@@ -97,6 +97,8 @@ const PAGE = /* html */`<!DOCTYPE html>
   --yellow:#fbbf24;
   --purple:#c084fc;
   --r:14px;
+  --sep:rgba(255,255,255,.05);
+  --row-hover:rgba(255,255,255,.03);
 }
 [data-theme="light"]{
   --bg:#f8f9fb;
@@ -111,6 +113,8 @@ const PAGE = /* html */`<!DOCTYPE html>
   --red:#dc2626;
   --yellow:#b45309;
   --purple:#7c3aed;
+  --sep:rgba(0,0,0,.07);
+  --row-hover:rgba(0,0,0,.03);
 }
 [data-theme="light"] .hero{
   background:linear-gradient(135deg,#eef2ff 0%,#e8edff 100%);
@@ -124,7 +128,6 @@ const PAGE = /* html */`<!DOCTYPE html>
 }
 [data-theme="light"] #ip-wrapper:hover{background:rgba(0,0,0,.04)}
 
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{
   background:var(--bg);
   color:var(--text);
@@ -339,13 +342,13 @@ header{
   gap:.5rem;
   padding:.45rem .3rem;
   margin:0 -.3rem;
-  border-bottom:1px solid rgba(255,255,255,.04);
+  border-bottom:1px solid var(--sep);
   font-size:.88rem;
   border-radius:6px;
   transition:background .1s;
 }
 .row:last-child{border-bottom:none}
-.row:hover{background:rgba(255,255,255,.03)}
+.row:hover{background:var(--row-hover)}
 .row-label{color:var(--muted);flex-shrink:0;margin-right:.5rem}
 .row-val{font-weight:500;text-align:right;word-break:break-all}
 .row-val.mono{font-family:'SF Mono','JetBrains Mono',monospace;font-size:.82rem}
@@ -356,7 +359,7 @@ header{
   align-items:flex-start;
   gap:.6rem;
   padding:.45rem 0;
-  border-bottom:1px solid rgba(255,255,255,.04);
+  border-bottom:1px solid var(--sep);
   font-size:.88rem;
 }
 .indicator:last-child{border-bottom:none}
@@ -410,7 +413,7 @@ header{
   align-items:baseline;
   gap:.5rem;
   padding:.3rem 0;
-  border-bottom:1px solid rgba(255,255,255,.04);
+  border-bottom:1px solid var(--sep);
   font-size:.82rem;
   flex-wrap:wrap;
 }
@@ -428,6 +431,9 @@ header{
 
 /* ── ua text ── */
 .ua-text{font-size:.75rem;color:var(--muted);word-break:break-all;margin-top:.3rem;line-height:1.5}
+
+/* ── section divider (used in JS templates) ── */
+.div-sep{margin-top:.75rem;padding-top:.5rem}
 
 /* ── skeleton ── */
 @keyframes shimmer{
@@ -858,7 +864,7 @@ function renderBrowser(ipTimezone) {
     row('All Languages', esc((navigator.languages||[navigator.language]).join(', '))) +
     row('Do Not Track', dnt) +
     row('Cookies', navigator.cookieEnabled ? 'Enabled' : 'Disabled') +
-    \`<div class="row"><span class="row-label">User Agent</span></div><div class="ua-text">\${esc(navigator.userAgent)}</div>\`;
+    \`<div class="row" style="flex-direction:column;align-items:flex-start;gap:.3rem"><span class="row-label">User Agent</span><span class="ua-text" style="margin-top:0;text-align:left">\${esc(navigator.userAgent)}</span></div>\`;
 }
 
 function renderIPv6(ipv6, cfTrace, publicIPv4) {
@@ -880,7 +886,7 @@ function renderIPv6(ipv6, cfTrace, publicIPv4) {
   if (cfTrace) {
     const warp = cfTrace.warp === 'on';
     const gateway = cfTrace.gateway === 'on';
-    html += \`<div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.04)">\`;
+    html += \`<div class="div-sep">\`;
     html += indicator(
       warp || gateway ? '✓' : 'i',
       warp ? 'Cloudflare WARP active' : gateway ? 'Cloudflare Gateway active' : 'Cloudflare WARP not detected',
@@ -934,7 +940,7 @@ async function renderFingerprint() {
 
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   if (conn) {
-    html += \`<div style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid rgba(255,255,255,.06)">\`;
+    html += \`<div class="div-sep">\`;
     html += \`<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.5rem">Connection — also a tracking signal</div>\`;
     if (conn.type)          html += row('Type',           esc(conn.type));
     if (conn.effectiveType) html += row('Effective type', esc(conn.effectiveType));
