@@ -208,18 +208,16 @@ header{
   font-size:clamp(1.8rem,5vw,3rem);
   font-weight:700;
   letter-spacing:.04em;
-  user-select:all;
-  transition:color .15s;
+  user-select:none;
   color:var(--text);
 }
-#ip-wrapper:hover #ip-display{color:var(--blue)}
 #copy-hint{
   font-size:.7rem;
   color:var(--dim);
   letter-spacing:.06em;
   transition:color .15s;
 }
-#ip-wrapper:hover #copy-hint{color:var(--blue)}
+#ip-wrapper:hover #copy-hint{color:var(--muted)}
 .hero-sub{margin-top:.75rem;color:var(--muted);font-size:.9rem}
 .status-row{
   display:flex;
