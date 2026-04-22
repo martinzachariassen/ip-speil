@@ -192,36 +192,34 @@ header{
   background:radial-gradient(ellipse at 50% 50%,rgba(96,165,250,.06) 0%,transparent 70%);
   pointer-events:none;
 }
-.ip-row{
-  display:flex;
+#ip-wrapper{
+  display:inline-flex;
+  flex-direction:column;
   align-items:center;
-  justify-content:center;
-  gap:.75rem;
-  flex-wrap:wrap;
+  gap:.45rem;
+  cursor:pointer;
+  padding:.6rem 1.2rem;
+  border-radius:12px;
+  transition:background .15s;
 }
+#ip-wrapper:hover{background:rgba(255,255,255,.04)}
 #ip-display{
   font-family:'SF Mono','JetBrains Mono','Fira Code',ui-monospace,monospace;
   font-size:clamp(1.8rem,5vw,3rem);
   font-weight:700;
   letter-spacing:.04em;
-  cursor:pointer;
   user-select:all;
   transition:color .15s;
   color:var(--text);
 }
-#ip-display:hover{color:var(--blue)}
-#copy-btn{
-  background:rgba(96,165,250,.1);
-  border:1px solid rgba(96,165,250,.25);
-  color:var(--blue);
-  border-radius:8px;
-  padding:.3rem .65rem;
-  font-size:.78rem;
-  cursor:pointer;
-  transition:background .15s,transform .1s;
-  flex-shrink:0;
+#ip-wrapper:hover #ip-display{color:var(--blue)}
+#copy-hint{
+  font-size:.7rem;
+  color:var(--dim);
+  letter-spacing:.06em;
+  transition:color .15s;
 }
-#copy-btn:active{transform:scale(.95)}
+#ip-wrapper:hover #copy-hint{color:var(--blue)}
 .hero-sub{margin-top:.75rem;color:var(--muted);font-size:.9rem}
 .status-row{
   display:flex;
@@ -270,8 +268,10 @@ header{
   background:var(--s2);
   border:1px solid var(--border);
   border-radius:var(--r);
-  padding:1.4rem 1.5rem;
+  padding:1.5rem 1.6rem;
+  transition:border-color .2s;
 }
+.card:hover{border-color:var(--dim)}
 .card-title{
   font-size:.7rem;
   font-weight:700;
@@ -299,11 +299,15 @@ header{
   align-items:baseline;
   justify-content:space-between;
   gap:.5rem;
-  padding:.35rem 0;
+  padding:.45rem .3rem;
+  margin:0 -.3rem;
   border-bottom:1px solid rgba(255,255,255,.04);
   font-size:.88rem;
+  border-radius:6px;
+  transition:background .1s;
 }
 .row:last-child{border-bottom:none}
+.row:hover{background:rgba(255,255,255,.03)}
 .row-label{color:var(--muted);flex-shrink:0;margin-right:.5rem}
 .row-val{font-weight:500;text-align:right;word-break:break-all}
 .row-val.mono{font-family:'SF Mono','JetBrains Mono',monospace;font-size:.82rem}
@@ -467,9 +471,9 @@ footer{
 
 <!-- HERO -->
 <div class="hero">
-  <div class="ip-row">
+  <div id="ip-wrapper" onclick="copyIP()" title="Click to copy">
     <div id="ip-display"><span class="skel" style="width:220px;height:1.1em;display:inline-block;vertical-align:middle"></span></div>
-    <button id="copy-btn" onclick="copyIP()">Copy</button>
+    <div id="copy-hint">click to copy</div>
   </div>
   <div class="hero-sub" id="hero-sub"><span class="skel" style="width:200px"></span></div>
   <div class="status-row" id="status-row"></div>
@@ -690,6 +694,7 @@ function getColorGamut() {
 /* ── Renders ── */
 function renderHero(d, isVPN) {
   document.getElementById('ip-display').textContent = d.query || 'Unknown';
+  document.getElementById('copy-hint').textContent = 'click to copy';
   currentIP = d.query || '';
   const f = flag(d.countryCode);
   document.getElementById('hero-sub').textContent =
@@ -904,6 +909,7 @@ async function load() {
 
   // reset skeletons
   document.getElementById('ip-display').innerHTML = '<span class="skel" style="width:220px;height:1.1em;display:inline-block;vertical-align:middle"></span>';
+  document.getElementById('copy-hint').textContent = '';
   document.getElementById('hero-sub').innerHTML = '<span class="skel" style="width:200px"></span>';
   document.getElementById('status-row').innerHTML = '';
   ['card-location','card-network','card-privacy','card-browser','card-ipv6'].forEach(id => {
@@ -942,9 +948,13 @@ async function load() {
 function copyIP() {
   if (!currentIP) return;
   navigator.clipboard.writeText(currentIP).then(() => {
-    const btn = document.getElementById('copy-btn');
-    btn.textContent = 'Copied!';
-    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+    const hint = document.getElementById('copy-hint');
+    hint.textContent = 'copied ✓';
+    hint.style.color = 'var(--green)';
+    setTimeout(() => {
+      hint.textContent = 'click to copy';
+      hint.style.color = '';
+    }, 1800);
   });
 }
 
