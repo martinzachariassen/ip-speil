@@ -663,6 +663,10 @@ footer{
       IPv6 detection: <a href="https://ipv6.icanhazip.com" target="_blank" rel="noopener">ipv6.icanhazip.com</a><br>
       WebRTC: Google STUN (stun.l.google.com)
     </div>
+    <div>
+      <h3>Source</h3>
+      Built by <a href="https://github.com/martinzachariassen" target="_blank" rel="noopener">@martinzachariassen</a> — open to feedback via GitHub.
+    </div>
   </div>
 </footer>
 
