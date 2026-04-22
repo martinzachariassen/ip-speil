@@ -981,7 +981,7 @@ function renderRecommendations(data, webrtc, ipv6) {
   if (!isVPN && !isHosting) {
     items.push(recItem('high',
       'Your real IP address is visible to every site you visit',
-      'Websites can log your IP, infer your city-level location, and cross-reference it with other data. A VPN routes your traffic through an encrypted tunnel so sites see the VPN\'s IP instead of yours.',
+      "Websites can log your IP, infer your city-level location, and cross-reference it with other data. A VPN routes your traffic through an encrypted tunnel so sites see the VPN's IP instead of yours.",
       [
         action('Mullvad', 'accepts cash · no account needed', 'https://mullvad.net'),
         action('ProtonVPN', 'free tier available · Swiss-based', 'https://protonvpn.com'),
@@ -994,7 +994,7 @@ function renderRecommendations(data, webrtc, ipv6) {
   if (webrtcLeak) {
     items.push(recItem('high',
       'Your VPN has a WebRTC leak — your real IP is exposed',
-      'Browsers use WebRTC for peer-to-peer features and it can reveal your real IP even when you\'re connected to a VPN. Sites can read this without you making a network request.',
+      "Browsers use WebRTC for peer-to-peer features and it can reveal your real IP even when you're connected to a VPN. Sites can read this without you making a network request.",
       [
         action('Brave', 'blocks WebRTC by default', 'https://brave.com'),
         action('Firefox', 'set media.peerconnection.enabled = false in about:config', ''),
@@ -1019,7 +1019,7 @@ function renderRecommendations(data, webrtc, ipv6) {
   /* ── Timezone mismatch ── */
   if (tzMismatch) {
     items.push(recItem('medium',
-      'Your browser timezone doesn\'t match your IP location',
+      "Your browser timezone doesn't match your IP location",
       \`Your IP resolves to \${esc(data.timezone)} but your browser reports \${esc(browserTz)}. This mismatch is a fingerprinting signal — it tells sites something doesn\'t add up, which can make you more identifiable, not less.\`,
       [
         action('Brave', 'randomizes timezone per site', 'https://brave.com'),
@@ -1042,7 +1042,7 @@ function renderRecommendations(data, webrtc, ipv6) {
   /* ── HTTP headers ── */
   items.push(recItem('medium',
     'Your browser automatically reveals your OS and device type',
-    'Client hint headers (sec-ch-ua-platform, sec-ch-ua) are sent with every request. They tell servers your exact OS, browser family, and whether you\'re on mobile — without you doing anything.',
+    "Client hint headers (sec-ch-ua-platform, sec-ch-ua) are sent with every request. They tell servers your exact OS, browser family, and whether you're on mobile — without you doing anything.",
     [
       action('Firefox', 'sends minimal client hints by default', 'https://www.mozilla.org/firefox'),
       action('Brave', 'spoofs client hints to reduce identifying detail', 'https://brave.com'),
@@ -1064,7 +1064,7 @@ function renderRecommendations(data, webrtc, ipv6) {
   if (isVPN || isHosting) {
     items.unshift(recItem('good',
       'Your IP is masked — you appear to be using a VPN or proxy',
-      'Sites see the VPN server\'s IP instead of yours. The checks below are still worth reviewing to make sure nothing leaks around it.',
+      "Sites see the VPN server's IP instead of yours. The checks below are still worth reviewing to make sure nothing leaks around it.",
       []
     ));
   }
