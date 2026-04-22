@@ -79,7 +79,7 @@ const PAGE = /* html */`<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>What's My IP</title>
+<title>ipspeil — your internet mirror</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -132,6 +132,11 @@ header{
   font-size:.78rem;
   color:var(--dim);
   margin-top:.2rem;
+}
+.header-left p em{
+  font-style:normal;
+  color:var(--muted);
+  font-weight:600;
 }
 .header-actions{display:flex;gap:.5rem;align-items:center;flex-shrink:0}
 #refresh-btn{
@@ -428,8 +433,8 @@ footer{
 <!-- HEADER -->
 <header>
   <div class="header-left">
-    <h1>What's My IP</h1>
-    <p>Your privacy snapshot — nothing is logged or stored.</p>
+    <h1>ipspeil</h1>
+    <p><em>speil</em> — Norwegian for mirror. Reflects what the internet sees of you.</p>
   </div>
   <div class="header-actions">
     <button id="refresh-btn" onclick="load()" title="Refresh all checks">↺</button>
