@@ -98,11 +98,37 @@ const PAGE = /* html */`<!DOCTYPE html>
   --purple:#c084fc;
   --r:14px;
 }
+[data-theme="light"]{
+  --bg:#f8f9fb;
+  --s1:#f0f0f2;
+  --s2:#ffffff;
+  --border:#e4e4e7;
+  --text:#18181b;
+  --muted:#52525b;
+  --dim:#a1a1aa;
+  --blue:#2563eb;
+  --green:#15803d;
+  --red:#dc2626;
+  --yellow:#b45309;
+  --purple:#7c3aed;
+}
+[data-theme="light"] .hero{
+  background:linear-gradient(135deg,#eef2ff 0%,#e8edff 100%);
+}
+[data-theme="light"] .hero::before{
+  background:radial-gradient(ellipse at 50% 50%,rgba(37,99,235,.07) 0%,transparent 70%);
+}
+[data-theme="light"] .skel{
+  background:linear-gradient(90deg,#ebebed 25%,#d8d8db 50%,#ebebed 75%);
+  background-size:800px 100%;
+}
+[data-theme="light"] #ip-wrapper:hover{background:rgba(0,0,0,.04)}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{
   background:var(--bg);
   color:var(--text);
+  transition:background .2s,color .2s;
   font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   font-size:15px;
   line-height:1.6;
@@ -152,6 +178,20 @@ header{
 #refresh-btn:hover{color:var(--text);border-color:var(--dim)}
 #refresh-btn.spinning{animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+#theme-btn{
+  background:none;
+  border:1px solid var(--border);
+  color:var(--muted);
+  border-radius:8px;
+  padding:.35rem .55rem;
+  font-size:.85rem;
+  cursor:pointer;
+  line-height:1;
+  transition:color .15s,border-color .15s;
+  display:flex;
+  align-items:center;
+}
+#theme-btn:hover{color:var(--text);border-color:var(--dim)}
 
 /* ── trust strip ── */
 .trust-strip{
@@ -474,6 +514,7 @@ footer{
     <p><em>speil</em> — Norwegian for mirror. Reflects what the internet sees of you.</p>
   </div>
   <div class="header-actions">
+    <button id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode"></button>
     <button id="refresh-btn" onclick="load()" title="Refresh all checks">↺</button>
   </div>
 </header>
@@ -891,6 +932,18 @@ async function renderFingerprint() {
   html += row('HDR', hdr);
   html += row('Platform', esc(navigator.platform || 'Not exposed'));
 
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (conn) {
+    html += \`<div style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid rgba(255,255,255,.06)">\`;
+    html += \`<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.5rem">Connection — also a tracking signal</div>\`;
+    if (conn.type)          html += row('Type',           esc(conn.type));
+    if (conn.effectiveType) html += row('Effective type', esc(conn.effectiveType));
+    if (conn.downlink != null) html += row('Est. downlink', \`\${conn.downlink} Mbps\`);
+    if (conn.rtt != null)   html += row('RTT',            \`\${conn.rtt} ms\`);
+    if (conn.saveData != null) html += row('Data saver',  conn.saveData ? 'On' : 'Off');
+    html += \`</div>\`;
+  }
+
   el.innerHTML = html;
 }
 
@@ -1118,6 +1171,26 @@ async function load() {
   btn.textContent = '↺';
 }
 
+/* ── theme ── */
+const SUN = \`<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>\`;
+const MOON = \`<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>\`;
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.innerHTML = theme === 'dark' ? SUN : MOON;
+}
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('ipspeil-theme', next);
+  applyTheme(next);
+}
+function initTheme() {
+  const saved = localStorage.getItem('ipspeil-theme');
+  const theme = saved || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  applyTheme(theme);
+}
+
 function copyIP() {
   if (!currentIP) return;
   navigator.clipboard.writeText(currentIP).then(() => {
@@ -1131,6 +1204,7 @@ function copyIP() {
   });
 }
 
+initTheme();
 load();
 </script>
 </body>
