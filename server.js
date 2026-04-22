@@ -407,6 +407,41 @@ header{
 }
 .skel-block{height:5em;border-radius:8px;margin-top:.5rem}
 
+/* ── recommendations ── */
+.rec-section{margin-bottom:1rem}
+.rec-intro{font-size:.85rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.6}
+.rec-list{display:flex;flex-direction:column;gap:.1rem}
+.rec-item{
+  padding:1rem 1rem 1rem 1.25rem;
+  border-left:3px solid var(--dim);
+  transition:border-color .2s;
+}
+.rec-item.high{border-color:var(--red)}
+.rec-item.medium{border-color:var(--yellow)}
+.rec-item.low{border-color:var(--blue)}
+.rec-item.good{border-color:var(--green)}
+.rec-title{font-weight:600;font-size:.9rem;margin-bottom:.25rem}
+.rec-item.high .rec-title{color:var(--red)}
+.rec-item.medium .rec-title{color:var(--yellow)}
+.rec-item.low .rec-title{color:var(--blue)}
+.rec-item.good .rec-title{color:var(--green)}
+.rec-desc{font-size:.82rem;color:var(--muted);line-height:1.65;margin-bottom:.65rem}
+.rec-item.good .rec-desc{margin-bottom:0}
+.rec-actions{display:flex;flex-wrap:wrap;gap:.4rem}
+.rec-action{
+  display:inline-flex;
+  flex-direction:column;
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:.3rem .7rem;
+  text-decoration:none;
+  transition:border-color .15s;
+}
+.rec-action:hover{border-color:var(--dim)}
+.rec-action-label{font-size:.8rem;font-weight:600;color:var(--text)}
+.rec-action-note{font-size:.7rem;color:var(--muted);margin-top:.05rem}
+
 /* ── footer ── */
 footer{
   margin-top:2.5rem;
@@ -554,6 +589,15 @@ footer{
     <span class="note">— probes for IPs your browser exposes via peer-to-peer, even behind a VPN</span>
   </div>
   <div id="webrtc-result"><span class="skel" style="width:200px"></span></div>
+</div>
+
+<!-- RECOMMENDATIONS -->
+<div class="card rec-section" id="card-recommendations">
+  <div class="card-title">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    What You Can Do
+  </div>
+  <div class="skel skel-block"></div>
 </div>
 
 <!-- FOOTER -->
@@ -901,6 +945,135 @@ function renderWebRTC(webrtc, publicIP) {
   el.innerHTML = html;
 }
 
+/* ── recommendations ── */
+function action(label, note, url) {
+  const tag = url ? 'a' : 'span';
+  const attrs = url ? \`href="\${url}" target="_blank" rel="noopener"\` : '';
+  return \`<\${tag} class="rec-action" \${attrs}>
+    <span class="rec-action-label">\${esc(label)}</span>
+    \${note ? \`<span class="rec-action-note">\${esc(note)}</span>\` : ''}
+  </\${tag}>\`;
+}
+
+function recItem(level, title, desc, actions = []) {
+  return \`<div class="rec-item \${level}">
+    <div class="rec-title">\${title}</div>
+    <div class="rec-desc">\${desc}</div>
+    \${actions.length ? \`<div class="rec-actions">\${actions.join('')}</div>\` : ''}
+  </div>\`;
+}
+
+function renderRecommendations(data, webrtc, ipv6) {
+  const el = document.getElementById('card-recommendations');
+  const ICON = \`<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>\`;
+
+  const ispText = ((data.isp||'') + ' ' + (data.org||'')).toLowerCase();
+  const isVPN = data.proxy || ['vpn','proxy','anonymi','virtual private'].some(k => ispText.includes(k));
+  const isHosting = data.hosting || ['hosting','cloud','digitalocean','linode','vultr','amazon','hetzner','ovh','datacenter'].some(k => ispText.includes(k));
+  const webrtcLeak = webrtc.pub.length > 0 && !webrtc.pub.includes(data.query);
+  const ipv6Exposed = !!ipv6;
+  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tzMismatch = data.timezone && browserTz !== data.timezone;
+
+  const items = [];
+
+  /* ── IP exposure ── */
+  if (!isVPN && !isHosting) {
+    items.push(recItem('high',
+      'Your real IP address is visible to every site you visit',
+      'Websites can log your IP, infer your city-level location, and cross-reference it with other data. A VPN routes your traffic through an encrypted tunnel so sites see the VPN\'s IP instead of yours.',
+      [
+        action('Mullvad', 'accepts cash · no account needed', 'https://mullvad.net'),
+        action('ProtonVPN', 'free tier available · Swiss-based', 'https://protonvpn.com'),
+        action('IVPN', 'privacy-focused · accepts cash', 'https://www.ivpn.net'),
+      ]
+    ));
+  }
+
+  /* ── WebRTC leak ── */
+  if (webrtcLeak) {
+    items.push(recItem('high',
+      'Your VPN has a WebRTC leak — your real IP is exposed',
+      'Browsers use WebRTC for peer-to-peer features and it can reveal your real IP even when you\'re connected to a VPN. Sites can read this without you making a network request.',
+      [
+        action('Brave', 'blocks WebRTC by default', 'https://brave.com'),
+        action('Firefox', 'set media.peerconnection.enabled = false in about:config', ''),
+        action('uBlock Origin', 'enable "Prevent WebRTC from leaking local IP"', 'https://ublockorigin.com'),
+      ]
+    ));
+  }
+
+  /* ── IPv6 leak ── */
+  if (ipv6Exposed && (isVPN || isHosting)) {
+    items.push(recItem('high',
+      'Your IPv6 address may not be tunneled by your VPN',
+      'Many VPNs only tunnel IPv4. If your connection has an IPv6 address, sites may see it directly — bypassing the VPN entirely.',
+      [
+        action('Mullvad', 'tunnels IPv6 by default', 'https://mullvad.net'),
+        action('ProtonVPN', 'IPv6 leak protection built-in', 'https://protonvpn.com'),
+        action('Disable IPv6', 'in your OS network settings as a fallback', ''),
+      ]
+    ));
+  }
+
+  /* ── Timezone mismatch ── */
+  if (tzMismatch) {
+    items.push(recItem('medium',
+      'Your browser timezone doesn\'t match your IP location',
+      \`Your IP resolves to \${esc(data.timezone)} but your browser reports \${esc(browserTz)}. This mismatch is a fingerprinting signal — it tells sites something doesn\'t add up, which can make you more identifiable, not less.\`,
+      [
+        action('Brave', 'randomizes timezone per site', 'https://brave.com'),
+        action('Firefox + RFP', 'resistFingerprinting reports UTC to all sites', ''),
+      ]
+    ));
+  }
+
+  /* ── Browser fingerprint ── */
+  items.push(recItem('medium',
+    'Your browser has a unique fingerprint',
+    'The canvas hash, WebGL renderer, screen resolution, and hardware details shown above can be combined into an ID that tracks you across sites — even in private mode, even with a VPN. This works without cookies.',
+    [
+      action('Brave', 'randomizes fingerprint per session by default', 'https://brave.com'),
+      action('Firefox', 'enable privacy.resistFingerprinting in about:config', 'https://www.mozilla.org/firefox'),
+      action('Tor Browser', 'maximum fingerprint resistance — all users look identical', 'https://www.torproject.org'),
+    ]
+  ));
+
+  /* ── HTTP headers ── */
+  items.push(recItem('medium',
+    'Your browser automatically reveals your OS and device type',
+    'Client hint headers (sec-ch-ua-platform, sec-ch-ua) are sent with every request. They tell servers your exact OS, browser family, and whether you\'re on mobile — without you doing anything.',
+    [
+      action('Firefox', 'sends minimal client hints by default', 'https://www.mozilla.org/firefox'),
+      action('Brave', 'spoofs client hints to reduce identifying detail', 'https://brave.com'),
+    ]
+  ));
+
+  /* ── DNS ── */
+  items.push(recItem('low',
+    'Consider encrypted DNS (DNS over HTTPS)',
+    'Without DoH, every domain you look up is visible to your ISP in plain text — even if the page itself is HTTPS. Your DNS resolver sees every site you visit.',
+    [
+      action('1.1.1.1', 'Cloudflare · fast and private', 'https://1.1.1.1'),
+      action('NextDNS', 'configurable · free tier', 'https://nextdns.io'),
+      action('Mullvad DNS', 'if you use their VPN · ad-blocking option', 'https://mullvad.net/dns'),
+    ]
+  ));
+
+  /* ── All good on IP ── */
+  if (isVPN || isHosting) {
+    items.unshift(recItem('good',
+      'Your IP is masked — you appear to be using a VPN or proxy',
+      'Sites see the VPN server\'s IP instead of yours. The checks below are still worth reviewing to make sure nothing leaks around it.',
+      []
+    ));
+  }
+
+  el.innerHTML = \`<div class="card-title">\${ICON}What You Can Do</div>
+    <p class="rec-intro">Based on what this scan found — prioritised from most to least urgent.</p>
+    <div class="rec-list">\${items.join('')}</div>\`;
+}
+
 /* ── load ── */
 async function load() {
   const btn = document.getElementById('refresh-btn');
@@ -918,6 +1091,7 @@ async function load() {
   document.getElementById('card-fingerprint').innerHTML = '<div class="skel skel-block"></div>';
   document.getElementById('card-headers').innerHTML = '<div class="skel skel-block"></div>';
   document.getElementById('webrtc-result').innerHTML = '<span class="skel" style="width:200px"></span>';
+  document.getElementById('card-recommendations').innerHTML = '<div class="card-title"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>What You Can Do</div><div class="skel skel-block"></div>';
 
   const [data, webrtc, ipv6, cfTrace, headers] = await Promise.all([
     fetch('/api/info').then(r => r.json()).catch(() => ({})),
@@ -940,6 +1114,7 @@ async function load() {
   renderFingerprint(); // async internally, no await needed
   renderHeaders(headers);
   renderWebRTC(webrtc, data.query);
+  renderRecommendations(data, webrtc, ipv6);
 
   btn.classList.remove('spinning');
   btn.textContent = '↺';
