@@ -85,7 +85,7 @@ const PAGE = /* html */`<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ipspeil — your internet mirror</title>
+<title>ip-speil — your internet mirror</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -522,7 +522,7 @@ footer{
 <!-- HEADER -->
 <header>
   <div class="header-left">
-    <h1>ipspeil</h1>
+    <h1>ip-speil</h1>
     <p><em>speil</em> — Norwegian for mirror. Reflects what the internet sees of you.</p>
   </div>
   <div class="header-actions">
