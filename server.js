@@ -59,6 +59,12 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === "/health") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("ok");
+    return;
+  }
+
   if (url.pathname === "/" || url.pathname === "/index.html") {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(PAGE);
