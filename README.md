@@ -1,4 +1,4 @@
-# ipspeil
+# ip-speil
 
 > **speil** — Norwegian for *mirror*. Reflects what the internet sees of you.
 
