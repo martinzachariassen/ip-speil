@@ -558,6 +558,7 @@ footer{
 <!-- HERO -->
 <div class="hero">
   <div id="ip-wrapper" onclick="copyIP()" title="Click to copy">
+    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Your public IP</div>
     <div id="ip-display"><span class="skel" style="width:220px;height:1.1em;display:inline-block;vertical-align:middle"></span></div>
     <div id="copy-hint">click to copy</div>
   </div>
