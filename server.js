@@ -672,7 +672,7 @@ footer{
     </div>
     <div>
       <h3>Source</h3>
-      Built by <a href="https://mlz.no" target="_blank" rel="noopener">Martin Zachariassen</a>
+      Made with ♥ by <a href="https://mlz.no" target="_blank" rel="noopener">Martin Zachariassen</a>
     </div>
   </div>
 </footer>
