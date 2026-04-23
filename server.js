@@ -672,7 +672,7 @@ footer{
     </div>
     <div>
       <h3>Source</h3>
-      Built by <a href="https://github.com/martinzachariassen" target="_blank" rel="noopener">@martinzachariassen</a> — open to feedback via GitHub.
+      Built by <a href="https://mlz.no" target="_blank" rel="noopener">Martin Zachariassen</a>
     </div>
   </div>
 </footer>
