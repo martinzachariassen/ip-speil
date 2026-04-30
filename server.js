@@ -86,6 +86,7 @@ const PAGE = /* html */`<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ip-speil — your internet mirror</title>
+<script defer src="https://cloud.umami.is/script.js" data-website-id="753c6aa6-9a74-4a22-a5b3-99cedf84fe68"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -543,11 +544,11 @@ footer{
   </span>
   <span class="trust-pill">
     <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-    No analytics
+    Cookieless analytics
   </span>
   <span class="trust-pill">
     <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-    No third-party scripts
+    No ad trackers
   </span>
   <span class="trust-pill">
     <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -661,7 +662,7 @@ footer{
     </div>
     <div>
       <h3>What we don't do</h3>
-      This server has no database and writes no logs. It does not set cookies, load analytics, or include any third-party scripts. Every check runs on demand — closing this tab leaves no trace on our end.
+      This server has no database and writes no logs. It does not set cookies or run ad trackers. Page visit counts are recorded via Umami — cookieless, no personal data, GDPR compliant. Every check runs on demand — closing this tab leaves no trace on our end.
     </div>
     <div>
       <h3>Data sources</h3>
