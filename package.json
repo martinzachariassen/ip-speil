@@ -1,12 +1,15 @@
 {
-  "name": "ipspeil-no",
+  "name": "ip-speil",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "check": "node --check server.js && node --check src/server.js && node --check src/ip-api.js && node --check public/app.js && node --check scripts/smoke-browser.js && node --test",
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "smoke:browser": "node scripts/smoke-browser.js",
+    "test": "node --test"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=24 <25"
   }
 }

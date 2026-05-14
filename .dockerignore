@@ -3,3 +3,8 @@
 *.md
 *.toml
 .claude
+.devbox
+.envrc
+devbox.json
+devbox.lock
+test
