@@ -2,14 +2,22 @@
   "name": "ip-speil",
   "version": "1.0.0",
   "type": "module",
+  "private": true,
   "scripts": {
-    "check": "node --check server.js && node --check src/server.js && node --check src/ip-api.js && node --check public/app.js && node --check scripts/smoke-browser.js && node --test",
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "smoke:browser": "node scripts/smoke-browser.js",
-    "test": "node --test"
+    "start": "node src/server.ts",
+    "dev": "node --watch src/server.ts",
+    "test": "node --test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "check": "npm run typecheck && npm run lint && npm run test"
   },
   "engines": {
     "node": ">=24 <25"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.1.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.0"
   }
 }

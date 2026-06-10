@@ -4,7 +4,8 @@ RUN addgroup -S app && adduser -S app -G app
 
 WORKDIR /app
 
-COPY package.json package-lock.json server.js ./
+# Zero runtime dependencies → no `npm install`. Copy manifest + source only.
+COPY package.json package-lock.json ./
 COPY src ./src
 COPY public ./public
 
@@ -14,4 +15,5 @@ USER app
 ENV PORT=3000
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+# Node 24 runs the TypeScript entry point directly via native type-stripping — no build step.
+CMD ["node", "src/server.ts"]

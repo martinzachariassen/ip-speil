@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { test } from "node:test";
 
-import { createAppServer } from "../src/server.js";
+import { createAppServer } from "../src/app.ts";
 
 async function withServer(fetchImpl, callback) {
   const server = createAppServer({ fetchImpl, requestTimeoutMs: 100 });
@@ -33,17 +33,17 @@ test("health endpoint returns ok with security headers", async () => {
 test("serves public index and static assets with appropriate cache headers", async () => {
   await withServer(fetch, async (baseUrl) => {
     const index = await fetch(`${baseUrl}/`);
-    const app = await fetch(`${baseUrl}/app.js`);
+    const mainJs = await fetch(`${baseUrl}/js/main.js`);
     const css = await fetch(`${baseUrl}/styles.css`);
 
     assert.equal(index.status, 200);
     assert.equal(index.headers.get("content-type"), "text/html; charset=utf-8");
     assert.equal(index.headers.get("cache-control"), "no-store");
-    assert.match(await index.text(), /<script src="\/app\.js" defer><\/script>/);
+    assert.match(await index.text(), /<script type="module" src="\/js\/main\.js"><\/script>/);
 
-    assert.equal(app.status, 200);
-    assert.equal(app.headers.get("content-type"), "text/javascript; charset=utf-8");
-    assert.equal(app.headers.get("cache-control"), "public, max-age=300");
+    assert.equal(mainJs.status, 200);
+    assert.equal(mainJs.headers.get("content-type"), "text/javascript; charset=utf-8");
+    assert.equal(mainJs.headers.get("cache-control"), "public, max-age=300");
 
     assert.equal(css.status, 200);
     assert.equal(css.headers.get("content-type"), "text/css; charset=utf-8");

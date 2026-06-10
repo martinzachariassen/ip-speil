@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { getClientIp, getIpInfo } from "../src/ip-api.js";
+import { getClientIp, getIpInfo } from "../src/ip-api.ts";
 
 test("getClientIp prefers the first forwarded address", () => {
-  assert.equal(getClientIp({
-    "x-forwarded-for": "203.0.113.10, 198.51.100.20",
-    "x-real-ip": "198.51.100.30",
-  }), "203.0.113.10");
+  assert.equal(
+    getClientIp({
+      "x-forwarded-for": "203.0.113.10, 198.51.100.20",
+      "x-real-ip": "198.51.100.30",
+    }),
+    "203.0.113.10",
+  );
 });
 
 test("getClientIp falls back to x-real-ip", () => {
