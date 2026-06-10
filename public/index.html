@@ -1,145 +1,222 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>ip-speil — your internet mirror</title>
-<meta name="description" content="A privacy and network diagnostic mirror — see your public IP, VPN/proxy signals, WebRTC leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no database, no trackers.">
-<meta name="theme-color" content="#ecebe4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#181712" media="(prefers-color-scheme: dark)">
-<link rel="canonical" href="https://ip.mlz.no/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="ip-speil">
-<meta property="og:url" content="https://ip.mlz.no/">
-<meta property="og:title" content="ip-speil — your internet mirror">
-<meta property="og:description" content="See your public IP, VPN/proxy signals, WebRTC leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no trackers.">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="ip-speil — your internet mirror">
-<meta name="twitter:description" content="See what websites can infer about your connection — IP, VPN signals, WebRTC leaks, IPv6 routing, browser fingerprint, HTTP headers.">
-<meta name="robots" content="index,follow">
-<link rel="icon" href="data:,">
-<script defer src="/script.js" data-website-id="753c6aa6-9a74-4a22-a5b3-99cedf84fe68" data-host-url="/"></script>
-<link rel="stylesheet" href="/styles.css">
-</head>
-<body>
-<div class="page" data-density="compact">
-<div class="col">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ip-speil — your internet mirror</title>
+    <meta
+      name="description"
+      content="A privacy and network diagnostic mirror — see your public IP, VPN/proxy signals, WebRTC leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no database, no trackers."
+    />
+    <meta name="theme-color" content="#ecebe4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#181712" media="(prefers-color-scheme: dark)" />
+    <link rel="canonical" href="https://ip.mlz.no/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ip-speil" />
+    <meta property="og:url" content="https://ip.mlz.no/" />
+    <meta property="og:title" content="ip-speil — your internet mirror" />
+    <meta
+      property="og:description"
+      content="See your public IP, VPN/proxy signals, WebRTC leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no trackers."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="ip-speil — your internet mirror" />
+    <meta
+      name="twitter:description"
+      content="See what websites can infer about your connection — IP, VPN signals, WebRTC leaks, IPv6 routing, browser fingerprint, HTTP headers."
+    />
+    <meta name="robots" content="index,follow" />
+    <link rel="icon" href="data:," />
+    <script
+      defer
+      src="/script.js"
+      data-website-id="753c6aa6-9a74-4a22-a5b3-99cedf84fe68"
+      data-host-url="/"
+    ></script>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page" data-density="compact">
+      <div class="col">
+        <!-- HEADER -->
+        <header class="hd">
+          <div class="wm">
+            <b class="blk">ip-speil</b> <em>— <i>speil</i>, Norwegian for mirror</em>
+          </div>
+          <div class="pills">
+            <span class="pill">No cookies</span>
+            <span class="pill">No database</span>
+            <span class="pill">Cookieless analytics</span>
+            <span class="pill">No ad trackers</span>
+            <span class="pill">Fingerprint stays local</span>
+          </div>
+        </header>
 
-  <!-- HEADER -->
-  <header class="hd">
-    <div class="wm"><b class="blk">ip-speil</b> <em>— <i>speil</i>, Norwegian for mirror</em></div>
-    <div class="pills">
-      <span class="pill">No cookies</span>
-      <span class="pill">No database</span>
-      <span class="pill">Cookieless analytics</span>
-      <span class="pill">No ad trackers</span>
-      <span class="pill">Fingerprint stays local</span>
-    </div>
-  </header>
+        <!-- HERO -->
+        <div class="hero">
+          <div class="eyebrow">Your public IP</div>
+          <button class="ip" id="ip-btn" type="button" title="Click to copy">
+            <span id="ip-display"><span class="skel skel-ip"></span></span>
+            <span class="copytag" id="copy-hint">click to copy</span>
+          </button>
+          <div class="hero-sub" id="hero-sub"><span class="skel skel-text"></span></div>
+          <div class="hero-status" id="hero-status"></div>
+          <div class="hero-actions">
+            <button class="btn" id="refresh-btn" type="button">
+              <span class="ico" id="refresh-ico">↻</span> Refresh
+            </button>
+            <button
+              class="btn ghost"
+              id="report-btn"
+              type="button"
+              title="Copy redacted diagnostics report"
+            >
+              Copy report
+            </button>
+            <button
+              class="btn ghost"
+              id="theme-btn"
+              type="button"
+              title="Toggle light/dark"
+            ></button>
+          </div>
+        </div>
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="eyebrow">Your public IP</div>
-    <button class="ip" id="ip-btn" type="button" title="Click to copy">
-      <span id="ip-display"><span class="skel skel-ip"></span></span>
-      <span class="copytag" id="copy-hint">click to copy</span>
-    </button>
-    <div class="hero-sub" id="hero-sub"><span class="skel skel-text"></span></div>
-    <div class="hero-status" id="hero-status"></div>
-    <div class="hero-actions">
-      <button class="btn" id="refresh-btn" type="button"><span class="ico" id="refresh-ico">↻</span> Refresh</button>
-      <button class="btn ghost" id="report-btn" type="button" title="Copy redacted diagnostics report">Copy report</button>
-      <button class="btn ghost" id="theme-btn" type="button" title="Toggle light/dark"></button>
-    </div>
-  </div>
+        <!-- FACTS -->
+        <div class="facts" id="facts">
+          <div class="fact">
+            <div class="fact-l">Loading</div>
+            <div class="fact-v"><span class="skel skel-text"></span></div>
+          </div>
+        </div>
 
-  <!-- FACTS -->
-  <div class="facts" id="facts">
-    <div class="fact"><div class="fact-l">Loading</div><div class="fact-v"><span class="skel skel-text"></span></div></div>
-  </div>
+        <!-- DEEPER LOOK -->
+        <div class="look">
+          <div class="look-l">Deeper look <span>— tap any section to expand</span></div>
 
-  <!-- DEEPER LOOK -->
-  <div class="look">
-    <div class="look-l">Deeper look <span>— tap any section to expand</span></div>
+          <div class="rev" id="rev-privacy">
+            <button class="rev-head" type="button">
+              <span class="rev-title"
+                ><b>Privacy checks</b><em>VPN, proxy, datacenter &amp; WebRTC signals</em></span
+              >
+              <span class="rev-sign"></span>
+            </button>
+            <div class="rev-wrap">
+              <div class="rev-body" id="body-privacy"><span class="skel skel-block"></span></div>
+            </div>
+          </div>
 
-    <div class="rev" id="rev-privacy">
-      <button class="rev-head" type="button">
-        <span class="rev-title"><b>Privacy checks</b><em>VPN, proxy, datacenter &amp; WebRTC signals</em></span>
-        <span class="rev-sign"></span>
-      </button>
-      <div class="rev-wrap"><div class="rev-body" id="body-privacy"><span class="skel skel-block"></span></div></div>
-    </div>
+          <div class="rev" id="rev-browser">
+            <button class="rev-head" type="button">
+              <span class="rev-title"
+                ><b>Your browser</b><em>language, tracking signals &amp; user agent</em></span
+              >
+              <span class="rev-sign"></span>
+            </button>
+            <div class="rev-wrap">
+              <div class="rev-body" id="body-browser"><span class="skel skel-block"></span></div>
+            </div>
+          </div>
 
-    <div class="rev" id="rev-browser">
-      <button class="rev-head" type="button">
-        <span class="rev-title"><b>Your browser</b><em>language, tracking signals &amp; user agent</em></span>
-        <span class="rev-sign"></span>
-      </button>
-      <div class="rev-wrap"><div class="rev-body" id="body-browser"><span class="skel skel-block"></span></div></div>
-    </div>
+          <div class="rev" id="rev-ipv6">
+            <button class="rev-head" type="button">
+              <span class="rev-title"
+                ><b>IPv6 &amp; routing</b
+                ><em>compares IPv4 / IPv6 exit and Cloudflare trace</em></span
+              >
+              <span class="rev-sign"></span>
+            </button>
+            <div class="rev-wrap">
+              <div class="rev-body" id="body-ipv6"><span class="skel skel-block"></span></div>
+            </div>
+          </div>
 
-    <div class="rev" id="rev-ipv6">
-      <button class="rev-head" type="button">
-        <span class="rev-title"><b>IPv6 &amp; routing</b><em>compares IPv4 / IPv6 exit and Cloudflare trace</em></span>
-        <span class="rev-sign"></span>
-      </button>
-      <div class="rev-wrap"><div class="rev-body" id="body-ipv6"><span class="skel skel-block"></span></div></div>
-    </div>
+          <div class="rev" id="rev-fingerprint">
+            <button class="rev-head" type="button">
+              <span class="rev-title"
+                ><b>Browser fingerprint</b><em>how sites track you beyond your IP</em></span
+              >
+              <span class="rev-sign"></span>
+            </button>
+            <div class="rev-wrap">
+              <div class="rev-body" id="body-fingerprint">
+                <span class="skel skel-block"></span>
+              </div>
+            </div>
+          </div>
 
-    <div class="rev" id="rev-fingerprint">
-      <button class="rev-head" type="button">
-        <span class="rev-title"><b>Browser fingerprint</b><em>how sites track you beyond your IP</em></span>
-        <span class="rev-sign"></span>
-      </button>
-      <div class="rev-wrap"><div class="rev-body" id="body-fingerprint"><span class="skel skel-block"></span></div></div>
-    </div>
+          <div class="rev" id="rev-headers">
+            <button class="rev-head" type="button">
+              <span class="rev-title"
+                ><b>What the server sees</b
+                ><em>HTTP headers your browser sent to this page</em></span
+              >
+              <span class="rev-sign"></span>
+            </button>
+            <div class="rev-wrap">
+              <div class="rev-body" id="body-headers"><span class="skel skel-block"></span></div>
+            </div>
+          </div>
 
-    <div class="rev" id="rev-headers">
-      <button class="rev-head" type="button">
-        <span class="rev-title"><b>What the server sees</b><em>HTTP headers your browser sent to this page</em></span>
-        <span class="rev-sign"></span>
-      </button>
-      <div class="rev-wrap"><div class="rev-body" id="body-headers"><span class="skel skel-block"></span></div></div>
-    </div>
+          <div class="rev" id="rev-webrtc">
+            <button class="rev-head" type="button">
+              <span class="rev-title"
+                ><b>WebRTC leak test</b><em>peer-to-peer candidates your browser exposes</em></span
+              >
+              <span class="rev-sign"></span>
+            </button>
+            <div class="rev-wrap">
+              <div class="rev-body" id="body-webrtc"><span class="skel skel-block"></span></div>
+            </div>
+          </div>
+        </div>
 
-    <div class="rev" id="rev-webrtc">
-      <button class="rev-head" type="button">
-        <span class="rev-title"><b>WebRTC leak test</b><em>peer-to-peer candidates your browser exposes</em></span>
-        <span class="rev-sign"></span>
-      </button>
-      <div class="rev-wrap"><div class="rev-body" id="body-webrtc"><span class="skel skel-block"></span></div></div>
-    </div>
-  </div>
+        <!-- FINE PRINT -->
+        <div class="fine">
+          <div class="fine-grid">
+            <div>
+              <h4>How this works</h4>
+              <p>
+                When you hit Refresh, this app looks up the HTTP IP seen by the server with
+                ipapi.is. If your browser also has IPv6, that address is looked up separately so the
+                page can compare IPv4 and IPv6 routing. Browser fingerprint data is computed
+                entirely in your browser and is not sent back to this server. WebRTC uses a public
+                STUN server to inspect the ICE candidates your browser exposes.
+              </p>
+            </div>
+            <div>
+              <h4>What we don't do</h4>
+              <p>
+                This app has no database and the application code does not write request logs. The
+                hosting platform may still keep operational logs. It does not set cookies or run ad
+                trackers. Page visit counts are recorded via Umami's cookieless analytics. Every
+                check runs on demand.
+              </p>
+            </div>
+          </div>
+          <div class="sources">
+            <span>Sources</span>
+            <a href="https://ipapi.is" target="_blank" rel="noopener">ipapi.is</a>
+            <a href="https://1.1.1.1/cdn-cgi/trace" target="_blank" rel="noopener"
+              >Cloudflare trace</a
+            >
+            <a href="https://ipv6.icanhazip.com" target="_blank" rel="noopener">icanhazip</a>
+            <a href="https://www.cloudflare.com" target="_blank" rel="noopener">Cloudflare STUN</a>
+          </div>
+        </div>
 
-  <!-- FINE PRINT -->
-  <div class="fine">
-    <div class="fine-grid">
-      <div>
-        <h4>How this works</h4>
-        <p>When you hit Refresh, this app looks up the HTTP IP seen by the server with ipapi.is. If your browser also has IPv6, that address is looked up separately so the page can compare IPv4 and IPv6 routing. Browser fingerprint data is computed entirely in your browser and is not sent back to this server. WebRTC uses a public STUN server to inspect the ICE candidates your browser exposes.</p>
+        <!-- FOOTER -->
+        <footer class="ft">
+          <div>
+            Made with <span class="heart">♥</span> by
+            <a href="https://mlz.no" target="_blank" rel="noopener">Martin Zachariassen</a>
+          </div>
+          <div class="coord" id="ft-coord"></div>
+        </footer>
       </div>
-      <div>
-        <h4>What we don't do</h4>
-        <p>This app has no database and the application code does not write request logs. The hosting platform may still keep operational logs. It does not set cookies or run ad trackers. Page visit counts are recorded via Umami's cookieless analytics. Every check runs on demand.</p>
-      </div>
+      <!-- /col -->
     </div>
-    <div class="sources">
-      <span>Sources</span>
-      <a href="https://ipapi.is" target="_blank" rel="noopener">ipapi.is</a>
-      <a href="https://1.1.1.1/cdn-cgi/trace" target="_blank" rel="noopener">Cloudflare trace</a>
-      <a href="https://ipv6.icanhazip.com" target="_blank" rel="noopener">icanhazip</a>
-      <a href="https://www.cloudflare.com" target="_blank" rel="noopener">Cloudflare STUN</a>
-    </div>
-  </div>
-
-  <!-- FOOTER -->
-  <footer class="ft">
-    <div>Made with <span class="heart">♥</span> by <a href="https://mlz.no" target="_blank" rel="noopener">Martin Zachariassen</a></div>
-    <div class="coord" id="ft-coord"></div>
-  </footer>
-
-</div><!-- /col -->
-</div><!-- /page -->
-<script type="module" src="/js/main.js"></script>
-</body>
+    <!-- /page -->
+    <script type="module" src="/js/main.js"></script>
+  </body>
 </html>
