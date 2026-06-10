@@ -4,10 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ip-speil — your internet mirror</title>
-<script defer src="https://cloud.umami.is/script.js" data-website-id="753c6aa6-9a74-4a22-a5b3-99cedf84fe68"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="description" content="A privacy and network diagnostic mirror — see your public IP, VPN/proxy signals, WebRTC leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no database, no trackers.">
+<meta name="theme-color" content="#ecebe4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#181712" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://ip.mlz.no/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ip-speil">
+<meta property="og:url" content="https://ip.mlz.no/">
+<meta property="og:title" content="ip-speil — your internet mirror">
+<meta property="og:description" content="See your public IP, VPN/proxy signals, WebRTC leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no trackers.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ip-speil — your internet mirror">
+<meta name="twitter:description" content="See what websites can infer about your connection — IP, VPN signals, WebRTC leaks, IPv6 routing, browser fingerprint, HTTP headers.">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="data:,">
+<script defer src="/script.js" data-website-id="753c6aa6-9a74-4a22-a5b3-99cedf84fe68" data-host-url="/"></script>
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -105,7 +116,7 @@
     <div class="fine-grid">
       <div>
         <h4>How this works</h4>
-        <p>When you hit Refresh, this app looks up the HTTP IP seen by the server with ip-api.com. If your browser also has IPv6, that address is looked up separately so the page can compare IPv4 and IPv6 routing. Browser fingerprint data is computed entirely in your browser and is not sent back to this server. WebRTC uses a public STUN server to inspect the ICE candidates your browser exposes.</p>
+        <p>When you hit Refresh, this app looks up the HTTP IP seen by the server with ipapi.is. If your browser also has IPv6, that address is looked up separately so the page can compare IPv4 and IPv6 routing. Browser fingerprint data is computed entirely in your browser and is not sent back to this server. WebRTC uses a public STUN server to inspect the ICE candidates your browser exposes.</p>
       </div>
       <div>
         <h4>What we don't do</h4>
@@ -114,10 +125,10 @@
     </div>
     <div class="sources">
       <span>Sources</span>
-      <a href="https://ip-api.com" target="_blank" rel="noopener">ip-api.com</a>
+      <a href="https://ipapi.is" target="_blank" rel="noopener">ipapi.is</a>
       <a href="https://1.1.1.1/cdn-cgi/trace" target="_blank" rel="noopener">Cloudflare trace</a>
       <a href="https://ipv6.icanhazip.com" target="_blank" rel="noopener">icanhazip</a>
-      <a href="https://www.google.com" target="_blank" rel="noopener">Google STUN</a>
+      <a href="https://www.cloudflare.com" target="_blank" rel="noopener">Cloudflare STUN</a>
     </div>
   </div>
 

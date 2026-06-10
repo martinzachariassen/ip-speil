@@ -14,7 +14,7 @@ export function redactIp(ip) {
 }
 
 /** Assemble a redacted summary object from all collected scan data. */
-export function buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers) {
+export function buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers, doh) {
   return {
     generatedAt: new Date().toISOString(),
     httpIp: redactIp(data.query),
@@ -25,8 +25,12 @@ export function buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers) {
     ipv6Country: ipv6Info?.countryCode || null,
     signals: {
       proxy: data.proxy === true,
+      vpn: data.vpn === true,
+      tor: data.tor === true,
+      abuser: data.abuser === true,
       hosting: data.hosting === true,
       mobile: data.mobile === true,
+      dohReachable: doh,
       timezoneMismatch: !!(
         data.timezone && Intl.DateTimeFormat().resolvedOptions().timeZone !== data.timezone
       ),

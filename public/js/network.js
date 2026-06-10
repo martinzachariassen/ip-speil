@@ -13,6 +13,25 @@ export async function getIPv6() {
   }
 }
 
+/**
+ * Probe Cloudflare's DNS-over-HTTPS endpoint. Returns true if reachable —
+ * useful because some VPNs, captive portals and corporate DPI middleboxes
+ * block DoH to keep DNS visible at the gateway.
+ */
+export async function getDohReachable() {
+  try {
+    const res = await fetch("https://cloudflare-dns.com/dns-query?name=cloudflare.com&type=A", {
+      signal: AbortSignal.timeout(4000),
+      headers: { Accept: "application/dns-json" },
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return Array.isArray(data?.Answer) && data.Answer.length > 0;
+  } catch {
+    return null;
+  }
+}
+
 /** Fetch and parse Cloudflare's `cdn-cgi/trace` key=value report, or null. */
 export async function getCFTrace() {
   try {

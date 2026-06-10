@@ -2,7 +2,7 @@
 // Entry point: orchestrates the scan, wires up interactions, owns UI state.
 import { fetchHeaders, fetchInfo } from "./api.js";
 import { ispSuggestsVpn } from "./format.js";
-import { getCFTrace, getIPv6 } from "./network.js";
+import { getCFTrace, getDohReachable, getIPv6 } from "./network.js";
 import {
   renderBrowser,
   renderFacts,
@@ -41,21 +41,25 @@ async function load() {
   ico?.classList.add("spin");
   showSkeletons();
 
-  const [data, webrtc, ipv6, cfTrace, headers] = await Promise.all([
+  const [data, webrtc, ipv6, cfTrace, headers, doh] = await Promise.all([
     fetchInfo(),
     getWebRTCIPs(),
     getIPv6(),
     getCFTrace(),
     fetchHeaders(),
+    getDohReachable(),
   ]);
   const ipv6Info = ipv6 ? await fetchInfo(ipv6) : null;
 
   currentIP = data.query || "";
-  latestReport = buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers);
+  latestReport = buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers, doh);
 
-  renderHero(data, data.proxy === true || ispSuggestsVpn(data));
+  renderHero(
+    data,
+    data.proxy === true || data.vpn === true || data.tor === true || ispSuggestsVpn(data),
+  );
   renderFacts(data, ipv6);
-  renderPrivacy(data, webrtc);
+  renderPrivacy(data, webrtc, doh);
   renderBrowser(data.timezone);
   renderIPv6(ipv6, ipv6Info, cfTrace, data);
   renderFingerprint(); // async internally; fire-and-forget

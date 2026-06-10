@@ -46,6 +46,44 @@ export async function getCanvasHash() {
   }
 }
 
+/**
+ * AudioContext fingerprint — sums the first 8k samples of a short offline render
+ * and hashes them. Small differences in the platform audio stack produce
+ * stable, distinct outputs across devices/browsers, which trackers exploit.
+ */
+export async function getAudioHash() {
+  try {
+    if (typeof OfflineAudioContext === "undefined") return null;
+    const ctx = new OfflineAudioContext(1, 44100, 44100);
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.value = 1000;
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -50;
+    compressor.knee.value = 40;
+    compressor.ratio.value = 12;
+    compressor.attack.value = 0;
+    compressor.release.value = 0.25;
+    osc.connect(compressor);
+    compressor.connect(ctx.destination);
+    osc.start(0);
+    const buffer = await ctx.startRendering();
+    const data = buffer.getChannelData(0);
+    let sum = 0;
+    for (let i = 4500; i < 5000; i += 1) sum += Math.abs(data[i]);
+    const hashBytes = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(sum.toString()),
+    );
+    return [...new Uint8Array(hashBytes)]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+      .slice(0, 24);
+  } catch {
+    return null;
+  }
+}
+
 /** Detect the display's colour gamut. */
 export function getColorGamut() {
   if (matchMedia("(color-gamut: rec2020)").matches) return "rec2020";

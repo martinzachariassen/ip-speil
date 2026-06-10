@@ -46,14 +46,15 @@ no longer defines task wrappers — use the `npm run` scripts directly.
 src/             Server TypeScript — run directly by Node (no build)
   server.ts      Entry point — parses PORT, starts/stops the HTTP server
   app.ts         Server factory: routing, security headers (CSP), static file serving
-  ip-api.ts      ip-api.com geolocation + client-IP extraction from headers
+  ip-lookup.ts   ipapi.is geolocation (HTTPS) + client-IP extraction from headers
 public/          Static frontend, served as-is (no bundler)
   index.html     Markup; loads /js/main.js as a module
   styles.css     Styles
+  fonts/         Self-hosted woff2 (no Google Fonts, no visitor-IP leak)
   js/            Native ES modules (no build). main.js is the entry point; others:
                  api, webrtc, network, fingerprint, render, format, dom, report, theme.
                  env.d.ts + jsconfig.json are editor-only (loose checkJs for the browser).
-test/            Node test runner: app.test.js, ip-api.test.js
+test/            Node test runner: app.test.js, ip-lookup.test.js
 tsconfig.json    Strict server typecheck (noEmit, type-strip-compatible flags)
 biome.json       Lint + format config
 Dockerfile       node:24-alpine, non-root user, copies src/ + public/, runs server.ts
@@ -62,8 +63,10 @@ railway.toml     Railway deploy config (healthcheck at /health)
 
 ## Routes (defined in `src/app.ts`)
 
-- `GET /api/info?ip=` — IP geolocation via ip-api.com (defaults to caller's IP)
+- `GET /api/info?ip=` — IP geolocation + VPN/Tor/proxy/abuse flags via ipapi.is over HTTPS (defaults to caller's IP)
 - `GET /api/headers` — echoes request headers (minus hop-by-hop/sensitive ones)
+- `GET /script.js` — first-party proxy of the Umami tracker script (cached 1h) so adblockers don't filter it
+- `POST /api/send` — first-party proxy that forwards Umami events to `api.umami.is` (same reason)
 - `GET /health` — returns `ok` (used by Railway healthcheck)
 - `GET /`, `/index.html`, `/styles.css`, `/js/*.js` — static files from `public/`
 
@@ -78,7 +81,8 @@ railway.toml     Railway deploy config (healthcheck at /health)
 - Browser fingerprinting is computed client-side only; never sent to the server.
 - No DB, no request logs, no cookies. Don't add persistence or trackers.
 - When adding a new served file, register it in the `PUBLIC_FILES` allowlist in `app.ts`
-  (a new front-end module just needs its name added to the `JS_MODULES` array). The
-  allowlist — not path resolution — is what prevents path traversal.
+  (a new front-end module just needs its name added to the `JS_MODULES` array; a new
+  webfont needs its filename in `FONT_FILES`). The allowlist — not path resolution —
+  is what prevents path traversal.
 - When loading new external resources in the frontend, update the CSP in
   `DEFAULT_SECURITY_HEADERS` (`app.ts`), or the browser will block them.

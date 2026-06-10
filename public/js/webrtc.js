@@ -44,7 +44,7 @@ export function parseIceCandidate(candidate) {
 export async function getWebRTCIPs() {
   return new Promise((resolve) => {
     try {
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }] });
       pc.createDataChannel("");
       const pub = new Set();
       const lan = new Set();

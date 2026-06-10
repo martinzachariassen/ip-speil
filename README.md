@@ -22,12 +22,14 @@ A privacy and network diagnostic tool that shows what websites can infer about y
 | Check | What it reveals |
 |---|---|
 | **IP & location** | Your public IP, city, country, ISP, and ASN |
-| **VPN / proxy detection** | Whether your IP is flagged as a proxy, VPN exit node, or datacenter |
+| **VPN / proxy / Tor detection** | Whether your IP is flagged as a proxy, VPN exit, Tor relay, datacenter, or known abuser |
 | **WebRTC leak** | Whether your real IP leaks through browser peer-to-peer APIs, even behind a VPN |
 | **IPv6 routing** | Whether IPv6 is available and whether it appears to exit through a different network than IPv4 |
-| **Browser fingerprint** | Canvas hash, WebGL renderer, screen resolution, hardware details — what tracks you without cookies |
+| **Browser fingerprint** | Canvas + audio + WebGL hashes, screen resolution, hardware details — what tracks you without cookies |
 | **HTTP headers** | Everything your browser sends automatically with every request |
 | **Cloudflare routing** | Nearest datacenter, protocol, and whether WARP is active |
+| **DNS-over-HTTPS reach** | Whether DoH is reachable from this network (blocked by some VPNs / DPI) |
+| **Negotiated HTTP version** | The HTTP protocol your browser used for this page vs. what Cloudflare advertises |
 | **Redacted report** | A copyable diagnostics summary without exact IPs or header values |
 | **Recommendations** | Prioritised, actionable steps based on what the scan found |
 
@@ -41,7 +43,8 @@ A privacy and network diagnostic tool that shows what websites can infer about y
 - **Frontend**: Static HTML + CSS, and native ES modules under `public/js/` — loaded
   straight by the browser, no bundler, no build.
 - **Tooling**: [Biome](https://biomejs.dev) for lint + format; the Node built-in test runner.
-- **Data**: IP geolocation via [ip-api.com](https://ip-api.com), routing cross-check via [Cloudflare trace](https://1.1.1.1/cdn-cgi/trace), IPv6 via [icanhazip.com](https://ipv6.icanhazip.com), WebRTC via Google STUN
+- **Data**: IP geolocation + VPN/Tor/proxy/abuse signals via [ipapi.is](https://ipapi.is) over HTTPS, routing cross-check via [Cloudflare trace](https://1.1.1.1/cdn-cgi/trace), IPv6 via [icanhazip.com](https://ipv6.icanhazip.com), DNS reach via [Cloudflare DoH](https://cloudflare-dns.com), WebRTC via [Cloudflare STUN](https://stun.cloudflare.com)
+- **Fonts**: Schibsted Grotesk + IBM Plex Mono — self-hosted from `public/fonts/` (no Google Fonts call, no IP leak)
 - **Fingerprinting**: Computed entirely in the browser, never sent to the server
 
 ---
@@ -97,10 +100,11 @@ npm test            # node --test
 src/                 Server TypeScript (run directly by Node, no build)
   server.ts          Entry point — parses PORT, starts/stops the HTTP server
   app.ts             Server factory: routing, security headers (CSP), static file serving
-  ip-api.ts          ip-api.com geolocation + client-IP extraction from headers
+  ip-lookup.ts       ipapi.is geolocation + client-IP extraction from headers
 public/              Static frontend, served as-is (no bundler)
   index.html         Markup
   styles.css         Styles
+  fonts/             Self-hosted webfonts (woff2)
   js/                Native ES modules (no build):
     main.js            Orchestration + interactions (entry point)
     api.js             Calls this app's /api/* endpoints

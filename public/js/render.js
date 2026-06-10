@@ -3,7 +3,7 @@
 // of the page; none fetch data or hold state.
 
 import { fact, kv, note } from "./dom.js";
-import { getCanvasHash, getColorGamut, getWebGL } from "./fingerprint.js";
+import { getAudioHash, getCanvasHash, getColorGamut, getWebGL } from "./fingerprint.js";
 import {
   esc,
   flag,
@@ -82,7 +82,7 @@ export function renderFacts(d, ipv6) {
   el.innerHTML = html;
 }
 
-export function renderPrivacy(d, webrtc) {
+export function renderPrivacy(d, webrtc, doh) {
   const el = document.getElementById("body-privacy");
   if (!isSuccessfulLookup(d)) {
     el.innerHTML = note(
@@ -94,6 +94,8 @@ export function renderPrivacy(d, webrtc) {
   }
 
   const isProxy = d.proxy === true;
+  const isVpn = d.vpn === true;
+  const isTor = d.tor === true;
   const isHosting = d.hosting === true;
   const ispText = `${d.isp || ""} ${d.org || ""} ${d.asname || ""}`.toLowerCase();
   const vpnByName = ispSuggestsVpn(d);
@@ -115,18 +117,38 @@ export function renderPrivacy(d, webrtc) {
   const webrtcLeak = webrtc.pub.length > 0 && !webrtc.pub.includes(d.query);
 
   const items = [];
-  if (isProxy || vpnByName) {
+  if (isTor) {
+    items.push(
+      note(
+        "bad",
+        "Tor exit node",
+        "This address is a known Tor exit relay. Sites may apply extra friction or block requests entirely.",
+      ),
+    );
+  }
+  if (isProxy || isVpn || vpnByName) {
     items.push(
       note(
         "bad",
         "VPN / proxy detected",
-        isProxy
-          ? "This IP is a known proxy or VPN exit node."
-          : "ISP name matches a known VPN provider.",
+        isVpn
+          ? "This IP belongs to a known VPN service."
+          : isProxy
+            ? "This IP is a known proxy or anonymizer."
+            : "ISP name matches a known VPN provider.",
       ),
     );
-  } else {
+  } else if (!isTor) {
     items.push(note("ok", "No known VPN / proxy", "Not flagged as a proxy, VPN or anonymizer."));
+  }
+  if (d.abuser === true) {
+    items.push(
+      note(
+        "warn",
+        "Reported for abuse",
+        "This address has been reported in abuse databases — sites may treat it with extra caution.",
+      ),
+    );
   }
   if (isHosting || ispSuggestsHosting) {
     items.push(
@@ -167,6 +189,24 @@ export function renderPrivacy(d, webrtc) {
     items.push(note("ok", "No WebRTC leak", "WebRTC IP matches your public IP."));
   }
   if (d.mobile) items.push(note("off", "Mobile / cellular network", ""));
+
+  if (doh === true) {
+    items.push(
+      note(
+        "ok",
+        "DNS-over-HTTPS reachable",
+        "Cloudflare's DoH endpoint is reachable from this network — no DPI middlebox is blocking it.",
+      ),
+    );
+  } else if (doh === false || doh === null) {
+    items.push(
+      note(
+        "warn",
+        "DNS-over-HTTPS unreachable",
+        "Cloudflare's DoH endpoint did not respond. Captive portal, VPN, or corporate DPI may be intercepting DNS.",
+      ),
+    );
+  }
 
   el.innerHTML = items.join("");
 }
@@ -227,6 +267,10 @@ export function renderIPv6(ipv6, ipv6Info, cfTrace, publicIPv4Info) {
     );
   }
 
+  const nav = performance.getEntriesByType("navigation")[0];
+  const nextHop = nav?.nextHopProtocol;
+  if (nextHop) html += kv("This page negotiated", esc(nextHop));
+
   html += `<div class="divider"></div><div class="sub-l">Cloudflare trace</div>`;
   if (cfTrace) {
     const warp = cfTrace.warp === "on";
@@ -242,7 +286,7 @@ export function renderIPv6(ipv6, ipv6Info, cfTrace, publicIPv4Info) {
     );
     if (cfTrace.colo) html += kv("Nearest CF datacenter", esc(cfTrace.colo));
     if (cfTrace.loc) html += kv("CF sees country", `${flag(cfTrace.loc)} ${esc(cfTrace.loc)}`);
-    if (cfTrace.http) html += kv("HTTP protocol", esc(cfTrace.http));
+    if (cfTrace.http) html += kv("CF reports protocol", esc(cfTrace.http));
   } else {
     html += note(
       "off",
@@ -256,7 +300,11 @@ export function renderIPv6(ipv6, ipv6Info, cfTrace, publicIPv4Info) {
 
 export async function renderFingerprint() {
   const el = document.getElementById("body-fingerprint");
-  const [canvasHash, webgl] = await Promise.all([getCanvasHash(), Promise.resolve(getWebGL())]);
+  const [canvasHash, audioHash, webgl] = await Promise.all([
+    getCanvasHash(),
+    getAudioHash(),
+    Promise.resolve(getWebGL()),
+  ]);
 
   const mem = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : null;
   const cpu = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} threads` : null;
@@ -268,6 +316,7 @@ export async function renderFingerprint() {
 
   let html = "";
   if (canvasHash) html += kv("Canvas fingerprint", `<span class="m">${esc(canvasHash)}…</span>`);
+  if (audioHash) html += kv("Audio fingerprint", `<span class="m">${esc(audioHash)}…</span>`);
   if (webgl) {
     html += kv("GPU renderer", esc(webgl.renderer));
     html += kv("GPU vendor", esc(webgl.vendor));

@@ -60,14 +60,15 @@ test("does not serve unknown public paths", async () => {
   });
 });
 
-test("api info uses first forwarded ip and returns upstream json", async () => {
+test("api info uses first forwarded ip and returns normalised json", async () => {
   const calls = [];
   const fetchImpl = async (url) => {
     calls.push(url);
     return Response.json({
-      status: "success",
-      query: "203.0.113.10",
-      country: "Norway",
+      ip: "203.0.113.10",
+      location: { country: "Norway", country_code: "NO" },
+      company: { name: "Telenor" },
+      asn: { asn: 2119, org: "Telenor" },
     });
   };
 
@@ -79,12 +80,13 @@ test("api info uses first forwarded ip and returns upstream json", async () => {
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("cache-control"), "no-store");
     assert.equal(response.headers.get("access-control-allow-origin"), "*");
-    assert.deepEqual(await response.json(), {
-      status: "success",
-      query: "203.0.113.10",
-      country: "Norway",
-    });
-    assert.match(calls[0], /\/json\/203\.0\.113\.10\?/);
+    const body = await response.json();
+    assert.equal(body.status, "success");
+    assert.equal(body.query, "203.0.113.10");
+    assert.equal(body.country, "Norway");
+    assert.equal(body.countryCode, "NO");
+    assert.equal(body.isp, "Telenor");
+    assert.match(calls[0], /\?q=203\.0\.113\.10$/);
   });
 });
 
@@ -93,9 +95,8 @@ test("api info can look up an explicit detected ip", async () => {
   const fetchImpl = async (url) => {
     calls.push(url);
     return Response.json({
-      status: "success",
-      query: "2001:db8::42",
-      country: "Norway",
+      ip: "2001:db8::42",
+      location: { country: "Norway", country_code: "NO" },
     });
   };
 
@@ -105,17 +106,16 @@ test("api info can look up an explicit detected ip", async () => {
     });
 
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), {
-      status: "success",
-      query: "2001:db8::42",
-      country: "Norway",
-    });
-    assert.match(calls[0], /\/json\/2001%3Adb8%3A%3A42\?/);
+    const body = await response.json();
+    assert.equal(body.status, "success");
+    assert.equal(body.query, "2001:db8::42");
+    assert.equal(body.country, "Norway");
+    assert.match(calls[0], /\?q=2001%3Adb8%3A%3A42$/);
   });
 });
 
 test("api info reports failed upstream lookups as bad gateway", async () => {
-  const fetchImpl = async () => Response.json({ status: "fail", message: "invalid query" });
+  const fetchImpl = async () => Response.json({ error: "Invalid IP Address or AS Number" });
 
   await withServer(fetchImpl, async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/info`);
@@ -123,7 +123,7 @@ test("api info reports failed upstream lookups as bad gateway", async () => {
 
     assert.equal(response.status, 502);
     assert.equal(body.error, "upstream_failed");
-    assert.equal(body.message, "invalid query");
+    assert.match(body.message, /Invalid IP Address/);
   });
 });
 
@@ -152,4 +152,82 @@ test("unsupported methods return 405", async () => {
     assert.equal(response.headers.get("allow"), "GET, HEAD");
     assert.deepEqual(await response.json(), { error: "method_not_allowed" });
   });
+});
+
+test("script.js proxies the umami tracker as a first-party asset", async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(String(url));
+    return new Response("(()=>{/* umami */})();", {
+      headers: { "content-type": "application/javascript; charset=utf-8" },
+    });
+  };
+
+  const server = createAppServer({
+    fetchImpl,
+    requestTimeoutMs: 100,
+    umamiScriptUrl: "https://example.test/script.js",
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+
+  try {
+    const { port } = server.address();
+    const response = await fetch(`http://127.0.0.1:${port}/script.js`);
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "application/javascript; charset=utf-8");
+    assert.equal(response.headers.get("cache-control"), "public, max-age=3600");
+    assert.match(await response.text(), /umami/);
+    assert.deepEqual(calls, ["https://example.test/script.js"]);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+});
+
+test("api/send forwards the body and propagates the client IP to umami", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    const body = init?.body ? Buffer.from(init.body).toString("utf-8") : "";
+    calls.push({ url: String(url), method: init?.method, body, headers: init?.headers });
+    return new Response('{"ok":true}', {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+
+  const server = createAppServer({
+    fetchImpl,
+    requestTimeoutMs: 100,
+    umamiSendUrl: "https://example.test/api/send",
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+
+  try {
+    const { port } = server.address();
+    const payload = JSON.stringify({ type: "event", payload: { website: "abc" } });
+    const response = await fetch(`http://127.0.0.1:${port}/api/send`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "user-agent": "Mozilla/5.0 test",
+        "x-forwarded-for": "203.0.113.10",
+      },
+      body: payload,
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ok: true });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, "https://example.test/api/send");
+    assert.equal(calls[0].method, "POST");
+    assert.equal(calls[0].body, payload);
+    assert.equal(calls[0].headers["User-Agent"], "Mozilla/5.0 test");
+    assert.equal(calls[0].headers["X-Forwarded-For"], "203.0.113.10");
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
 });

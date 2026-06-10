@@ -19,9 +19,8 @@ export function toggleTheme() {
   applyTheme(next);
 }
 
-/** Apply the saved theme, or the OS preference on first visit. */
+/** Apply the saved theme, or light on first visit. The toggle still opts into dark. */
 export function initTheme() {
   const saved = localStorage.getItem(STORAGE_KEY);
-  const theme = saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  applyTheme(theme);
+  applyTheme(saved === "dark" ? "dark" : "light");
 }

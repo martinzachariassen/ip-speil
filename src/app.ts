@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import type { IncomingHttpHeaders, Server, ServerResponse } from "node:http";
+import type { IncomingHttpHeaders, IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 
-import { DEFAULT_REQUEST_TIMEOUT_MS, getClientIp, getIpInfo } from "./ip-api.ts";
+import { DEFAULT_REQUEST_TIMEOUT_MS, getClientIp, getIpInfo } from "./ip-lookup.ts";
 
 export const DEFAULT_PORT = 3000;
 
@@ -13,7 +13,10 @@ const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".woff2": "font/woff2",
 };
+
+const FONT_CACHE = "public, max-age=31536000, immutable";
 
 const contentTypeFor = (file: string): string => {
   const ext = file.slice(file.lastIndexOf("."));
@@ -40,6 +43,14 @@ const JS_MODULES = [
   "theme",
 ];
 
+/** Self-hosted webfonts served from `public/fonts/`. */
+const FONT_FILES = [
+  "schibsted-grotesk.woff2",
+  "ibm-plex-mono-400.woff2",
+  "ibm-plex-mono-500.woff2",
+  "ibm-plex-mono-600.woff2",
+];
+
 /**
  * Explicit allowlist of servable paths → files. An allowlist (rather than resolving
  * arbitrary paths against the public root) is what prevents path-traversal access.
@@ -54,21 +65,27 @@ register("/styles.css", "styles.css", ASSET_CACHE);
 for (const name of JS_MODULES) {
   register(`/js/${name}.js`, `js/${name}.js`, ASSET_CACHE);
 }
+for (const file of FONT_FILES) {
+  register(`/fonts/${file}`, `fonts/${file}`, FONT_CACHE);
+}
 
 const DEFAULT_SECURITY_HEADERS = {
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' https://cloud.umami.is",
-    "connect-src 'self' https://cloud.umami.is https://1.1.1.1 https://ipv6.icanhazip.com",
+    "script-src 'self'",
+    "connect-src 'self' https://1.1.1.1 https://ipv6.icanhazip.com https://cloudflare-dns.com",
     "img-src 'self' data:",
-    "style-src 'self' https://fonts.googleapis.com",
-    "font-src https://fonts.gstatic.com",
+    "style-src 'self'",
+    "font-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
     "frame-ancestors 'none'",
   ].join("; "),
   "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Permissions-Policy": "interest-cohort=(), browsing-topics=()",
   "Referrer-Policy": "no-referrer",
+  "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "X-Content-Type-Options": "nosniff",
 };
 
@@ -153,27 +170,109 @@ export interface AppServerOptions {
   ipApiBaseUrl?: string;
   publicRoot?: URL;
   requestTimeoutMs?: number;
+  /** Override for the Umami tracker script URL (proxied so adblockers see a first-party request). */
+  umamiScriptUrl?: string;
+  /** Override for the Umami event ingestion URL (proxied so adblockers see a first-party request). */
+  umamiSendUrl?: string;
 }
+
+const UMAMI_SCRIPT_CACHE_MS = 60 * 60 * 1000;
 
 export function createAppServer(options: AppServerOptions = {}): Server {
   const {
     fetchImpl = fetch,
-    ipApiBaseUrl = "http://ip-api.com",
+    ipApiBaseUrl = "https://api.ipapi.is",
     publicRoot = new URL("../public/", import.meta.url),
     requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+    umamiScriptUrl = "https://cloud.umami.is/script.js",
+    umamiSendUrl = "https://api.umami.is/api/send",
   } = options;
 
+  let scriptCache: { body: Buffer; fetchedAt: number; contentType: string } | null = null;
+
+  async function proxyUmamiScript(res: ServerResponse): Promise<void> {
+    try {
+      if (!scriptCache || Date.now() - scriptCache.fetchedAt > UMAMI_SCRIPT_CACHE_MS) {
+        const upstream = await fetchImpl(umamiScriptUrl, {
+          signal: AbortSignal.timeout(requestTimeoutMs),
+        });
+        if (!upstream.ok) {
+          writeText(res, 502, "umami script fetch failed");
+          return;
+        }
+        scriptCache = {
+          body: Buffer.from(await upstream.arrayBuffer()),
+          fetchedAt: Date.now(),
+          contentType: upstream.headers.get("content-type") ?? "text/javascript; charset=utf-8",
+        };
+      }
+      writeResponse(
+        res,
+        200,
+        {
+          "Content-Type": scriptCache.contentType,
+          "Cache-Control": "public, max-age=3600",
+        },
+        scriptCache.body,
+      );
+    } catch {
+      writeText(res, 502, "umami script fetch failed");
+    }
+  }
+
+  async function proxyUmamiSend(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const body = await readRequestBody(req);
+      const headers: Record<string, string> = {
+        "Content-Type": String(req.headers["content-type"] ?? "application/json"),
+      };
+      const ua = req.headers["user-agent"];
+      if (typeof ua === "string") headers["User-Agent"] = ua;
+      const clientIp = getClientIp(req.headers, req.socket.remoteAddress);
+      if (clientIp) headers["X-Forwarded-For"] = clientIp;
+
+      const upstream = await fetchImpl(umamiSendUrl, {
+        method: "POST",
+        headers,
+        body,
+        signal: AbortSignal.timeout(requestTimeoutMs),
+      });
+      const respBody = Buffer.from(await upstream.arrayBuffer());
+      writeResponse(
+        res,
+        upstream.status,
+        {
+          "Content-Type": upstream.headers.get("content-type") ?? "application/json; charset=utf-8",
+          "Cache-Control": NO_STORE,
+        },
+        respBody,
+      );
+    } catch {
+      writeJson(res, 502, { error: "umami_send_failed" });
+    }
+  }
+
   return createServer(async (req, res) => {
+    const url = new URL(req.url ?? "/", "http://localhost");
+
+    if (url.pathname === "/api/send" && req.method === "POST") {
+      await proxyUmamiSend(req, res);
+      return;
+    }
+
     if (req.method !== "GET" && req.method !== "HEAD") {
       writeJson(res, 405, { error: "method_not_allowed" }, { Allow: "GET, HEAD" });
       return;
     }
 
-    const url = new URL(req.url ?? "/", "http://localhost");
+    if (url.pathname === "/script.js") {
+      await proxyUmamiScript(res);
+      return;
+    }
 
     if (url.pathname === "/api/info") {
       const requestedIp = url.searchParams.get("ip")?.trim() ?? "";
-      const ip = requestedIp || getClientIp(req.headers);
+      const ip = requestedIp || getClientIp(req.headers, req.socket.remoteAddress);
       try {
         const data = await getIpInfo(ip, { fetchImpl, ipApiBaseUrl, timeoutMs: requestTimeoutMs });
         writeJson(res, 200, data, { "Access-Control-Allow-Origin": "*" });
@@ -198,6 +297,14 @@ export function createAppServer(options: AppServerOptions = {}): Server {
 
     await servePublicFile(res, publicRoot, url.pathname);
   });
+}
+
+async function readRequestBody(req: IncomingMessage): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
 }
 
 /** Echo request headers minus hop-by-hop/sensitive ones. */
