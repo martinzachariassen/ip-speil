@@ -16,7 +16,10 @@ import {
 /** Render the hero: IP, location summary, VPN/proxy status line. */
 export function renderHero(d, isVPN) {
   const hasLookup = isSuccessfulLookup(d);
-  document.getElementById("ip-display").textContent = hasLookup ? d.query : "Unavailable";
+  // Zero-width spaces after colons let IPv6 wrap at segment boundaries on narrow
+  // viewports instead of breaking mid-hextet. Copy uses the raw IP from main.js.
+  const displayIp = hasLookup ? d.query.replace(/:/g, ":​") : "Unavailable";
+  document.getElementById("ip-display").textContent = displayIp;
   document.getElementById("copy-hint").textContent = hasLookup ? "click to copy" : "try refresh";
   document.getElementById("ip-btn").classList.remove("copied");
 
