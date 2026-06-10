@@ -3,8 +3,12 @@
 *.md
 *.toml
 .claude
-.devbox
-.envrc
-devbox.json
-devbox.lock
+.storecode
 test
+
+# Dev-only tooling files (editor/typecheck), not needed at runtime
+**/jsconfig.json
+**/*.d.ts
+tsconfig.json
+biome.json
+node_modules

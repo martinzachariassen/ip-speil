@@ -3,12 +3,13 @@
 > **speil** — Norwegian for *mirror*. Reflects what the internet sees of you.
 
 ![Node.js](https://img.shields.io/badge/Node.js-24%20LTS-339933?logo=node.js&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?logo=javascript&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 ![Railway](https://img.shields.io/badge/Railway-deployed-0B0D0E?logo=railway&logoColor=white)
-![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
+![Zero runtime deps](https://img.shields.io/badge/runtime%20dependencies-0-brightgreen)
+![No build step](https://img.shields.io/badge/build%20step-none-brightgreen)
 
 A privacy and network diagnostic tool that shows what websites can infer about your connection — your IP address, approximate location, ISP, VPN/proxy signals, WebRTC candidates, IPv6 routing, browser fingerprint, and HTTP headers sent with requests. All checks run on demand, and the app stores no scan results.
 
@@ -21,12 +22,14 @@ A privacy and network diagnostic tool that shows what websites can infer about y
 | Check | What it reveals |
 |---|---|
 | **IP & location** | Your public IP, city, country, ISP, and ASN |
-| **VPN / proxy detection** | Whether your IP is flagged as a proxy, VPN exit node, or datacenter |
+| **VPN / proxy / Tor detection** | Whether your IP is flagged as a proxy, VPN exit, Tor relay, datacenter, or known abuser |
 | **WebRTC leak** | Whether your real IP leaks through browser peer-to-peer APIs, even behind a VPN |
 | **IPv6 routing** | Whether IPv6 is available and whether it appears to exit through a different network than IPv4 |
-| **Browser fingerprint** | Canvas hash, WebGL renderer, screen resolution, hardware details — what tracks you without cookies |
+| **Browser fingerprint** | Canvas + audio + WebGL hashes, screen resolution, hardware details — what tracks you without cookies |
 | **HTTP headers** | Everything your browser sends automatically with every request |
 | **Cloudflare routing** | Nearest datacenter, protocol, and whether WARP is active |
+| **DNS-over-HTTPS reach** | Whether DoH is reachable from this network (blocked by some VPNs / DPI) |
+| **Negotiated HTTP version** | The HTTP protocol your browser used for this page vs. what Cloudflare advertises |
 | **Redacted report** | A copyable diagnostics summary without exact IPs or header values |
 | **Recommendations** | Prioritised, actionable steps based on what the scan found |
 
@@ -34,9 +37,14 @@ A privacy and network diagnostic tool that shows what websites can infer about y
 
 ## Tech
 
-- **Runtime**: Node.js 24 LTS, native `http` module — no framework, no runtime dependencies
-- **Frontend**: Static HTML, CSS, and JavaScript from `public/` — no build step, no bundler
-- **Data**: IP geolocation via [ip-api.com](https://ip-api.com), routing cross-check via [Cloudflare trace](https://1.1.1.1/cdn-cgi/trace), IPv6 via [icanhazip.com](https://ipv6.icanhazip.com), WebRTC via Google STUN
+- **Server**: TypeScript on Node.js 24 LTS, native `http` module — no framework. Node runs
+  the `.ts` files directly via native type-stripping, so there is **no build step and zero
+  runtime dependencies**. TypeScript is a dev-only typecheck (`tsc --noEmit`).
+- **Frontend**: Static HTML + CSS, and native ES modules under `public/js/` — loaded
+  straight by the browser, no bundler, no build.
+- **Tooling**: [Biome](https://biomejs.dev) for lint + format; the Node built-in test runner.
+- **Data**: IP geolocation + VPN/Tor/proxy/abuse signals via [ipapi.is](https://ipapi.is) over HTTPS, routing cross-check via [Cloudflare trace](https://1.1.1.1/cdn-cgi/trace), IPv6 via [icanhazip.com](https://ipv6.icanhazip.com), DNS reach via [Cloudflare DoH](https://cloudflare-dns.com), WebRTC via [Cloudflare STUN](https://stun.cloudflare.com)
+- **Fonts**: Schibsted Grotesk + IBM Plex Mono — self-hosted from `public/fonts/` (no Google Fonts call, no IP leak)
 - **Fingerprinting**: Computed entirely in the browser, never sent to the server
 
 ---
@@ -52,18 +60,19 @@ A privacy and network diagnostic tool that shows what websites can infer about y
 
 ## Run locally
 
+Tool versions are managed with [mise](https://mise.jdx.dev) (`mise.toml` pins Node 24):
+
 ```sh
 git clone git@github.com:martinzachariassen/ipspeil-no.git
 cd ipspeil-no
-direnv allow
-npm run dev
-# → http://localhost:3000
+mise install      # installs Node 24 (mise only pins the toolchain)
+npm run dev       # → http://localhost:3000
 ```
 
-Without direnv:
+Or with plain npm (Node 24 already on PATH):
 
 ```sh
-devbox run dev
+npm run dev
 ```
 
 Or with Docker:
@@ -76,21 +85,42 @@ docker run -p 3000:3000 ipspeil
 ## Check
 
 ```sh
-devbox run check
-```
+npm run check       # typecheck + lint + tests (run before finishing)
 
-Optional browser smoke test:
-
-```sh
-devbox run npm run smoke:browser
+# or individually:
+npm run typecheck   # tsc --noEmit (server types)
+npm run lint        # biome check
+npm run format      # biome format --write
+npm test            # node --test
 ```
 
 ## Structure
 
 ```text
-src/       Node HTTP server and ip-api integration
-public/    Static frontend assets
-test/      Node test runner coverage for routes and upstream handling
+src/                 Server TypeScript (run directly by Node, no build)
+  server.ts          Entry point — parses PORT, starts/stops the HTTP server
+  app.ts             Server factory: routing, security headers (CSP), static file serving
+  ip-lookup.ts       ipapi.is geolocation + client-IP extraction from headers
+public/              Static frontend, served as-is (no bundler)
+  index.html         Markup
+  styles.css         Styles
+  fonts/             Self-hosted webfonts (woff2)
+  js/                Native ES modules (no build):
+    main.js            Orchestration + interactions (entry point)
+    api.js             Calls this app's /api/* endpoints
+    webrtc.js          WebRTC ICE-candidate / leak inspection
+    network.js         IPv6 + Cloudflare trace probes
+    fingerprint.js     Canvas / WebGL / display fingerprint probes
+    render.js          DOM render functions
+    format.js          Pure string/format helpers
+    dom.js             HTML render primitives
+    report.js          Redacted diagnostics report builder
+    theme.js           Light/dark theme
+    env.d.ts           Ambient types for non-standard browser APIs (editor only)
+    jsconfig.json      Editor-only checkJs config for the browser modules
+test/                Node test runner coverage for routes and upstream handling
+tsconfig.json        Strict typecheck config for the server (no emit)
+biome.json           Lint + format config
 ```
 
 ---
