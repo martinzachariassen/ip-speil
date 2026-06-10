@@ -2,10 +2,9 @@ import { readFile } from "node:fs/promises";
 import type { IncomingHttpHeaders, Server, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 
-import { getClientIp, getIpInfo } from "./ip-api.ts";
+import { DEFAULT_REQUEST_TIMEOUT_MS, getClientIp, getIpInfo } from "./ip-api.ts";
 
 export const DEFAULT_PORT = 3000;
-export const DEFAULT_REQUEST_TIMEOUT_MS = 8000;
 
 const NO_STORE = "no-store";
 const ASSET_CACHE = "public, max-age=300";

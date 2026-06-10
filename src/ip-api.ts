@@ -1,5 +1,8 @@
 import type { IncomingHttpHeaders } from "node:http";
 
+/** Default timeout for upstream ip-api.com requests, in milliseconds. */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 8000;
+
 /** Fields requested from ip-api.com, in a single comma-separated list. */
 const IP_API_FIELDS = [
   "status",
@@ -81,11 +84,15 @@ export function getClientIp(headers: IncomingHttpHeaders): string {
  */
 export async function getIpInfo(
   ip: string,
-  { fetchImpl = fetch, ipApiBaseUrl = "http://ip-api.com", timeoutMs }: IpInfoOptions = {},
+  {
+    fetchImpl = fetch,
+    ipApiBaseUrl = "http://ip-api.com",
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+  }: IpInfoOptions = {},
 ): Promise<IpApiResponse> {
   const path = ip ? `/json/${encodeURIComponent(ip)}` : "/json/";
   const res = await fetchImpl(`${ipApiBaseUrl}${path}?fields=${IP_API_FIELDS}`, {
-    signal: AbortSignal.timeout(timeoutMs ?? 8000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!res.ok) {

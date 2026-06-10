@@ -1,6 +1,7 @@
 // @ts-check
 // Entry point: orchestrates the scan, wires up interactions, owns UI state.
 import { fetchHeaders, fetchInfo } from "./api.js";
+import { ispSuggestsVpn } from "./format.js";
 import { getCFTrace, getIPv6 } from "./network.js";
 import {
   renderBrowser,
@@ -20,13 +21,6 @@ const SECTION_IDS = ["privacy", "browser", "ipv6", "fingerprint", "headers", "we
 
 let currentIP = "";
 let latestReport = null;
-
-/** Heuristic VPN/proxy flag from ip-api data (proxy bit or ISP name match). */
-function looksLikeVPN(data) {
-  if (data.proxy === true) return true;
-  const text = `${data.isp || ""} ${data.org || ""}`.toLowerCase();
-  return ["vpn", "proxy", "anonymi", "virtual private"].some((k) => text.includes(k));
-}
 
 function showSkeletons() {
   document.getElementById("ip-display").innerHTML = '<span class="skel skel-ip"></span>';
@@ -59,7 +53,7 @@ async function load() {
   currentIP = data.query || "";
   latestReport = buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers);
 
-  renderHero(data, looksLikeVPN(data));
+  renderHero(data, data.proxy === true || ispSuggestsVpn(data));
   renderFacts(data, ipv6);
   renderPrivacy(data, webrtc);
   renderBrowser(data.timezone);

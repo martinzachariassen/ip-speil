@@ -5,7 +5,7 @@ RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
 # Zero runtime dependencies → no `npm install`. Copy manifest + source only.
-COPY package.json package-lock.json ./
+COPY package.json ./
 COPY src ./src
 COPY public ./public
 

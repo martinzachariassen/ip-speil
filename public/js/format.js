@@ -33,3 +33,12 @@ export function formatPlace(d) {
 export function networkLabel(d) {
   return [d.asname, d.org || d.isp].filter(Boolean).join(" / ");
 }
+
+/** Substrings that hint an ISP/org/ASN name belongs to a VPN or anonymizer. */
+const VPN_KEYWORDS = ["vpn", "proxy", "anonymi", "vps", "virtual private"];
+
+/** True when the ISP/org/ASN name on an ip-api response looks VPN-shaped. */
+export function ispSuggestsVpn(d) {
+  const text = `${d?.isp || ""} ${d?.org || ""} ${d?.asname || ""}`.toLowerCase();
+  return VPN_KEYWORDS.some((k) => text.includes(k));
+}

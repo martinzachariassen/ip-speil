@@ -4,12 +4,16 @@
 
 import { fact, kv, note } from "./dom.js";
 import { getCanvasHash, getColorGamut, getWebGL } from "./fingerprint.js";
-import { esc, flag, formatPlace, isSuccessfulLookup, networkLabel } from "./format.js";
+import {
+  esc,
+  flag,
+  formatPlace,
+  ispSuggestsVpn,
+  isSuccessfulLookup,
+  networkLabel,
+} from "./format.js";
 
-/**
- * Render the hero (IP, location summary, VPN/proxy status line).
- * Returns the resolved IP so the caller can own copy/report state.
- */
+/** Render the hero: IP, location summary, VPN/proxy status line. */
 export function renderHero(d, isVPN) {
   const hasLookup = isSuccessfulLookup(d);
   document.getElementById("ip-display").textContent = hasLookup ? d.query : "Unavailable";
@@ -30,8 +34,6 @@ export function renderHero(d, isVPN) {
   document.getElementById("hero-status").innerHTML = parts
     .map(([dot, text]) => `<span class="dot ${dot}"></span><span>${esc(text)}</span>`)
     .join("");
-
-  return hasLookup ? d.query : "";
 }
 
 export function renderFacts(d, ipv6) {
@@ -94,9 +96,7 @@ export function renderPrivacy(d, webrtc) {
   const isProxy = d.proxy === true;
   const isHosting = d.hosting === true;
   const ispText = `${d.isp || ""} ${d.org || ""} ${d.asname || ""}`.toLowerCase();
-  const ispSuggestsVPN = ["vpn", "proxy", "anonymi", "vps", "virtual private"].some((k) =>
-    ispText.includes(k),
-  );
+  const vpnByName = ispSuggestsVpn(d);
   const ispSuggestsHosting = [
     "hosting",
     "cloud",
@@ -115,7 +115,7 @@ export function renderPrivacy(d, webrtc) {
   const webrtcLeak = webrtc.pub.length > 0 && !webrtc.pub.includes(d.query);
 
   const items = [];
-  if (isProxy || ispSuggestsVPN) {
+  if (isProxy || vpnByName) {
     items.push(
       note(
         "bad",
