@@ -1,94 +1,77 @@
-import { readFile } from "node:fs/promises";
-import type { IncomingHttpHeaders, IncomingMessage, Server, ServerResponse } from "node:http";
-import { createServer } from "node:http";
+import type { Context } from "hono";
+import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { getConnInfo, serveStatic } from "hono/bun";
+import { secureHeaders } from "hono/secure-headers";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 
-import { DEFAULT_REQUEST_TIMEOUT_MS, getClientIp, getIpInfo } from "./ip-lookup.ts";
+import {
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  type FetchLike,
+  getClientIp,
+  getIpInfo,
+  isProbablyIp,
+} from "./ip-lookup.ts";
+import { rateLimit } from "./rate-limit.ts";
 
 export const DEFAULT_PORT = 3000;
 
 const NO_STORE = "no-store";
 const ASSET_CACHE = "public, max-age=300";
-
-const CONTENT_TYPES: Record<string, string> = {
-  ".html": "text/html; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".woff2": "font/woff2",
-};
-
 const FONT_CACHE = "public, max-age=31536000, immutable";
+const SCRIPT_CACHE = "public, max-age=3600";
 
-const contentTypeFor = (file: string): string => {
-  const ext = file.slice(file.lastIndexOf("."));
-  return CONTENT_TYPES[ext] ?? "application/octet-stream";
-};
+/** Cap on the proxied Umami event body. Real events are a few hundred bytes. */
+const MAX_SEND_BODY_BYTES = 64 * 1024;
+/** How long the fetched Umami tracker script is cached in memory. */
+const UMAMI_SCRIPT_CACHE_MS = 60 * 60 * 1000;
 
-interface StaticAsset {
-  file: string;
-  contentType: string;
-  cacheControl: string;
-}
-
-/** Front-end ES modules served from `public/js/` (entry point: main.js). */
-const JS_MODULES = [
-  "main",
-  "format",
-  "dom",
-  "api",
-  "webrtc",
-  "network",
-  "fingerprint",
-  "render",
-  "report",
-  "theme",
-];
-
-/** Self-hosted webfonts served from `public/fonts/`. */
-const FONT_FILES = [
-  "schibsted-grotesk.woff2",
-  "ibm-plex-mono-400.woff2",
-  "ibm-plex-mono-500.woff2",
-  "ibm-plex-mono-600.woff2",
-];
+/** Rate-limit window shared by the upstream-hitting API routes. */
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+/**
+ * Per-IP request cap within the window. `/api/info` proxies ipapi.is (free tier
+ * 1k req/day) so it's the tighter of the two; a normal page load makes ~2 calls
+ * and a Refresh ~2 more, leaving generous headroom for humans while cutting off
+ * scripted abuse. `/api/send` only spends Umami's own quota, so it's looser.
+ */
+const DEFAULT_INFO_RATE_LIMIT = 30;
+const DEFAULT_SEND_RATE_LIMIT = 60;
 
 /**
- * Explicit allowlist of servable paths → files. An allowlist (rather than resolving
- * arbitrary paths against the public root) is what prevents path-traversal access.
+ * Content-Security-Policy and friends, expressed through Hono's typed
+ * secureHeaders middleware. When the frontend starts talking to a new external
+ * origin, add it to `connectSrc` here or the browser will block the request.
  */
-const PUBLIC_FILES: Map<string, StaticAsset> = new Map();
-const register = (route: string, file: string, cacheControl: string) =>
-  PUBLIC_FILES.set(route, { file, contentType: contentTypeFor(file), cacheControl });
+const securityMiddleware = secureHeaders({
+  contentSecurityPolicy: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    connectSrc: [
+      "'self'",
+      "https://1.1.1.1",
+      "https://ipv6.icanhazip.com",
+      "https://cloudflare-dns.com",
+    ],
+    imgSrc: ["'self'", "data:"],
+    styleSrc: ["'self'"],
+    fontSrc: ["'self'"],
+    baseUri: ["'none'"],
+    formAction: ["'none'"],
+    frameAncestors: ["'none'"],
+  },
+  crossOriginOpenerPolicy: "same-origin",
+  crossOriginResourcePolicy: "same-origin",
+  // Leave COEP off — enabling it would break the cross-origin probe fetches.
+  crossOriginEmbedderPolicy: false,
+  referrerPolicy: "no-referrer",
+  strictTransportSecurity: "max-age=63072000; includeSubDomains; preload",
+  xContentTypeOptions: "nosniff",
+  xFrameOptions: "DENY",
+  // Opt out of the Topics API. (interest-cohort / FLoC is dead and no longer emitted.)
+  permissionsPolicy: { browsingTopics: [] },
+});
 
-register("/", "index.html", NO_STORE);
-register("/index.html", "index.html", NO_STORE);
-register("/styles.css", "styles.css", ASSET_CACHE);
-for (const name of JS_MODULES) {
-  register(`/js/${name}.js`, `js/${name}.js`, ASSET_CACHE);
-}
-for (const file of FONT_FILES) {
-  register(`/fonts/${file}`, `fonts/${file}`, FONT_CACHE);
-}
-
-const DEFAULT_SECURITY_HEADERS = {
-  "Content-Security-Policy": [
-    "default-src 'self'",
-    "script-src 'self'",
-    "connect-src 'self' https://1.1.1.1 https://ipv6.icanhazip.com https://cloudflare-dns.com",
-    "img-src 'self' data:",
-    "style-src 'self'",
-    "font-src 'self'",
-    "base-uri 'none'",
-    "form-action 'none'",
-    "frame-ancestors 'none'",
-  ].join("; "),
-  "Cross-Origin-Opener-Policy": "same-origin",
-  "Cross-Origin-Resource-Policy": "same-origin",
-  "Permissions-Policy": "interest-cohort=(), browsing-topics=()",
-  "Referrer-Policy": "no-referrer",
-  "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
-  "X-Content-Type-Options": "nosniff",
-};
-
+/** Request headers we never echo back from `/api/headers` (hop-by-hop/sensitive). */
 const HIDDEN_HEADERS = new Set([
   "connection",
   "host",
@@ -101,217 +84,174 @@ const HIDDEN_HEADERS = new Set([
   "upgrade",
 ]);
 
-type HeaderMap = Record<string, string>;
-
-function writeResponse(
-  res: ServerResponse,
-  statusCode: number,
-  headers: HeaderMap,
-  body: string | Buffer,
-): void {
-  res.writeHead(statusCode, { ...DEFAULT_SECURITY_HEADERS, ...headers });
-  res.end(body);
-}
-
-function writeText(res: ServerResponse, statusCode: number, body: string): void {
-  writeResponse(
-    res,
-    statusCode,
-    { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": NO_STORE },
-    body,
-  );
-}
-
-function writeJson(
-  res: ServerResponse,
-  statusCode: number,
-  body: unknown,
-  headers: HeaderMap = {},
-): void {
-  writeResponse(
-    res,
-    statusCode,
-    { "Content-Type": "application/json; charset=utf-8", "Cache-Control": NO_STORE, ...headers },
-    JSON.stringify(body),
-  );
-}
-
-async function servePublicFile(
-  res: ServerResponse,
-  publicRoot: URL,
-  pathname: string,
-): Promise<void> {
-  const asset = PUBLIC_FILES.get(pathname);
-  if (!asset) {
-    writeText(res, 404, "Not found");
-    return;
-  }
-
-  try {
-    const body = await readFile(new URL(asset.file, publicRoot));
-    writeResponse(
-      res,
-      200,
-      { "Content-Type": asset.contentType, "Cache-Control": asset.cacheControl },
-      body,
-    );
-  } catch (err) {
-    const code = err && typeof err === "object" && "code" in err ? err.code : "";
-    if (code === "ENOENT") {
-      writeText(res, 404, "Not found");
-    } else {
-      writeText(res, 500, "Internal Server Error");
-    }
-  }
-}
-
-export interface AppServerOptions {
-  fetchImpl?: typeof fetch;
+export interface AppOptions {
+  fetchImpl?: FetchLike;
   ipApiBaseUrl?: string;
-  publicRoot?: URL;
+  publicRoot?: string;
   requestTimeoutMs?: number;
+  /** Max `/api/info` requests per client IP per minute (default 30). */
+  infoRateLimit?: number;
+  /** Max `/api/send` requests per client IP per minute (default 60). */
+  sendRateLimit?: number;
   /** Override for the Umami tracker script URL (proxied so adblockers see a first-party request). */
   umamiScriptUrl?: string;
   /** Override for the Umami event ingestion URL (proxied so adblockers see a first-party request). */
   umamiSendUrl?: string;
 }
 
-const UMAMI_SCRIPT_CACHE_MS = 60 * 60 * 1000;
+/** Echo request headers minus hop-by-hop/sensitive ones. */
+function visibleHeaders(headers: Headers): Record<string, string> {
+  const visible: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    if (!HIDDEN_HEADERS.has(key)) visible[key] = value;
+  });
+  return visible;
+}
 
-export function createAppServer(options: AppServerOptions = {}): Server {
+export function createApp(options: AppOptions = {}) {
   const {
     fetchImpl = fetch,
     ipApiBaseUrl = "https://api.ipapi.is",
-    publicRoot = new URL("../public/", import.meta.url),
+    // Absolute + module-relative so serving works regardless of the process cwd.
+    publicRoot = new URL("../public", import.meta.url).pathname,
     requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+    infoRateLimit = DEFAULT_INFO_RATE_LIMIT,
+    sendRateLimit = DEFAULT_SEND_RATE_LIMIT,
     umamiScriptUrl = "https://cloud.umami.is/script.js",
     umamiSendUrl = "https://api.umami.is/api/send",
   } = options;
 
-  let scriptCache: { body: Buffer; fetchedAt: number; contentType: string } | null = null;
+  const app = new Hono();
 
-  async function proxyUmamiScript(res: ServerResponse): Promise<void> {
+  app.use("*", securityMiddleware);
+
+  /** Best-effort client IP: proxy headers first, socket address as a fallback. */
+  const clientIpFor = (c: Context): string => {
+    let socketAddress: string | undefined;
+    try {
+      socketAddress = getConnInfo(c).remote.address;
+    } catch {
+      socketAddress = undefined;
+    }
+    return getClientIp(c.req.raw.headers, socketAddress);
+  };
+
+  const setStaticCache = (path: string, c: { header: (k: string, v: string) => void }) => {
+    if (path.endsWith(".woff2")) c.header("Cache-Control", FONT_CACHE);
+    else if (path.endsWith(".html")) c.header("Cache-Control", NO_STORE);
+    else c.header("Cache-Control", ASSET_CACHE);
+  };
+
+  app.get("/health", (c) => {
+    c.header("Cache-Control", NO_STORE);
+    return c.text("ok");
+  });
+
+  app.get(
+    "/api/info",
+    rateLimit({ windowMs: RATE_LIMIT_WINDOW_MS, limit: infoRateLimit, keyGenerator: clientIpFor }),
+    async (c) => {
+      const requested = c.req.query("ip")?.trim() ?? "";
+      if (requested && !isProbablyIp(requested)) {
+        return c.json({ error: "invalid_ip" }, 400);
+      }
+
+      const ip = requested || clientIpFor(c);
+      try {
+        const data = await getIpInfo(ip, {
+          fetchImpl,
+          ipApiBaseUrl,
+          timeoutMs: requestTimeoutMs,
+        });
+        c.header("Cache-Control", NO_STORE);
+        c.header("Access-Control-Allow-Origin", "*");
+        return c.json(data);
+      } catch (err) {
+        return c.json(
+          {
+            error: "upstream_failed",
+            message: err instanceof Error ? err.message : String(err),
+          },
+          502,
+        );
+      }
+    },
+  );
+
+  app.get("/api/headers", (c) => {
+    c.header("Cache-Control", NO_STORE);
+    c.header("Access-Control-Allow-Origin", "*");
+    return c.json(visibleHeaders(c.req.raw.headers));
+  });
+
+  // First-party proxy of the Umami tracker script so adblockers don't filter it.
+  let scriptCache: { body: ArrayBuffer; fetchedAt: number; contentType: string } | null = null;
+  app.get("/script.js", async (c) => {
     try {
       if (!scriptCache || Date.now() - scriptCache.fetchedAt > UMAMI_SCRIPT_CACHE_MS) {
         const upstream = await fetchImpl(umamiScriptUrl, {
           signal: AbortSignal.timeout(requestTimeoutMs),
         });
-        if (!upstream.ok) {
-          writeText(res, 502, "umami script fetch failed");
-          return;
-        }
+        if (!upstream.ok) return c.text("umami script fetch failed", 502);
         scriptCache = {
-          body: Buffer.from(await upstream.arrayBuffer()),
+          body: await upstream.arrayBuffer(),
           fetchedAt: Date.now(),
           contentType: upstream.headers.get("content-type") ?? "text/javascript; charset=utf-8",
         };
       }
-      writeResponse(
-        res,
-        200,
-        {
-          "Content-Type": scriptCache.contentType,
-          "Cache-Control": "public, max-age=3600",
-        },
-        scriptCache.body,
-      );
+      c.header("Content-Type", scriptCache.contentType);
+      c.header("Cache-Control", SCRIPT_CACHE);
+      return c.body(scriptCache.body);
     } catch {
-      writeText(res, 502, "umami script fetch failed");
+      return c.text("umami script fetch failed", 502);
     }
-  }
-
-  async function proxyUmamiSend(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    try {
-      const body = await readRequestBody(req);
-      const headers: Record<string, string> = {
-        "Content-Type": String(req.headers["content-type"] ?? "application/json"),
-      };
-      const ua = req.headers["user-agent"];
-      if (typeof ua === "string") headers["User-Agent"] = ua;
-      const clientIp = getClientIp(req.headers, req.socket.remoteAddress);
-      if (clientIp) headers["X-Forwarded-For"] = clientIp;
-
-      const upstream = await fetchImpl(umamiSendUrl, {
-        method: "POST",
-        headers,
-        body,
-        signal: AbortSignal.timeout(requestTimeoutMs),
-      });
-      const respBody = Buffer.from(await upstream.arrayBuffer());
-      writeResponse(
-        res,
-        upstream.status,
-        {
-          "Content-Type": upstream.headers.get("content-type") ?? "application/json; charset=utf-8",
-          "Cache-Control": NO_STORE,
-        },
-        respBody,
-      );
-    } catch {
-      writeJson(res, 502, { error: "umami_send_failed" });
-    }
-  }
-
-  return createServer(async (req, res) => {
-    const url = new URL(req.url ?? "/", "http://localhost");
-
-    if (url.pathname === "/api/send" && req.method === "POST") {
-      await proxyUmamiSend(req, res);
-      return;
-    }
-
-    if (req.method !== "GET" && req.method !== "HEAD") {
-      writeJson(res, 405, { error: "method_not_allowed" }, { Allow: "GET, HEAD" });
-      return;
-    }
-
-    if (url.pathname === "/script.js") {
-      await proxyUmamiScript(res);
-      return;
-    }
-
-    if (url.pathname === "/api/info") {
-      const requestedIp = url.searchParams.get("ip")?.trim() ?? "";
-      const ip = requestedIp || getClientIp(req.headers, req.socket.remoteAddress);
-      try {
-        const data = await getIpInfo(ip, { fetchImpl, ipApiBaseUrl, timeoutMs: requestTimeoutMs });
-        writeJson(res, 200, data, { "Access-Control-Allow-Origin": "*" });
-      } catch (err) {
-        writeJson(res, 502, {
-          error: "upstream_failed",
-          message: err instanceof Error ? err.message : String(err),
-        });
-      }
-      return;
-    }
-
-    if (url.pathname === "/api/headers") {
-      writeJson(res, 200, visibleHeaders(req.headers), { "Access-Control-Allow-Origin": "*" });
-      return;
-    }
-
-    if (url.pathname === "/health") {
-      writeText(res, 200, "ok");
-      return;
-    }
-
-    await servePublicFile(res, publicRoot, url.pathname);
   });
-}
 
-async function readRequestBody(req: IncomingMessage): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks);
-}
+  // First-party proxy that forwards Umami events, propagating the client IP.
+  app.post(
+    "/api/send",
+    rateLimit({ windowMs: RATE_LIMIT_WINDOW_MS, limit: sendRateLimit, keyGenerator: clientIpFor }),
+    bodyLimit({
+      maxSize: MAX_SEND_BODY_BYTES,
+      onError: (c) => c.json({ error: "payload_too_large" }, 413),
+    }),
+    async (c) => {
+      try {
+        const body = await c.req.arrayBuffer();
+        const headers: Record<string, string> = {
+          "Content-Type": c.req.header("content-type") ?? "application/json",
+        };
+        const ua = c.req.header("user-agent");
+        if (ua) headers["User-Agent"] = ua;
+        const clientIp = clientIpFor(c);
+        if (clientIp) headers["X-Forwarded-For"] = clientIp;
 
-/** Echo request headers minus hop-by-hop/sensitive ones. */
-function visibleHeaders(headers: IncomingHttpHeaders): IncomingHttpHeaders {
-  const visible: IncomingHttpHeaders = {};
-  for (const [key, value] of Object.entries(headers)) {
-    if (!HIDDEN_HEADERS.has(key)) visible[key] = value;
-  }
-  return visible;
+        const upstream = await fetchImpl(umamiSendUrl, {
+          method: "POST",
+          headers,
+          body,
+          signal: AbortSignal.timeout(requestTimeoutMs),
+        });
+        c.header(
+          "Content-Type",
+          upstream.headers.get("content-type") ?? "application/json; charset=utf-8",
+        );
+        c.header("Cache-Control", NO_STORE);
+        return c.body(await upstream.arrayBuffer(), upstream.status as ContentfulStatusCode);
+      } catch {
+        return c.json({ error: "umami_send_failed" }, 502);
+      }
+    },
+  );
+
+  // `root` (unlike `path`) accepts an absolute directory, so serving stays
+  // independent of the process cwd. `/` rewrites to the index file.
+  const staticOptions = { root: publicRoot, onFound: setStaticCache };
+  app.get("/", serveStatic({ ...staticOptions, rewriteRequestPath: () => "/index.html" }));
+  app.get("/index.html", serveStatic(staticOptions));
+  app.get("/assets/*", serveStatic(staticOptions));
+
+  app.notFound((c) => c.text("Not found", 404));
+
+  return app;
 }

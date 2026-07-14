@@ -1,14 +1,26 @@
+# VCS + CI
 .git
 .gitignore
+.github
+
+# Docs + tooling not needed in the image
 *.md
-*.toml
+biome.json
+tsconfig.json
+railway.json
+mise.toml
+Dockerfile
+.dockerignore
+
+# Agent / editor internals
 .claude
 .storecode
+.vscode
+.idea
+
+# Tests
 test
 
-# Dev-only tooling files (editor/typecheck), not needed at runtime
-**/jsconfig.json
-**/*.d.ts
-tsconfig.json
-biome.json
+# Dependencies + build output (installed / rebuilt inside the image)
 node_modules
+public/assets/js

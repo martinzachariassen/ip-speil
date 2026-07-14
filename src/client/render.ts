@@ -1,9 +1,8 @@
-// @ts-check
 // All DOM rendering for the scan results. Each function writes into a section
 // of the page; none fetch data or hold state.
 
-import { fact, kv, note } from "./dom.js";
-import { getAudioHash, getCanvasHash, getColorGamut, getWebGL } from "./fingerprint.js";
+import { byId, fact, kv, note } from "./dom.ts";
+import { getAudioHash, getCanvasHash, getColorGamut, getWebGL } from "./fingerprint.ts";
 import {
   esc,
   flag,
@@ -11,36 +10,37 @@ import {
   ispSuggestsVpn,
   isSuccessfulLookup,
   networkLabel,
-} from "./format.js";
+} from "./format.ts";
+import type { CFTrace, HeaderMap, IpInfo, WebRTCResult } from "./types.ts";
 
 /** Render the hero: IP, location summary, VPN/proxy status line. */
-export function renderHero(d, isVPN) {
+export function renderHero(d: IpInfo, isVPN: boolean) {
   const hasLookup = isSuccessfulLookup(d);
   // Zero-width spaces after colons let IPv6 wrap at segment boundaries on narrow
-  // viewports instead of breaking mid-hextet. Copy uses the raw IP from main.js.
-  const displayIp = hasLookup ? d.query.replace(/:/g, ":​") : "Unavailable";
-  document.getElementById("ip-display").textContent = displayIp;
-  document.getElementById("copy-hint").textContent = hasLookup ? "click to copy" : "try refresh";
-  document.getElementById("ip-btn").classList.remove("copied");
+  // viewports instead of breaking mid-hextet. Copy uses the raw IP from main.ts.
+  const displayIp = hasLookup && d.query ? d.query.replace(/:/g, ":​") : "Unavailable";
+  byId("ip-display").textContent = displayIp;
+  byId("copy-hint").textContent = hasLookup ? "click to copy" : "try refresh";
+  byId("ip-btn").classList.remove("copied");
 
   const f = flag(d.countryCode);
-  document.getElementById("hero-sub").textContent = hasLookup
+  byId("hero-sub").textContent = hasLookup
     ? [d.isp, [f, d.city, d.country].filter(Boolean).join(" ")].filter(Boolean).join(" · ")
     : "IP lookup failed or returned no usable result";
 
-  const parts = [];
+  const parts: [string, string][] = [];
   if (!hasLookup) parts.push(["off", "Lookup unavailable"]);
   else if (isVPN) parts.push(["bad", "VPN / proxy signal"]);
   else if (d.hosting) parts.push(["warn", "Datacenter IP"]);
   else parts.push(["ok", "No VPN signal"]);
   if (hasLookup && d.mobile) parts.push(["off", "Mobile network"]);
-  document.getElementById("hero-status").innerHTML = parts
+  byId("hero-status").innerHTML = parts
     .map(([dot, text]) => `<span class="dot ${dot}"></span><span>${esc(text)}</span>`)
     .join("");
 }
 
-export function renderFacts(d, ipv6) {
-  const el = document.getElementById("facts");
+export function renderFacts(d: IpInfo, ipv6: string | null) {
+  const el = byId("facts");
   const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   if (!isSuccessfulLookup(d)) {
@@ -85,8 +85,8 @@ export function renderFacts(d, ipv6) {
   el.innerHTML = html;
 }
 
-export function renderPrivacy(d, webrtc, doh) {
-  const el = document.getElementById("body-privacy");
+export function renderPrivacy(d: IpInfo, webrtc: WebRTCResult, doh: boolean | null) {
+  const el = byId("body-privacy");
   if (!isSuccessfulLookup(d)) {
     el.innerHTML = note(
       "off",
@@ -117,9 +117,9 @@ export function renderPrivacy(d, webrtc, doh) {
     "colocation",
     "serverius",
   ].some((k) => ispText.includes(k));
-  const webrtcLeak = webrtc.pub.length > 0 && !webrtc.pub.includes(d.query);
+  const webrtcLeak = webrtc.pub.length > 0 && !webrtc.pub.includes(d.query ?? "");
 
-  const items = [];
+  const items: string[] = [];
   if (isTor) {
     items.push(
       note(
@@ -214,8 +214,8 @@ export function renderPrivacy(d, webrtc, doh) {
   el.innerHTML = items.join("");
 }
 
-export function renderBrowser(ipTimezone) {
-  const el = document.getElementById("body-browser");
+export function renderBrowser(ipTimezone: string | undefined) {
+  const el = byId("body-browser");
   const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const tzMatch = !ipTimezone || browserTz === ipTimezone;
   const dnt =
@@ -238,8 +238,13 @@ export function renderBrowser(ipTimezone) {
   el.innerHTML = html;
 }
 
-export function renderIPv6(ipv6, ipv6Info, cfTrace, publicIPv4Info) {
-  const el = document.getElementById("body-ipv6");
+export function renderIPv6(
+  ipv6: string | null,
+  ipv6Info: IpInfo | null,
+  cfTrace: CFTrace | null,
+  publicIPv4Info: IpInfo,
+) {
+  const el = byId("body-ipv6");
   let html = "";
 
   if (ipv6) {
@@ -270,7 +275,9 @@ export function renderIPv6(ipv6, ipv6Info, cfTrace, publicIPv4Info) {
     );
   }
 
-  const nav = performance.getEntriesByType("navigation")[0];
+  const nav = performance.getEntriesByType("navigation")[0] as
+    | PerformanceNavigationTiming
+    | undefined;
   const nextHop = nav?.nextHopProtocol;
   if (nextHop) html += kv("This page negotiated", esc(nextHop));
 
@@ -302,7 +309,7 @@ export function renderIPv6(ipv6, ipv6Info, cfTrace, publicIPv4Info) {
 }
 
 export async function renderFingerprint() {
-  const el = document.getElementById("body-fingerprint");
+  const el = byId("body-fingerprint");
   const [canvasHash, audioHash, webgl] = await Promise.all([
     getCanvasHash(),
     getAudioHash(),
@@ -346,8 +353,8 @@ export async function renderFingerprint() {
   el.innerHTML = html;
 }
 
-export function renderHeaders(headers) {
-  const el = document.getElementById("body-headers");
+export function renderHeaders(headers: HeaderMap) {
+  const el = byId("body-headers");
   const PRIORITY = [
     "user-agent",
     "accept-language",
@@ -383,9 +390,9 @@ export function renderHeaders(headers) {
       ));
 }
 
-export function renderWebRTC(webrtc, publicIP) {
-  const el = document.getElementById("body-webrtc");
-  const { pub = [], lan = [], relay = [], mdns = 0, candidates = [] } = webrtc;
+export function renderWebRTC(webrtc: WebRTCResult, publicIP: string | undefined) {
+  const el = byId("body-webrtc");
+  const { pub, lan, relay, mdns, candidates } = webrtc;
   const leak = pub.some((ip) => ip !== publicIP);
 
   let html = "";

@@ -1,24 +1,20 @@
 {
-  "//": "Strict typecheck for the server TypeScript. No emit — Node runs the .ts files directly via native type-stripping. The browser modules are checked loosely via public/js/jsconfig.json.",
+  "//": "Strict typecheck for the server TypeScript. No emit — Bun runs the .ts files directly (transpile-on-load, no build step). The browser modules live in src/client and are checked via src/client/tsconfig.json.",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "lib": [
-      "ES2023"
-    ],
-    "types": [
-      "node"
-    ],
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "lib": ["ESNext"],
+    "types": ["bun"],
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
-    "erasableSyntaxOnly": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["src/client"]
 }

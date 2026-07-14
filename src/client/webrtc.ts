@@ -1,9 +1,9 @@
-// @ts-check
 // WebRTC ICE-candidate inspection — surfaces public/local/relay IPs the
 // browser exposes to peers, used to detect VPN/routing leaks.
+import type { IceCandidateInfo, WebRTCResult } from "./types.ts";
 
 /** True if `ip` is an RFC1918 / link-local / loopback address. */
-export function isPrivateIp(ip) {
+export function isPrivateIp(ip: string): boolean {
   if (ip.includes(":")) {
     const lower = ip.toLowerCase();
     return (
@@ -27,7 +27,7 @@ export function isPrivateIp(ip) {
 }
 
 /** Parse the address and candidate type out of an ICE candidate string. */
-export function parseIceCandidate(candidate) {
+export function parseIceCandidate(candidate: string): { address: string; type: string } | null {
   const parts = candidate.trim().split(/\s+/);
   const typIndex = parts.indexOf("typ");
   if (parts.length < 8 || typIndex === -1) return null;
@@ -41,20 +41,22 @@ export function parseIceCandidate(candidate) {
  * Gather the IP candidates WebRTC exposes via a public STUN server.
  * Resolves after the first null candidate or a 3s timeout.
  */
-export async function getWebRTCIPs() {
+export async function getWebRTCIPs(): Promise<WebRTCResult> {
   return new Promise((resolve) => {
     try {
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }] });
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
+      });
       pc.createDataChannel("");
-      const pub = new Set();
-      const lan = new Set();
-      const relay = new Set();
-      const candidates = new Map();
+      const pub = new Set<string>();
+      const lan = new Set<string>();
+      const relay = new Set<string>();
+      const candidates = new Map<string, IceCandidateInfo>();
       let mdns = 0;
-      const addCandidate = (type, address, scope) => {
+      const addCandidate = (type: string, address: string, scope: string) => {
         candidates.set(`${type}|${address}|${scope}`, { type, address, scope });
       };
-      const done = () => ({
+      const done = (): WebRTCResult => ({
         pub: [...pub],
         lan: [...lan],
         relay: [...relay],
@@ -63,7 +65,7 @@ export async function getWebRTCIPs() {
       });
 
       pc.onicecandidate = (e) => {
-        if (!e?.candidate) {
+        if (!e.candidate) {
           pc.close();
           resolve(done());
           return;
