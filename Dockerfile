@@ -26,4 +26,4 @@ ENV PORT=3000
 EXPOSE 3000
 
 # Bun runs the TypeScript entry point directly (transpile-on-load) — no build step.
-CMD ["bun", "src/server.ts"]
+CMD ["bun", "src/server/index.ts"]

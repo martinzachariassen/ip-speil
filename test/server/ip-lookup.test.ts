@@ -1,12 +1,7 @@
 import { expect, test } from "bun:test";
 
-import {
-  type FetchLike,
-  getClientIp,
-  getIpInfo,
-  isProbablyIp,
-  isUnroutableIp,
-} from "../src/ip-lookup.ts";
+import { getClientIp, isProbablyIp, isUnroutableIp } from "../../src/server/lib/client-ip.ts";
+import { type FetchLike, getIpInfo } from "../../src/server/lib/ip-lookup.ts";
 
 const headers = (init: Record<string, string>) => new Headers(init);
 
