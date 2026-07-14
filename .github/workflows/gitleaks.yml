@@ -1,0 +1,33 @@
+name: Secret Scan
+
+# Belt-and-suspenders on top of GitHub's native secret scanning: gitleaks
+# fails the build if a commit (or PR diff) introduces something that looks
+# like a credential. Free for personal and public repositories.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: read the repo; the token lets the action annotate the PR.
+permissions:
+  contents: read
+
+concurrency:
+  group: gitleaks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so pushes to main scan every new commit, not just the tip.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

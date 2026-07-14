@@ -1,0 +1,54 @@
+name: Workflow Lint
+
+# Lint the GitHub Actions workflows themselves: actionlint for YAML/expression
+# and shell-in-`run` bugs, zizmor for security smells (template injection,
+# over-broad tokens, credential persistence).
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".github/zizmor.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/zizmor.yml"
+
+# Least privilege: both jobs only read the checked-out workflows.
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run actionlint
+        uses: raven-actions/actionlint@v2
+        with:
+          fail-on-error: true
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      # Pinned to zizmor 1.x; fail only on medium+ findings so low-severity
+      # style nits don't block, while template injection / excessive
+      # permissions / known-bad actions do. Config in .github/zizmor.yml.
+      - name: Run zizmor
+        run: uvx zizmor@1 --min-severity=medium .

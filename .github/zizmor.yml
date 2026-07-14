@@ -1,0 +1,19 @@
+# zizmor configuration — https://docs.zizmor.sh/configuration/
+#
+# Our workflows pin third-party actions to release tags (e.g. @v4), and the
+# github-actions Dependabot ecosystem keeps those tags current. Require at least
+# a ref pin so nothing floats on a mutable branch, but accept tag pins rather
+# than demanding a full commit SHA for every action.
+rules:
+  unpinned-uses:
+    ignore: []
+    config:
+      policies:
+        "*": ref-pin
+
+  # docker.yml builds the image only to smoke-test it (`load: true`) and never
+  # pushes it to a registry, so a poisoned GHA build cache can't reach a
+  # published/released artifact. The cache is a pure build-speed optimisation.
+  cache-poisoning:
+    ignore:
+      - docker.yml

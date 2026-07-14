@@ -6,6 +6,8 @@
 infer about your connection the moment you load it. *Speil* is Norwegian for **mirror**.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/martinzachariassen/ip-speil/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/martinzachariassen/ip-speil/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/martinzachariassen/ip-speil/codeql.yml?branch=main&label=CodeQL&style=flat-square)](https://github.com/martinzachariassen/ip-speil/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/martinzachariassen/ip-speil/badge?style=flat-square)](https://scorecard.dev/viewer/?uri=github.com/martinzachariassen/ip-speil)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 [![Bun](https://img.shields.io/badge/Bun-1.3-14151a?style=flat-square&logo=bun&logoColor=white)](https://bun.sh)
 [![Hono](https://img.shields.io/badge/Hono-4-e36002?style=flat-square&logo=hono&logoColor=white)](https://hono.dev)
@@ -171,8 +173,21 @@ proxied first-party. Running a scan does make your browser contact a few third p
 directly (icanhazip, Cloudflare, bash.ws); the geolocation providers are called server-side
 and cached.
 
-**Verified in CI.** [`ci.yml`](.github/workflows/ci.yml) bundles the client, type-checks
-server + client, lints with Biome, and runs the test suite on every push and pull request.
+**Verified in CI.** Several workflows run on every push and pull request:
+
+| Workflow | What it guards |
+| --- | --- |
+| [`ci.yml`](.github/workflows/ci.yml) | Bundles the client, type-checks server + client, lints with Biome, runs the test suite |
+| [`docker.yml`](.github/workflows/docker.yml) | Builds the exact image Railway deploys, smoke-tests `/health`, and **asserts the security headers above are actually served** |
+| [`lighthouse.yml`](.github/workflows/lighthouse.yml) | Boots the server and runs Lighthouse against `/` — accessibility and best-practices are hard gates |
+| [`codeql.yml`](.github/workflows/codeql.yml) | Static analysis (security-and-quality) for JS/TS, weekly + on change |
+| [`scorecard.yml`](.github/workflows/scorecard.yml) | OpenSSF Scorecard — supply-chain posture, published to the Security tab |
+| [`gitleaks.yml`](.github/workflows/gitleaks.yml) | Fails the build if a diff introduces something that looks like a secret |
+| [`dependency-review.yml`](.github/workflows/dependency-review.yml) | Blocks PRs that pull in a vulnerable or badly-licensed dependency |
+| [`workflow-lint.yml`](.github/workflows/workflow-lint.yml) | Lints the workflows themselves with actionlint + zizmor |
+
+Dependencies (npm, Actions, and the Docker base image) are kept current by Dependabot
+([`dependabot.yml`](.github/dependabot.yml)).
 
 > [!NOTE]
 > The cache, daily budget, and rate limiter all live in **process memory** — correct for a

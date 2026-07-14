@@ -35,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -68,6 +70,32 @@ jobs:
           echo "::error::Health check never succeeded — container logs follow:"
           docker logs ip-speil-ci
           exit 1
+
+      # The CSP + secure headers are a product feature (src/server/security.ts),
+      # so assert the deployed image actually serves them. Guards against a
+      # middleware regression silently shipping.
+      - name: Assert security headers
+        run: |
+          headers="$(curl -fsS -D - -o /dev/null http://localhost:3000/)"
+          echo "$headers"
+          require() {
+            if echo "$headers" | grep -iq "$1"; then
+              echo "ok: $1"
+            else
+              echo "::error::missing or incorrect header: $1"
+              docker logs ip-speil-ci
+              exit 1
+            fi
+          }
+          require "content-security-policy:.*default-src 'self'"
+          require "content-security-policy:.*script-src 'self'"
+          require "x-content-type-options: nosniff"
+          require "x-frame-options: DENY"
+          require "referrer-policy: no-referrer"
+          require "strict-transport-security: max-age=63072000"
+          require "cross-origin-opener-policy: same-origin"
+          require "cross-origin-resource-policy: same-origin"
+          require "permissions-policy:.*browsing-topics"
 
       - name: Tear down
         if: always()
