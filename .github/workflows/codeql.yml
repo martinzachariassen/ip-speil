@@ -26,6 +26,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # Interpreted language: no build step, so autobuild/manual build is skipped.
       - name: Initialize CodeQL
