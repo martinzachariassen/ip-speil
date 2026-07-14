@@ -1,0 +1,80 @@
+name: Lighthouse
+
+# Frontend quality gate: build the client, boot the real server, and run
+# Lighthouse against `/`. Accessibility and best-practices are hard gates;
+# performance and SEO are warnings (CI timing is noisier than a real browser).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/client/**"
+      - "public/**"
+      - "package.json"
+      - "bun.lock"
+      - "lighthouserc.json"
+      - ".github/workflows/lighthouse.yml"
+  pull_request:
+    paths:
+      - "src/client/**"
+      - "public/**"
+      - "package.json"
+      - "bun.lock"
+      - "lighthouserc.json"
+      - ".github/workflows/lighthouse.yml"
+
+# Least privilege: read the repo; results are uploaded as a run artifact.
+permissions:
+  contents: read
+
+concurrency:
+  group: lighthouse-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Lighthouse audit (/)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build client
+        run: bun run build
+
+      # Start the production server the same way `bun start` does, in the
+      # background, and wait for the healthcheck before auditing.
+      - name: Start server
+        run: |
+          PORT=3000 nohup bun start > server.log 2>&1 &
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:3000/health | grep -q "ok"; then
+              echo "Server healthy after ${i} attempt(s)."
+              exit 0
+            fi
+            echo "Attempt ${i}: not ready yet, retrying in 1s..."
+            sleep 1
+          done
+          echo "::error::Server never became healthy — logs follow:"
+          cat server.log
+          exit 1
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: ./lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: false
+
+      - name: Stop server
+        if: always()
+        run: kill "$SERVER_PID" 2>/dev/null || true

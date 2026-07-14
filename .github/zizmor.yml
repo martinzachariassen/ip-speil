@@ -1,0 +1,11 @@
+# zizmor configuration — https://docs.zizmor.sh/configuration/
+#
+# Our workflows pin third-party actions to release tags (e.g. @v4), and the
+# github-actions Dependabot ecosystem keeps those tags current. Require at least
+# a ref pin so nothing floats on a mutable branch, but accept tag pins rather
+# than demanding a full commit SHA for every action.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "*": ref-pin
