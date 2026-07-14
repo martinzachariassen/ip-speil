@@ -1,0 +1,74 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "bun.lock"
+      - "railway.json"
+      - ".github/workflows/docker.yml"
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "bun.lock"
+      - "railway.json"
+      - ".github/workflows/docker.yml"
+
+# Least privilege: build happens locally, nothing is pushed to a registry.
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-smoke:
+    name: Build image and smoke-test /health
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build the same image Railway deploys, with GHA layer caching. Load it
+      # into the local daemon so the smoke test can run it.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ip-speil:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run container
+        run: docker run -d --name ip-speil-ci -p 3000:3000 ip-speil:ci
+
+      # Poll the same endpoint Railway uses for its healthcheck. Fail loudly
+      # (and dump logs) if the server never comes up.
+      - name: Smoke-test /health
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:3000/health | grep -q "ok"; then
+              echo "Health check passed after ${i} attempt(s)."
+              exit 0
+            fi
+            echo "Attempt ${i}: not ready yet, retrying in 1s..."
+            sleep 1
+          done
+          echo "::error::Health check never succeeded — container logs follow:"
+          docker logs ip-speil-ci
+          exit 1
+
+      - name: Tear down
+        if: always()
+        run: docker rm -f ip-speil-ci || true
