@@ -1,0 +1,24 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [main]
+
+# Least privilege: read the diff, and comment the summary on the PR.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fails the PR if it introduces a dependency with a known vulnerability
+      # or an incompatible license, and posts a summary comment.
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
