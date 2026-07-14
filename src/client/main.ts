@@ -1,8 +1,8 @@
-// @ts-check
 // Entry point: orchestrates the scan, wires up interactions, owns UI state.
-import { fetchHeaders, fetchInfo } from "./api.js";
-import { ispSuggestsVpn } from "./format.js";
-import { getCFTrace, getDohReachable, getIPv6 } from "./network.js";
+import { fetchHeaders, fetchInfo } from "./api.ts";
+import { byId } from "./dom.ts";
+import { ispSuggestsVpn } from "./format.ts";
+import { getCFTrace, getDohReachable, getIPv6 } from "./network.ts";
 import {
   renderBrowser,
   renderFacts,
@@ -12,26 +12,26 @@ import {
   renderIPv6,
   renderPrivacy,
   renderWebRTC,
-} from "./render.js";
-import { buildReport } from "./report.js";
-import { initTheme, toggleTheme } from "./theme.js";
-import { getWebRTCIPs } from "./webrtc.js";
+} from "./render.ts";
+import { buildReport } from "./report.ts";
+import { initTheme, toggleTheme } from "./theme.ts";
+import { getWebRTCIPs } from "./webrtc.ts";
 
 const SECTION_IDS = ["privacy", "browser", "ipv6", "fingerprint", "headers", "webrtc"];
 
 let currentIP = "";
-let latestReport = null;
+let latestReport: ReturnType<typeof buildReport> | null = null;
 
 function showSkeletons() {
-  document.getElementById("ip-display").innerHTML = '<span class="skel skel-ip"></span>';
-  document.getElementById("copy-hint").textContent = "click to copy";
-  document.getElementById("ip-btn").classList.remove("copied");
-  document.getElementById("hero-sub").innerHTML = '<span class="skel skel-text"></span>';
-  document.getElementById("hero-status").innerHTML = "";
-  document.getElementById("facts").innerHTML =
+  byId("ip-display").innerHTML = '<span class="skel skel-ip"></span>';
+  byId("copy-hint").textContent = "click to copy";
+  byId("ip-btn").classList.remove("copied");
+  byId("hero-sub").innerHTML = '<span class="skel skel-text"></span>';
+  byId("hero-status").innerHTML = "";
+  byId("facts").innerHTML =
     '<div class="fact"><div class="fact-l">Loading</div><div class="fact-v"><span class="skel skel-text"></span></div></div>';
   for (const id of SECTION_IDS) {
-    document.getElementById(`body-${id}`).innerHTML = '<span class="skel skel-block"></span>';
+    byId(`body-${id}`).innerHTML = '<span class="skel skel-block"></span>';
   }
 }
 
@@ -78,8 +78,8 @@ async function load() {
 function copyIP() {
   if (!currentIP) return;
   navigator.clipboard.writeText(currentIP).then(() => {
-    const btn = document.getElementById("ip-btn");
-    const hint = document.getElementById("copy-hint");
+    const btn = byId("ip-btn");
+    const hint = byId("copy-hint");
     hint.textContent = "copied ✓";
     btn.classList.add("copied");
     setTimeout(() => {
@@ -90,7 +90,7 @@ function copyIP() {
 }
 
 function copyReport() {
-  const btn = document.getElementById("report-btn");
+  const btn = byId("report-btn");
   if (!latestReport || !navigator.clipboard) return;
   navigator.clipboard.writeText(JSON.stringify(latestReport, null, 2)).then(() => {
     const original = btn.textContent;

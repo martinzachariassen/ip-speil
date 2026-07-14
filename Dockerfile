@@ -1,19 +1,29 @@
-FROM node:24-alpine
-
-RUN addgroup -S app && adduser -S app -G app
-
+# --- Build stage: bundle the client TypeScript to public/js ---------------
+FROM oven/bun:1-alpine AS build
 WORKDIR /app
 
-# Zero runtime dependencies → no `npm install`. Copy manifest + source only.
-COPY package.json ./
+# The client bundle has no npm dependencies, so no install is needed here.
 COPY src ./src
 COPY public ./public
+RUN bun build src/client/main.ts --outdir public/assets/js --target browser --minify --sourcemap=linked
 
-RUN chown -R app:app /app
-USER app
+# --- Runtime stage --------------------------------------------------------
+FROM oven/bun:1-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Install runtime deps only (Hono). Dev tooling stays out of the image.
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile --production
+
+COPY src ./src
+COPY --from=build /app/public ./public
+
+# oven/bun ships a non-root `bun` user.
+USER bun
 
 ENV PORT=3000
 EXPOSE 3000
 
-# Node 24 runs the TypeScript entry point directly via native type-stripping — no build step.
-CMD ["node", "src/server.ts"]
+# Bun runs the TypeScript entry point directly (transpile-on-load) — no build step.
+CMD ["bun", "src/server.ts"]

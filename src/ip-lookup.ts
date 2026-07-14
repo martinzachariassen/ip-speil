@@ -1,7 +1,14 @@
-import type { IncomingHttpHeaders } from "node:http";
+import { isIP } from "node:net";
 
 /** Default timeout for upstream ipapi.is requests, in milliseconds. */
 export const DEFAULT_REQUEST_TIMEOUT_MS = 8000;
+
+/**
+ * Minimal fetch shape we depend on. Using this instead of `typeof fetch` lets
+ * tests inject a plain mock without having to satisfy Bun's static `fetch`
+ * properties (e.g. `preconnect`).
+ */
+export type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 /** Upstream base URL — ipapi.is offers free HTTPS with 1k req/day, no key. */
 const DEFAULT_BASE_URL = "https://api.ipapi.is";
@@ -69,7 +76,7 @@ interface IpapiIsResponse {
 }
 
 export interface IpLookupOptions {
-  fetchImpl?: typeof fetch;
+  fetchImpl?: FetchLike;
   ipApiBaseUrl?: string;
   timeoutMs?: number;
 }
@@ -82,26 +89,22 @@ export interface IpLookupOptions {
  * the request source IP — that way `localhost:3000` still resolves the dev
  * machine's WAN IP and the UI gets real data.
  */
-export function getClientIp(headers: IncomingHttpHeaders, socketRemoteAddress?: string): string {
-  const forwarded = headers["x-forwarded-for"];
-  const realIp = headers["x-real-ip"];
-
-  if (typeof forwarded === "string") {
+export function getClientIp(headers: Headers, socketRemoteAddress?: string): string {
+  const forwarded = headers.get("x-forwarded-for");
+  if (forwarded) {
     const first = forwarded.split(",")[0]?.trim();
     if (first) return first;
-  } else if (Array.isArray(forwarded)) {
-    const first = forwarded[0]?.split(",")[0]?.trim();
-    if (first) return first;
   }
 
-  if (typeof realIp === "string") {
-    const trimmed = realIp.trim();
-    if (trimmed) return trimmed;
-  }
+  const realIp = headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
 
   const socket = normaliseSocketAddress(socketRemoteAddress);
   return isUnroutableIp(socket) ? "" : socket;
 }
+
+/** True when a string is a syntactically valid IPv4 or IPv6 address. */
+export const isProbablyIp = (value: string): boolean => isIP(value) !== 0;
 
 /** Strip the IPv6-mapped IPv4 prefix (`::ffff:1.2.3.4` → `1.2.3.4`). */
 function normaliseSocketAddress(address: string | undefined): string {

@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Build output (client bundle produced by `bun run build`)
+/public/assets/js/
+
 # Environment
 .env
 .env.local

@@ -1,9 +1,9 @@
-// @ts-check
 // Builds the copyable, redacted diagnostics report.
-import { networkLabel } from "./format.js";
+import { networkLabel } from "./format.ts";
+import type { CFTrace, HeaderMap, IpInfo, WebRTCResult } from "./types.ts";
 
 /** Redact an IP for sharing: keep a coarse prefix, drop the host bits. */
-export function redactIp(ip) {
+export function redactIp(ip: string | null | undefined): string | null {
   if (!ip) return null;
   if (ip.includes(":")) {
     const parts = ip.split(":").filter(Boolean);
@@ -14,7 +14,15 @@ export function redactIp(ip) {
 }
 
 /** Assemble a redacted summary object from all collected scan data. */
-export function buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers, doh) {
+export function buildReport(
+  data: IpInfo,
+  webrtc: WebRTCResult,
+  ipv6: string | null,
+  ipv6Info: IpInfo | null,
+  cfTrace: CFTrace | null,
+  headers: HeaderMap,
+  doh: boolean | null,
+) {
   return {
     generatedAt: new Date().toISOString(),
     httpIp: redactIp(data.query),
@@ -34,14 +42,14 @@ export function buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers, doh)
       timezoneMismatch: !!(
         data.timezone && Intl.DateTimeFormat().resolvedOptions().timeZone !== data.timezone
       ),
-      webrtcDifferentPublicIp: (webrtc.pub || []).some((ip) => ip !== data.query),
+      webrtcDifferentPublicIp: webrtc.pub.some((ip) => ip !== data.query),
     },
     webrtc: {
-      publicCount: webrtc.pub?.length || 0,
-      privateCount: webrtc.lan?.length || 0,
-      relayCount: webrtc.relay?.length || 0,
-      mdnsMaskedCount: webrtc.mdns || 0,
-      candidateTypes: [...new Set((webrtc.candidates || []).map((c) => c.type))],
+      publicCount: webrtc.pub.length,
+      privateCount: webrtc.lan.length,
+      relayCount: webrtc.relay.length,
+      mdnsMaskedCount: webrtc.mdns,
+      candidateTypes: [...new Set(webrtc.candidates.map((c) => c.type))],
     },
     cloudflare: cfTrace
       ? {
@@ -52,7 +60,7 @@ export function buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers, doh)
           http: cfTrace.http || null,
         }
       : null,
-    headersObserved: Object.keys(headers || {}).sort(),
+    headersObserved: Object.keys(headers ?? {}).sort(),
     note: "Redacted report: exact IP addresses and full header values are intentionally omitted.",
   };
 }

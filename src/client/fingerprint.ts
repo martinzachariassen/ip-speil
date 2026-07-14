@@ -1,18 +1,19 @@
-// @ts-check
 // Browser-fingerprint probes. All computed locally; never sent to the server.
+import type { WebGLInfo } from "./types.ts";
 
 /** WebGL renderer/vendor strings (unmasked when the extension is available). */
-export function getWebGL() {
+export function getWebGL(): WebGLInfo | null {
   try {
     const c = document.createElement("canvas");
-    const gl = /** @type {WebGLRenderingContext | null} */ (
-      c.getContext("webgl") || c.getContext("experimental-webgl")
-    );
+    const gl = (c.getContext("webgl") ||
+      c.getContext("experimental-webgl")) as WebGLRenderingContext | null;
     if (!gl) return null;
     const ext = gl.getExtension("WEBGL_debug_renderer_info");
     return {
-      renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
-      vendor: ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR),
+      renderer: String(
+        ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
+      ),
+      vendor: String(ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR)),
     };
   } catch {
     return null;
@@ -20,7 +21,7 @@ export function getWebGL() {
 }
 
 /** A short SHA-256 of a rendered canvas — a classic fingerprinting signal. */
-export async function getCanvasHash() {
+export async function getCanvasHash(): Promise<string | null> {
   try {
     const c = document.createElement("canvas");
     c.width = 240;
@@ -47,11 +48,11 @@ export async function getCanvasHash() {
 }
 
 /**
- * AudioContext fingerprint — sums the first 8k samples of a short offline render
- * and hashes them. Small differences in the platform audio stack produce
- * stable, distinct outputs across devices/browsers, which trackers exploit.
+ * AudioContext fingerprint — sums a slice of a short offline render and hashes
+ * it. Small differences in the platform audio stack produce stable, distinct
+ * outputs across devices/browsers, which trackers exploit.
  */
-export async function getAudioHash() {
+export async function getAudioHash(): Promise<string | null> {
   try {
     if (typeof OfflineAudioContext === "undefined") return null;
     const ctx = new OfflineAudioContext(1, 44100, 44100);
@@ -85,7 +86,7 @@ export async function getAudioHash() {
 }
 
 /** Detect the display's colour gamut. */
-export function getColorGamut() {
+export function getColorGamut(): string {
   if (matchMedia("(color-gamut: rec2020)").matches) return "rec2020";
   if (matchMedia("(color-gamut: p3)").matches) return "p3 (wide)";
   if (matchMedia("(color-gamut: srgb)").matches) return "sRGB";
