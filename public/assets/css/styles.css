@@ -1,9 +1,6 @@
-/* ── ip-speil "Mirror" theme ──
-   Ported from the design prototype (paper/ink aesthetic) and extended with a
-   dark variant, skeleton loaders, and the WebRTC/header primitives the app needs. */
+/* ip-speil "Mirror" theme — paper/ink aesthetic, light + dark. */
 
-/* Self-hosted to avoid leaking visitor IPs to Google Fonts. Latin subset only —
-   Norwegian's æ/ø/å fit inside U+0000-00FF. Schibsted Grotesk is a variable font. */
+/* Self-hosted to avoid leaking visitor IPs to Google Fonts. */
 @font-face {
   font-family: "Schibsted Grotesk";
   font-style: normal;
@@ -336,6 +333,51 @@ a {
 }
 .dot.off {
   background: var(--ink-faint);
+}
+
+/* exposure summary */
+.exposure {
+  margin-top: var(--gap-sec);
+}
+.exposure-head {
+  font-family: var(--font-head);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-align: center;
+  text-wrap: balance;
+  margin-bottom: 18px;
+  min-height: 1.2em;
+}
+.exposure-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13px;
+  background: color-mix(in oklab, var(--ink) 2%, transparent);
+}
+.chip .dot {
+  flex: none;
+}
+.chip-l {
+  color: var(--ink);
+  font-weight: 500;
+}
+.chip-d {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 /* facts */

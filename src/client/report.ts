@@ -1,8 +1,16 @@
-// Builds the copyable, redacted diagnostics report.
-import { networkLabel } from "./format.ts";
-import type { CFTrace, HeaderMap, IpInfo, WebRTCResult } from "./types.ts";
+import { networkLabel } from "./lib/format.ts";
+import { webrtcLeak } from "./lib/heuristics.ts";
+import type {
+  CFTrace,
+  DnsLeakResult,
+  EntropyEstimate,
+  Exits,
+  HeaderMap,
+  IpInfo,
+  WebRTCResult,
+} from "./types.ts";
 
-/** Redact an IP for sharing: keep a coarse prefix, drop the host bits. */
+// Keep a coarse prefix, drop the host bits, so the report is shareable.
 export function redactIp(ip: string | null | undefined): string | null {
   if (!ip) return null;
   if (ip.includes(":")) {
@@ -13,36 +21,51 @@ export function redactIp(ip: string | null | undefined): string | null {
   return parts.length === 4 ? `${parts[0]}.${parts[1]}.x.x` : "IP redacted";
 }
 
-/** Assemble a redacted summary object from all collected scan data. */
-export function buildReport(
-  data: IpInfo,
-  webrtc: WebRTCResult,
-  ipv6: string | null,
-  ipv6Info: IpInfo | null,
-  cfTrace: CFTrace | null,
-  headers: HeaderMap,
-  doh: boolean | null,
-) {
+export interface ReportInput {
+  data: IpInfo;
+  webrtc: WebRTCResult;
+  exits: Exits;
+  ipv6Info: IpInfo | null;
+  cfTrace: CFTrace | null;
+  headers: HeaderMap;
+  dnsLeak: DnsLeakResult;
+  doh: boolean | null;
+  entropy: EntropyEstimate;
+}
+
+export function buildReport(input: ReportInput) {
+  const { data, webrtc, exits, ipv6Info, cfTrace, headers, dnsLeak, doh, entropy } = input;
+  const foreignResolvers = dnsLeak.resolvers.filter(
+    (r) => r.country && data.country && r.country !== data.country,
+  ).length;
+
   return {
     generatedAt: new Date().toISOString(),
     httpIp: redactIp(data.query),
     httpNetwork: networkLabel(data) || null,
     httpCountry: data.countryCode || null,
-    ipv6: redactIp(ipv6),
+    reverseDns: data.reverse || null,
+    ipv4Exit: redactIp(exits.v4),
+    ipv6: redactIp(exits.v6),
     ipv6Network: ipv6Info?.status === "success" ? networkLabel(ipv6Info) : null,
     ipv6Country: ipv6Info?.countryCode || null,
+    geoAgreement: data.geo ? `${data.geo.agree}/${data.geo.total}` : null,
     signals: {
       proxy: data.proxy === true,
       vpn: data.vpn === true,
       tor: data.tor === true,
       abuser: data.abuser === true,
+      blocklists: data.blocklists ?? [],
       hosting: data.hosting === true,
       mobile: data.mobile === true,
       dohReachable: doh,
+      dnsResolverCount: dnsLeak.available ? dnsLeak.resolvers.length : null,
+      dnsForeignResolvers: dnsLeak.available ? foreignResolvers : null,
       timezoneMismatch: !!(
         data.timezone && Intl.DateTimeFormat().resolvedOptions().timeZone !== data.timezone
       ),
-      webrtcDifferentPublicIp: webrtc.pub.some((ip) => ip !== data.query),
+      webrtcDifferentPublicIp: webrtcLeak(webrtc, data.query),
+      fingerprintEntropyBits: entropy.bits,
     },
     webrtc: {
       publicCount: webrtc.pub.length,
@@ -61,6 +84,6 @@ export function buildReport(
         }
       : null,
     headersObserved: Object.keys(headers ?? {}).sort(),
-    note: "Redacted report: exact IP addresses and full header values are intentionally omitted.",
+    note: "Redacted report: exact IPs and full header values are omitted. Browser fingerprint details stay local — only a coarse entropy estimate is included.",
   };
 }

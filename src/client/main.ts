@@ -1,21 +1,22 @@
-// Entry point: orchestrates the scan, wires up interactions, owns UI state.
 import { fetchHeaders, fetchInfo } from "./api.ts";
-import { byId } from "./dom.ts";
-import { ispSuggestsVpn } from "./format.ts";
-import { getCFTrace, getDohReachable, getIPv6 } from "./network.ts";
-import {
-  renderBrowser,
-  renderFacts,
-  renderFingerprint,
-  renderHeaders,
-  renderHero,
-  renderIPv6,
-  renderPrivacy,
-  renderWebRTC,
-} from "./render.ts";
+import { byId } from "./lib/dom.ts";
+import { estimateEntropy, isVpnSignal } from "./lib/heuristics.ts";
+import { getDnsLeak } from "./probes/dns-leak.ts";
+import { collectFingerprint } from "./probes/fingerprint.ts";
+import { getCFTrace, getDohReachable, getIPv4, getIPv6 } from "./probes/network.ts";
+import { getWebRTCIPs } from "./probes/webrtc.ts";
 import { buildReport } from "./report.ts";
+import { renderBrowser } from "./sections/browser.ts";
+import { renderExposure } from "./sections/exposure.ts";
+import { renderFacts } from "./sections/facts.ts";
+import { renderFingerprint } from "./sections/fingerprint.ts";
+import { renderHeaders } from "./sections/headers.ts";
+import { renderHero } from "./sections/hero.ts";
+import { renderIPv6 } from "./sections/ipv6.ts";
+import { renderPrivacy } from "./sections/privacy.ts";
+import { renderWebRTC } from "./sections/webrtc.ts";
 import { initTheme, toggleTheme } from "./theme.ts";
-import { getWebRTCIPs } from "./webrtc.ts";
+import type { Exits } from "./types.ts";
 
 const SECTION_IDS = ["privacy", "browser", "ipv6", "fingerprint", "headers", "webrtc"];
 
@@ -28,6 +29,8 @@ function showSkeletons() {
   byId("ip-btn").classList.remove("copied");
   byId("hero-sub").innerHTML = '<span class="skel skel-text"></span>';
   byId("hero-status").innerHTML = "";
+  byId("exposure-headline").innerHTML = '<span class="skel skel-text"></span>';
+  byId("exposure-grid").innerHTML = '<span class="skel skel-block"></span>';
   byId("facts").innerHTML =
     '<div class="fact"><div class="fact-l">Loading</div><div class="fact-v"><span class="skel skel-text"></span></div></div>';
   for (const id of SECTION_IDS) {
@@ -35,34 +38,46 @@ function showSkeletons() {
   }
 }
 
-/** Run every check in parallel and render the results. */
 async function load() {
   const ico = document.getElementById("refresh-ico");
   ico?.classList.add("spin");
   showSkeletons();
 
-  const [data, webrtc, ipv6, cfTrace, headers, doh] = await Promise.all([
+  const [data, webrtc, ipv4, ipv6, cfTrace, headers, doh, dnsLeak, fp] = await Promise.all([
     fetchInfo(),
     getWebRTCIPs(),
+    getIPv4(),
     getIPv6(),
     getCFTrace(),
     fetchHeaders(),
     getDohReachable(),
+    getDnsLeak(),
+    collectFingerprint(),
   ]);
   const ipv6Info = ipv6 ? await fetchInfo(ipv6) : null;
+  const exits: Exits = { http: data.query ?? null, v4: ipv4, v6: ipv6 };
+  const entropy = estimateEntropy(fp);
 
   currentIP = data.query || "";
-  latestReport = buildReport(data, webrtc, ipv6, ipv6Info, cfTrace, headers, doh);
-
-  renderHero(
+  latestReport = buildReport({
     data,
-    data.proxy === true || data.vpn === true || data.tor === true || ispSuggestsVpn(data),
-  );
-  renderFacts(data, ipv6);
-  renderPrivacy(data, webrtc, doh);
-  renderBrowser(data.timezone);
-  renderIPv6(ipv6, ipv6Info, cfTrace, data);
-  renderFingerprint(); // async internally; fire-and-forget
+    webrtc,
+    exits,
+    ipv6Info,
+    cfTrace,
+    headers,
+    dnsLeak,
+    doh,
+    entropy,
+  });
+
+  renderExposure({ d: data, webrtc, dnsLeak, doh, entropy });
+  renderHero(data, isVpnSignal(data));
+  renderFacts(data, exits);
+  renderPrivacy(data, webrtc, dnsLeak, doh);
+  renderBrowser(data);
+  renderIPv6(exits, ipv6Info, cfTrace, data);
+  renderFingerprint(fp, entropy);
   renderHeaders(headers);
   renderWebRTC(webrtc, data.query);
 

@@ -1,5 +1,4 @@
 {
-  "//": "Typecheck for the browser ES modules in src/client. These are authored in TypeScript and bundled to public/js by `bun build`. DOM libs only — no Bun/Node globals.",
   "compilerOptions": {
     "target": "ESNext",
     "module": "Preserve",
@@ -14,5 +13,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts"],
+  "exclude": ["**/*.test.ts"]
 }

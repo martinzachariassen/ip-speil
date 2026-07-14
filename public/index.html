@@ -6,7 +6,7 @@
     <title>ip-speil — your internet mirror</title>
     <meta
       name="description"
-      content="A privacy and network diagnostic mirror — see your public IP, VPN/proxy signals, WebRTC leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no database, no trackers."
+      content="A privacy and network diagnostic mirror — see your public IP, VPN/proxy signals, WebRTC and DNS leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no database, no trackers."
     />
     <meta name="theme-color" content="#ecebe4" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#181712" media="(prefers-color-scheme: dark)" />
@@ -17,13 +17,13 @@
     <meta property="og:title" content="ip-speil — your internet mirror" />
     <meta
       property="og:description"
-      content="See your public IP, VPN/proxy signals, WebRTC leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no trackers."
+      content="See your public IP, VPN/proxy signals, WebRTC and DNS leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no trackers."
     />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="ip-speil — your internet mirror" />
     <meta
       name="twitter:description"
-      content="See what websites can infer about your connection — IP, VPN signals, WebRTC leaks, IPv6 routing, browser fingerprint, HTTP headers."
+      content="See what websites can infer about your connection — IP, VPN signals, WebRTC and DNS leaks, IPv6 routing, browser fingerprint, HTTP headers."
     />
     <meta name="robots" content="index,follow" />
     <link rel="icon" href="data:," />
@@ -38,7 +38,6 @@
   <body>
     <div class="page" data-density="compact">
       <div class="col">
-        <!-- HEADER -->
         <header class="hd">
           <div class="wm">
             <b class="blk">ip-speil</b> <em>— <i>speil</i>, Norwegian for mirror</em>
@@ -52,7 +51,6 @@
           </div>
         </header>
 
-        <!-- HERO -->
         <div class="hero">
           <div class="eyebrow">Your public IP</div>
           <button class="ip" id="ip-btn" type="button" title="Click to copy">
@@ -73,16 +71,15 @@
             >
               Copy report
             </button>
-            <button
-              class="btn ghost"
-              id="theme-btn"
-              type="button"
-              title="Toggle light/dark"
-            ></button>
+            <button class="btn ghost" id="theme-btn" type="button" title="Toggle light/dark"></button>
           </div>
         </div>
 
-        <!-- FACTS -->
+        <section class="exposure" id="exposure" aria-label="Exposure summary">
+          <div class="exposure-head" id="exposure-headline"><span class="skel skel-text"></span></div>
+          <div class="exposure-grid" id="exposure-grid"><span class="skel skel-block"></span></div>
+        </section>
+
         <div class="facts" id="facts">
           <div class="fact">
             <div class="fact-l">Loading</div>
@@ -90,14 +87,13 @@
           </div>
         </div>
 
-        <!-- DEEPER LOOK -->
         <div class="look">
           <div class="look-l">Deeper look <span>— tap any section to expand</span></div>
 
           <div class="rev" id="rev-privacy">
             <button class="rev-head" type="button">
               <span class="rev-title"
-                ><b>Privacy checks</b><em>VPN, proxy, datacenter &amp; WebRTC signals</em></span
+                ><b>Privacy checks</b><em>VPN, proxy, reputation, WebRTC &amp; DNS signals</em></span
               >
               <span class="rev-sign"></span>
             </button>
@@ -109,7 +105,7 @@
           <div class="rev" id="rev-browser">
             <button class="rev-head" type="button">
               <span class="rev-title"
-                ><b>Your browser</b><em>language, tracking signals &amp; user agent</em></span
+                ><b>Your browser</b><em>language, privacy signals &amp; user agent</em></span
               >
               <span class="rev-sign"></span>
             </button>
@@ -121,8 +117,7 @@
           <div class="rev" id="rev-ipv6">
             <button class="rev-head" type="button">
               <span class="rev-title"
-                ><b>IPv6 &amp; routing</b
-                ><em>compares IPv4 / IPv6 exit and Cloudflare trace</em></span
+                ><b>IPv6 &amp; routing</b><em>compares IPv4 / IPv6 exit and Cloudflare trace</em></span
               >
               <span class="rev-sign"></span>
             </button>
@@ -139,17 +134,14 @@
               <span class="rev-sign"></span>
             </button>
             <div class="rev-wrap">
-              <div class="rev-body" id="body-fingerprint">
-                <span class="skel skel-block"></span>
-              </div>
+              <div class="rev-body" id="body-fingerprint"><span class="skel skel-block"></span></div>
             </div>
           </div>
 
           <div class="rev" id="rev-headers">
             <button class="rev-head" type="button">
               <span class="rev-title"
-                ><b>What the server sees</b
-                ><em>HTTP headers your browser sent to this page</em></span
+                ><b>What the server sees</b><em>HTTP headers your browser sent to this page</em></span
               >
               <span class="rev-sign"></span>
             </button>
@@ -171,41 +163,40 @@
           </div>
         </div>
 
-        <!-- FINE PRINT -->
         <div class="fine">
           <div class="fine-grid">
             <div>
               <h4>How this works</h4>
               <p>
-                When you hit Refresh, this app looks up the HTTP IP seen by the server with
-                ipapi.is. If your browser also has IPv6, that address is looked up separately so the
-                page can compare IPv4 and IPv6 routing. Browser fingerprint data is computed
-                entirely in your browser and is not sent back to this server. WebRTC uses a public
-                STUN server to inspect the ICE candidates your browser exposes.
+                On Refresh, the server looks up the HTTP IP it sees with ipapi.is and cross-checks
+                the country against ipwho.is and geojs.io, adds a reverse-DNS and blocklist check,
+                and caches the result. Your browser separately probes its IPv4 and IPv6 exits, runs
+                a DNS-leak test, inspects WebRTC candidates via a public STUN server, and estimates
+                a fingerprint. Fingerprint data is computed entirely in your browser and never sent
+                back.
               </p>
             </div>
             <div>
               <h4>What we don't do</h4>
               <p>
                 This app has no database and the application code does not write request logs. The
-                hosting platform may still keep operational logs. It does not set cookies or run ad
-                trackers. Page visit counts are recorded via Umami's cookieless analytics. Every
-                check runs on demand.
+                hosting platform may still keep operational logs. It sets no cookies and runs no ad
+                trackers. Page visit counts use Umami's cookieless analytics. Every check runs on
+                demand.
               </p>
             </div>
           </div>
           <div class="sources">
             <span>Sources</span>
             <a href="https://ipapi.is" target="_blank" rel="noopener">ipapi.is</a>
-            <a href="https://1.1.1.1/cdn-cgi/trace" target="_blank" rel="noopener"
-              >Cloudflare trace</a
-            >
-            <a href="https://ipv6.icanhazip.com" target="_blank" rel="noopener">icanhazip</a>
-            <a href="https://www.cloudflare.com" target="_blank" rel="noopener">Cloudflare STUN</a>
+            <a href="https://ipwho.is" target="_blank" rel="noopener">ipwho.is</a>
+            <a href="https://www.geojs.io" target="_blank" rel="noopener">geojs.io</a>
+            <a href="https://1.1.1.1/cdn-cgi/trace" target="_blank" rel="noopener">Cloudflare trace</a>
+            <a href="https://bash.ws" target="_blank" rel="noopener">bash.ws DNS leak</a>
+            <a href="https://icanhazip.com" target="_blank" rel="noopener">icanhazip</a>
           </div>
         </div>
 
-        <!-- FOOTER -->
         <footer class="ft">
           <div>
             Made with <span class="heart">♥</span> by
@@ -214,9 +205,7 @@
           <div class="coord" id="ft-coord"></div>
         </footer>
       </div>
-      <!-- /col -->
     </div>
-    <!-- /page -->
     <script type="module" src="/assets/js/main.js"></script>
   </body>
 </html>

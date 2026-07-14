@@ -1,8 +1,5 @@
-// WebRTC ICE-candidate inspection — surfaces public/local/relay IPs the
-// browser exposes to peers, used to detect VPN/routing leaks.
-import type { IceCandidateInfo, WebRTCResult } from "./types.ts";
+import type { IceCandidateInfo, WebRTCResult } from "../types.ts";
 
-/** True if `ip` is an RFC1918 / link-local / loopback address. */
 export function isPrivateIp(ip: string): boolean {
   if (ip.includes(":")) {
     const lower = ip.toLowerCase();
@@ -26,27 +23,18 @@ export function isPrivateIp(ip: string): boolean {
   );
 }
 
-/** Parse the address and candidate type out of an ICE candidate string. */
 export function parseIceCandidate(candidate: string): { address: string; type: string } | null {
   const parts = candidate.trim().split(/\s+/);
   const typIndex = parts.indexOf("typ");
   if (parts.length < 8 || typIndex === -1) return null;
-  return {
-    address: parts[4],
-    type: parts[typIndex + 1] || "unknown",
-  };
+  return { address: parts[4], type: parts[typIndex + 1] || "unknown" };
 }
 
-/**
- * Gather the IP candidates WebRTC exposes via a public STUN server.
- * Resolves after the first null candidate or a 3s timeout.
- */
+// Resolves after the first null candidate or a 3s timeout.
 export async function getWebRTCIPs(): Promise<WebRTCResult> {
   return new Promise((resolve) => {
     try {
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }],
-      });
+      const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }] });
       pc.createDataChannel("");
       const pub = new Set<string>();
       const lan = new Set<string>();

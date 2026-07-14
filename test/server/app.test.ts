@@ -1,7 +1,7 @@
 import { beforeAll, expect, test } from "bun:test";
 
-import { createApp } from "../src/app.ts";
-import type { FetchLike } from "../src/ip-lookup.ts";
+import { createApp } from "../../src/server/app.ts";
+import type { FetchLike } from "../../src/server/lib/ip-lookup.ts";
 
 // The client bundle is a build artifact; build it once so the static-serving
 // test has something to serve.
@@ -13,8 +13,16 @@ beforeAll(async () => {
   });
 });
 
+// Enrichment does real DNS + secondary-provider calls; default it off so the
+// core route tests stay network-free. Enrichment is covered separately below.
 const app = (options: Parameters<typeof createApp>[0] = {}) =>
-  createApp({ requestTimeoutMs: 100, ...options });
+  createApp({
+    requestTimeoutMs: 100,
+    reverseDnsImpl: async () => undefined,
+    blocklistImpl: async () => [],
+    enableGeoCrossCheck: false,
+    ...options,
+  });
 
 test("health endpoint returns ok with security headers", async () => {
   const res = await app().request("/health");
@@ -22,6 +30,7 @@ test("health endpoint returns ok with security headers", async () => {
   expect(res.status).toBe(200);
   expect(await res.text()).toBe("ok");
   expect(res.headers.get("content-security-policy")).not.toContain("unsafe-inline");
+  expect(res.headers.get("content-security-policy")).toContain("https://bash.ws");
   expect(res.headers.get("x-content-type-options")).toBe("nosniff");
   expect(res.headers.get("referrer-policy")).toBe("no-referrer");
   expect(res.headers.get("strict-transport-security")).toContain("max-age=63072000");
@@ -47,6 +56,13 @@ test("serves the index and built assets with appropriate cache headers", async (
   expect(css.status).toBe(200);
   expect(css.headers.get("content-type")).toBe("text/css; charset=utf-8");
   expect(css.headers.get("cache-control")).toBe("public, max-age=300");
+});
+
+test("serves robots.txt disallowing the api", async () => {
+  const res = await app().request("/robots.txt");
+
+  expect(res.status).toBe(200);
+  expect(await res.text()).toMatch(/Disallow: \/api\//);
 });
 
 test("does not serve unknown paths", async () => {
@@ -80,7 +96,7 @@ test("api info uses the first forwarded ip and returns normalised json", async (
 
   expect(res.status).toBe(200);
   expect(res.headers.get("cache-control")).toBe("no-store");
-  expect(res.headers.get("access-control-allow-origin")).toBe("*");
+  expect(res.headers.get("access-control-allow-origin")).toBeNull();
   const body = (await res.json()) as Record<string, unknown>;
   expect(body.status).toBe("success");
   expect(body.query).toBe("203.0.113.10");
@@ -88,6 +104,58 @@ test("api info uses the first forwarded ip and returns normalised json", async (
   expect(body.countryCode).toBe("NO");
   expect(body.isp).toBe("Telenor");
   expect(calls[0]).toMatch(/\?q=203\.0\.113\.10$/);
+});
+
+test("api info caches repeat lookups for the same ip", async () => {
+  let calls = 0;
+  const fetchImpl: FetchLike = async () => {
+    calls += 1;
+    return Response.json({ ip: "203.0.113.10", location: { country_code: "NO" } });
+  };
+  const server = app({ fetchImpl });
+  const headers = { "x-forwarded-for": "203.0.113.10" };
+
+  await server.request("/api/info", { headers });
+  await server.request("/api/info", { headers });
+
+  expect(calls).toBe(1);
+});
+
+test("api info enriches with reverse dns, blocklists, and a geo cross-check", async () => {
+  const fetchImpl: FetchLike = async (url) => {
+    const u = String(url);
+    if (u.startsWith("https://ipwho.is/")) {
+      return Response.json({ success: true, country_code: "NO", city: "Oslo" });
+    }
+    if (u.startsWith("https://get.geojs.io/")) {
+      return Response.json({ country_code: "NO", city: "Oslo" });
+    }
+    return Response.json({
+      ip: "203.0.113.10",
+      location: { country: "Norway", country_code: "NO", city: "Oslo" },
+      asn: { asn: 2119, org: "Telenor" },
+    });
+  };
+
+  const server = createApp({
+    requestTimeoutMs: 100,
+    fetchImpl,
+    reverseDnsImpl: async () => "host.example.no",
+    blocklistImpl: async () => ["Spamhaus ZEN"],
+    enableGeoCrossCheck: true,
+  });
+
+  const res = await server.request("/api/info", {
+    headers: { "x-forwarded-for": "203.0.113.10" },
+  });
+  const body = (await res.json()) as Record<string, unknown>;
+
+  expect(res.status).toBe(200);
+  expect(body.reverse).toBe("host.example.no");
+  expect(body.blocklists).toEqual(["Spamhaus ZEN"]);
+  const geo = body.geo as { agree: number; total: number };
+  expect(geo.total).toBe(3);
+  expect(geo.agree).toBe(3);
 });
 
 test("api info looks up an explicit ip query", async () => {
@@ -159,6 +227,7 @@ test("headers endpoint hides hop-by-hop headers", async () => {
   const body = (await res.json()) as Record<string, unknown>;
 
   expect(res.status).toBe(200);
+  expect(res.headers.get("access-control-allow-origin")).toBeNull();
   expect(body["x-visible"]).toBe("yes");
   expect(body.host).toBeUndefined();
   expect(body.connection).toBeUndefined();

@@ -1,7 +1,19 @@
-// Shared client-side data shapes. The server sends the `IpInfo` shape from
-// /api/info; the rest describe values assembled in the browser.
+export interface GeoSource {
+  name: string;
+  country?: string;
+  countryCode?: string;
+  city?: string;
+  asn?: string;
+}
 
-/** The /api/info response as the client consumes it (all fields optional). */
+export interface GeoCrossCheck {
+  agree: number;
+  total: number;
+  countryCode?: string;
+  sources: GeoSource[];
+}
+
+// The /api/info response as the client consumes it (all fields optional).
 export interface IpInfo {
   status?: "success" | "fail";
   query?: string;
@@ -27,16 +39,16 @@ export interface IpInfo {
   vpn?: boolean;
   abuser?: boolean;
   bogon?: boolean;
+  blocklists?: string[];
+  geo?: GeoCrossCheck;
 }
 
-/** A single WebRTC ICE candidate we surface to the user. */
 export interface IceCandidateInfo {
   type: string;
   address: string;
   scope: string;
 }
 
-/** Aggregated WebRTC probe result. */
 export interface WebRTCResult {
   pub: string[];
   lan: string[];
@@ -45,14 +57,65 @@ export interface WebRTCResult {
   candidates: IceCandidateInfo[];
 }
 
-/** Parsed Cloudflare `cdn-cgi/trace` key/value report. */
 export type CFTrace = Record<string, string>;
 
-/** WebGL renderer/vendor strings. */
 export interface WebGLInfo {
   renderer: string;
   vendor: string;
 }
 
-/** Headers echoed by /api/headers. */
 export type HeaderMap = Record<string, string | string[]>;
+
+// Which exit IP the browser presents over each transport. `http` is whatever
+// family reached our server; `v4`/`v6` are forced single-family probes.
+export interface Exits {
+  http: string | null;
+  v4: string | null;
+  v6: string | null;
+}
+
+export interface DnsResolver {
+  ip?: string;
+  country?: string;
+  asn?: string;
+}
+
+export interface DnsLeakResult {
+  available: boolean;
+  conclusion?: string;
+  resolvers: DnsResolver[];
+}
+
+export interface ConnectionInfo {
+  type?: string;
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+}
+
+export interface FingerprintData {
+  canvas: string | null;
+  audio: string | null;
+  webgl: WebGLInfo | null;
+  screen: string;
+  dpr: number;
+  cpu: number | null;
+  memory: number | null;
+  touch: number;
+  gamut: string;
+  hdr: boolean;
+  platform: string;
+  fonts: string[];
+  voices: number;
+  devices: { audioIn: number; audioOut: number; videoIn: number } | null;
+  storage: { localStorage: boolean; indexedDB: boolean; cacheAPI: boolean; serviceWorker: boolean };
+  languages: string[];
+  connection: ConnectionInfo | null;
+}
+
+export interface EntropyEstimate {
+  bits: number;
+  oneIn: string;
+  rarity: "low" | "moderate" | "high" | "very high";
+}

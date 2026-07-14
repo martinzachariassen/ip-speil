@@ -9,7 +9,7 @@ console.log(`▶  http://localhost:${server.port}`);
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, async () => {
-    // Stop accepting connections and let in-flight requests drain before exit.
+    // Drain in-flight requests before exit.
     await server.stop();
     process.exit(0);
   });
