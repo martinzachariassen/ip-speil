@@ -36,30 +36,41 @@
     <link rel="stylesheet" href="/assets/css/styles.css" />
   </head>
   <body>
-    <div class="page" data-density="compact">
-      <div class="col">
-        <header class="hd">
-          <div class="wm">
-            <b class="blk">ip-speil</b> <em>— <i>speil</i>, Norwegian for mirror</em>
-          </div>
-          <div class="pills">
-            <span class="pill">No cookies</span>
-            <span class="pill">No database</span>
-            <span class="pill">Cookieless analytics</span>
-            <span class="pill">No ad trackers</span>
-            <span class="pill">Fingerprint stays local</span>
-          </div>
-        </header>
+    <div class="page">
+      <div class="shell">
+        <aside class="rail">
+          <header class="wm">
+            <b class="blk">ip-speil</b> <em>— your internet mirror</em>
+          </header>
 
-        <div class="hero">
-          <div class="eyebrow">Your public IP</div>
-          <button class="ip" id="ip-btn" type="button" title="Click to copy">
-            <span id="ip-display"><span class="skel skel-ip"></span></span>
-            <span class="copytag" id="copy-hint">click to copy</span>
-          </button>
-          <div class="hero-sub" id="hero-sub"><span class="skel skel-text"></span></div>
-          <div class="hero-status" id="hero-status"></div>
-          <div class="hero-actions">
+          <div class="rail-hero">
+            <div class="eyebrow">Your public IP</div>
+            <div class="ip" id="ip-display"><span class="skel skel-ip"></span></div>
+            <button class="copy-main" id="ip-btn" type="button" title="Copy your public IP">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+                <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+                <path d="M5 15V5a2 2 0 0 1 2-2h10"></path>
+              </svg>
+              <span id="copy-hint">copy IP</span>
+            </button>
+            <div class="v6-row" id="v6-row" hidden>
+              <span class="v6-chip" id="v6-chip"></span>
+              <button class="btn mini" id="v6-btn" type="button" title="Copy your IPv6 address">
+                copy v6
+              </button>
+            </div>
+            <div class="rail-sub" id="hero-sub"><span class="skel skel-text"></span></div>
+          </div>
+
+          <div class="verdict" aria-live="polite">
+            <span class="dot off pulse" id="verdict-dot"></span>
+            <div class="verdict-txt">
+              <div class="verdict-t" id="verdict-title"><span class="skel skel-text"></span></div>
+              <div class="verdict-s" id="verdict-sub"></div>
+            </div>
+          </div>
+
+          <div class="rail-actions">
             <button class="btn" id="refresh-btn" type="button">
               <span class="ico" id="refresh-ico">↻</span> Refresh
             </button>
@@ -73,137 +84,161 @@
             </button>
             <button class="btn ghost" id="theme-btn" type="button" title="Toggle light/dark"></button>
           </div>
-        </div>
 
-        <section class="exposure" id="exposure" aria-label="Exposure summary">
-          <div class="exposure-head" id="exposure-headline"><span class="skel skel-text"></span></div>
-          <div class="exposure-grid" id="exposure-grid"><span class="skel skel-block"></span></div>
-        </section>
-
-        <div class="facts" id="facts">
-          <div class="fact">
-            <div class="fact-l">Loading</div>
-            <div class="fact-v"><span class="skel skel-text"></span></div>
+          <div class="rail-foot">
+            <span>nothing stored</span>
+            <span class="coord" id="ft-coord"></span>
           </div>
-        </div>
+        </aside>
 
-        <div class="look">
-          <div class="look-l">Deeper look <span>— tap any section to expand</span></div>
+        <main class="main">
+          <section class="sec" aria-label="Exposure summary">
+            <div class="sec-l">What sites can see</div>
+            <div class="ledger" id="exposure-grid"><span class="skel skel-block"></span></div>
+          </section>
 
-          <div class="rev" id="rev-privacy">
-            <button class="rev-head" type="button">
-              <span class="rev-title"
-                ><b>Privacy checks</b><em>VPN, proxy, reputation, WebRTC &amp; DNS signals</em></span
-              >
-              <span class="rev-sign"></span>
-            </button>
-            <div class="rev-wrap">
-              <div class="rev-body" id="body-privacy"><span class="skel skel-block"></span></div>
+          <section class="sec" aria-label="Connection details">
+            <div class="sec-l">Connection details</div>
+            <div class="facts" id="facts">
+              <div class="fact">
+                <div class="fact-l">Loading</div>
+                <div class="fact-v"><span class="skel skel-text"></span></div>
+              </div>
+            </div>
+          </section>
+
+          <div class="sec look">
+            <div class="sec-l">Deeper look <span>— tap any section to expand</span></div>
+
+            <div class="rev" id="rev-privacy">
+              <button class="rev-head" type="button">
+                <span class="rev-num">01</span>
+                <span class="rev-title"
+                  ><b>Privacy checks</b><em>VPN, proxy, reputation, WebRTC &amp; DNS signals</em></span
+                >
+                <span class="rev-sign"></span>
+              </button>
+              <div class="rev-wrap">
+                <div class="rev-body" id="body-privacy"><span class="skel skel-block"></span></div>
+              </div>
+            </div>
+
+            <div class="rev" id="rev-browser">
+              <button class="rev-head" type="button">
+                <span class="rev-num">02</span>
+                <span class="rev-title"
+                  ><b>Your browser</b><em>language, privacy signals &amp; user agent</em></span
+                >
+                <span class="rev-sign"></span>
+              </button>
+              <div class="rev-wrap">
+                <div class="rev-body" id="body-browser"><span class="skel skel-block"></span></div>
+              </div>
+            </div>
+
+            <div class="rev" id="rev-ipv6">
+              <button class="rev-head" type="button">
+                <span class="rev-num">03</span>
+                <span class="rev-title"
+                  ><b>IPv6 &amp; routing</b><em>compares IPv4 / IPv6 exit and Cloudflare trace</em></span
+                >
+                <span class="rev-sign"></span>
+              </button>
+              <div class="rev-wrap">
+                <div class="rev-body" id="body-ipv6"><span class="skel skel-block"></span></div>
+              </div>
+            </div>
+
+            <div class="rev" id="rev-fingerprint">
+              <button class="rev-head" type="button">
+                <span class="rev-num">04</span>
+                <span class="rev-title"
+                  ><b>Browser fingerprint</b><em>how sites track you beyond your IP</em></span
+                >
+                <span class="rev-badge" id="badge-fingerprint" hidden></span>
+                <span class="rev-sign"></span>
+              </button>
+              <div class="rev-wrap">
+                <div class="rev-body" id="body-fingerprint"><span class="skel skel-block"></span></div>
+              </div>
+            </div>
+
+            <div class="rev" id="rev-headers">
+              <button class="rev-head" type="button">
+                <span class="rev-num">05</span>
+                <span class="rev-title"
+                  ><b>What the server sees</b><em>HTTP headers your browser sent to this page</em></span
+                >
+                <span class="rev-sign"></span>
+              </button>
+              <div class="rev-wrap">
+                <div class="rev-body" id="body-headers"><span class="skel skel-block"></span></div>
+              </div>
+            </div>
+
+            <div class="rev" id="rev-webrtc">
+              <button class="rev-head" type="button">
+                <span class="rev-num">06</span>
+                <span class="rev-title"
+                  ><b>WebRTC leak test</b><em>peer-to-peer candidates your browser exposes</em></span
+                >
+                <span class="rev-sign"></span>
+              </button>
+              <div class="rev-wrap">
+                <div class="rev-body" id="body-webrtc"><span class="skel skel-block"></span></div>
+              </div>
             </div>
           </div>
 
-          <div class="rev" id="rev-browser">
-            <button class="rev-head" type="button">
-              <span class="rev-title"
-                ><b>Your browser</b><em>language, privacy signals &amp; user agent</em></span
-              >
-              <span class="rev-sign"></span>
-            </button>
-            <div class="rev-wrap">
-              <div class="rev-body" id="body-browser"><span class="skel skel-block"></span></div>
+          <div class="fine">
+            <div class="pills">
+              <span class="pill">No cookies</span>
+              <span class="pill">No database</span>
+              <span class="pill">Cookieless analytics</span>
+              <span class="pill">No ad trackers</span>
+              <span class="pill">Fingerprint stays local</span>
+            </div>
+            <div class="fine-grid">
+              <div>
+                <h4>How this works</h4>
+                <p>
+                  On Refresh, the server looks up the HTTP IP it sees with ipapi.is and cross-checks
+                  the country against ipwho.is and geojs.io, adds a reverse-DNS and blocklist check,
+                  and caches the result. Your browser separately probes its IPv4 and IPv6 exits, runs
+                  a DNS-leak test, inspects WebRTC candidates via a public STUN server, and estimates
+                  a fingerprint. Fingerprint data is computed entirely in your browser and never sent
+                  back.
+                </p>
+              </div>
+              <div>
+                <h4>What we don't do</h4>
+                <p>
+                  This app has no database and the application code does not write request logs. The
+                  hosting platform may still keep operational logs. It sets no cookies and runs no ad
+                  trackers. Page visit counts use Umami's cookieless analytics. Every check runs on
+                  demand.
+                </p>
+              </div>
+            </div>
+            <div class="sources">
+              <span>Sources</span>
+              <a href="https://ipapi.is" target="_blank" rel="noopener">ipapi.is</a>
+              <a href="https://ipwho.is" target="_blank" rel="noopener">ipwho.is</a>
+              <a href="https://www.geojs.io" target="_blank" rel="noopener">geojs.io</a>
+              <a href="https://1.1.1.1/cdn-cgi/trace" target="_blank" rel="noopener">Cloudflare trace</a>
+              <a href="https://bash.ws" target="_blank" rel="noopener">bash.ws DNS leak</a>
+              <a href="https://icanhazip.com" target="_blank" rel="noopener">icanhazip</a>
             </div>
           </div>
 
-          <div class="rev" id="rev-ipv6">
-            <button class="rev-head" type="button">
-              <span class="rev-title"
-                ><b>IPv6 &amp; routing</b><em>compares IPv4 / IPv6 exit and Cloudflare trace</em></span
-              >
-              <span class="rev-sign"></span>
-            </button>
-            <div class="rev-wrap">
-              <div class="rev-body" id="body-ipv6"><span class="skel skel-block"></span></div>
-            </div>
-          </div>
-
-          <div class="rev" id="rev-fingerprint">
-            <button class="rev-head" type="button">
-              <span class="rev-title"
-                ><b>Browser fingerprint</b><em>how sites track you beyond your IP</em></span
-              >
-              <span class="rev-sign"></span>
-            </button>
-            <div class="rev-wrap">
-              <div class="rev-body" id="body-fingerprint"><span class="skel skel-block"></span></div>
-            </div>
-          </div>
-
-          <div class="rev" id="rev-headers">
-            <button class="rev-head" type="button">
-              <span class="rev-title"
-                ><b>What the server sees</b><em>HTTP headers your browser sent to this page</em></span
-              >
-              <span class="rev-sign"></span>
-            </button>
-            <div class="rev-wrap">
-              <div class="rev-body" id="body-headers"><span class="skel skel-block"></span></div>
-            </div>
-          </div>
-
-          <div class="rev" id="rev-webrtc">
-            <button class="rev-head" type="button">
-              <span class="rev-title"
-                ><b>WebRTC leak test</b><em>peer-to-peer candidates your browser exposes</em></span
-              >
-              <span class="rev-sign"></span>
-            </button>
-            <div class="rev-wrap">
-              <div class="rev-body" id="body-webrtc"><span class="skel skel-block"></span></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="fine">
-          <div class="fine-grid">
+          <footer class="ft">
             <div>
-              <h4>How this works</h4>
-              <p>
-                On Refresh, the server looks up the HTTP IP it sees with ipapi.is and cross-checks
-                the country against ipwho.is and geojs.io, adds a reverse-DNS and blocklist check,
-                and caches the result. Your browser separately probes its IPv4 and IPv6 exits, runs
-                a DNS-leak test, inspects WebRTC candidates via a public STUN server, and estimates
-                a fingerprint. Fingerprint data is computed entirely in your browser and never sent
-                back.
-              </p>
+              Made with <span class="heart">♥</span> by
+              <a href="https://mlz.no" target="_blank" rel="noopener">Martin Zachariassen</a>
             </div>
-            <div>
-              <h4>What we don't do</h4>
-              <p>
-                This app has no database and the application code does not write request logs. The
-                hosting platform may still keep operational logs. It sets no cookies and runs no ad
-                trackers. Page visit counts use Umami's cookieless analytics. Every check runs on
-                demand.
-              </p>
-            </div>
-          </div>
-          <div class="sources">
-            <span>Sources</span>
-            <a href="https://ipapi.is" target="_blank" rel="noopener">ipapi.is</a>
-            <a href="https://ipwho.is" target="_blank" rel="noopener">ipwho.is</a>
-            <a href="https://www.geojs.io" target="_blank" rel="noopener">geojs.io</a>
-            <a href="https://1.1.1.1/cdn-cgi/trace" target="_blank" rel="noopener">Cloudflare trace</a>
-            <a href="https://bash.ws" target="_blank" rel="noopener">bash.ws DNS leak</a>
-            <a href="https://icanhazip.com" target="_blank" rel="noopener">icanhazip</a>
-          </div>
-        </div>
-
-        <footer class="ft">
-          <div>
-            Made with <span class="heart">♥</span> by
-            <a href="https://mlz.no" target="_blank" rel="noopener">Martin Zachariassen</a>
-          </div>
-          <div class="coord" id="ft-coord"></div>
-        </footer>
+            <div><i>speil</i> — Norwegian for mirror</div>
+          </footer>
+        </main>
       </div>
     </div>
     <script type="module" src="/assets/js/main.js"></script>

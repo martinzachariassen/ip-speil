@@ -11,6 +11,12 @@ export interface ExposureItem {
   detail?: string;
 }
 
+export interface Verdict {
+  severity: Severity;
+  title: string;
+  sub: string;
+}
+
 interface ExposureInput {
   d: IpInfo;
   webrtc: WebRTCResult;
@@ -20,7 +26,7 @@ interface ExposureInput {
 }
 
 export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureInput): {
-  headline: string;
+  verdict: Verdict;
   items: ExposureItem[];
 } {
   const items: ExposureItem[] = [];
@@ -32,81 +38,118 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
 
   items.push({
     severity: ok ? "off" : "warn",
-    label: ok ? "Public IP visible" : "IP lookup failed",
-    detail: ok ? d.query : undefined,
+    label: ok ? "Public IP" : "IP lookup",
+    detail: ok ? d.query : "failed",
   });
 
   if (ok) {
-    const place = [d.city, d.country].filter(Boolean).join(", ");
+    const place = [d.city, d.countryCode || d.country].filter(Boolean).join(", ");
     items.push({ severity: "off", label: "Approximate location", detail: place || "unknown" });
     items.push(
       anonymity
-        ? { severity: "bad", label: "VPN / proxy / Tor detected" }
-        : { severity: "ok", label: "No VPN / proxy signal" },
+        ? { severity: "bad", label: "VPN / proxy / Tor", detail: "detected" }
+        : { severity: "ok", label: "VPN / proxy / Tor", detail: "no signal" },
     );
     if (d.hosting === true || ispSuggestsHosting(d)) {
-      items.push({ severity: "warn", label: "Datacenter / cloud IP" });
-      concerns.push("hosting");
+      items.push({ severity: "warn", label: "Datacenter / cloud IP", detail: "hosting ASN" });
+      concerns.push("a datacenter IP");
     }
     if (d.blocklists?.length) {
       items.push({
         severity: "warn",
-        label: "Listed in reputation DBs",
+        label: "Reputation DBs",
         detail: d.blocklists.join(", "),
       });
-      concerns.push("reputation");
+      concerns.push("a blocklist listing");
+    }
+    if (d.mobile) {
+      items.push({ severity: "off", label: "Mobile network", detail: "cellular ASN" });
     }
   }
 
   const leak = webrtcLeak(webrtc, d.query);
-  items.push({ severity: leak ? "warn" : "ok", label: leak ? "WebRTC IP leak" : "No WebRTC leak" });
-  if (leak) concerns.push("webrtc");
+  items.push({
+    severity: leak ? "warn" : "ok",
+    label: "WebRTC leak",
+    detail: leak ? "IP exposed" : "none",
+  });
+  if (leak) concerns.push("a WebRTC leak");
 
   if (dnsLeak.available) {
     const foreign = dnsLeak.resolvers.filter(
       (r) => r.country && d.country && r.country !== d.country,
     );
+    const n = dnsLeak.resolvers.length;
     items.push({
       severity: foreign.length ? "warn" : "ok",
-      label: foreign.length ? "Possible DNS leak" : "No DNS leak",
+      label: "DNS leak",
+      detail: foreign.length
+        ? `${foreign.length} foreign resolver${foreign.length === 1 ? "" : "s"}`
+        : `none · ${n} resolver${n === 1 ? "" : "s"}`,
     });
-    if (foreign.length) concerns.push("dns");
+    if (foreign.length) concerns.push("a DNS leak");
   } else if (doh === false) {
-    items.push({ severity: "warn", label: "DNS-over-HTTPS blocked" });
+    items.push({ severity: "warn", label: "DNS-over-HTTPS", detail: "blocked" });
   }
 
   const fpHigh = entropy.bits >= 18;
   items.push({
     severity: entropy.bits >= 26 ? "bad" : fpHigh ? "warn" : "ok",
-    label: `Fingerprint: ${entropy.rarity}`,
-    detail: `~${entropy.bits} bits`,
+    label: "Fingerprint",
+    detail: `${entropy.rarity} · ~${entropy.bits} bits`,
   });
 
   if (d.geo && d.geo.total > 1) {
-    items.push({ severity: "off", label: `Geo: ${d.geo.agree}/${d.geo.total} sources agree` });
+    items.push({
+      severity: "off",
+      label: "Geo cross-check",
+      detail: `${d.geo.agree}/${d.geo.total} agree`,
+    });
   }
 
-  const headline = !ok
-    ? "Couldn't complete the scan — try Refresh"
+  const verdict: Verdict = !ok
+    ? {
+        severity: "warn",
+        title: "Scan incomplete.",
+        sub: "The IP lookup failed — try Refresh.",
+      }
     : anonymity
-      ? "Anonymity signals detected — likely a VPN, proxy or Tor"
+      ? {
+          severity: "bad",
+          title: "Anonymity signals detected.",
+          sub: "This connection looks like a VPN, proxy or Tor exit.",
+        }
       : concerns.length > 0
-        ? "Some things are exposed to the sites you visit"
+        ? {
+            severity: "warn",
+            title: "Some things are exposed.",
+            sub: `Sites can see ${concerns.join(" and ")}.`,
+          }
         : fpHigh
-          ? "Your connection is ordinary, but your browser is easy to fingerprint"
-          : "Your connection looks fairly ordinary";
+          ? {
+              severity: "ok",
+              title: "Nothing is leaking.",
+              sub: "But your browser fingerprint is easy to single out.",
+            }
+          : {
+              severity: "ok",
+              title: "Nothing is leaking.",
+              sub: "Your connection looks ordinary.",
+            };
 
-  return { headline, items };
+  return { verdict, items };
 }
 
 export function renderExposure(input: ExposureInput) {
-  const { headline, items } = computeExposure(input);
-  byId("exposure-headline").textContent = headline;
+  const { verdict, items } = computeExposure(input);
+  byId("verdict-dot").className = `dot ${verdict.severity} pulse`;
+  byId("verdict-title").textContent = verdict.title;
+  byId("verdict-sub").textContent = verdict.sub;
   byId("exposure-grid").innerHTML = items
     .map(
       (i) =>
-        `<div class="chip"><span class="dot ${i.severity}"></span><span class="chip-l">${esc(i.label)}</span>${
-          i.detail ? `<span class="chip-d">${esc(i.detail)}</span>` : ""
+        `<div class="lrow"><span class="dot ${i.severity}"></span><span class="lrow-l">${esc(i.label)}</span>${
+          i.detail ? `<span class="lrow-d ${i.severity}">${esc(i.detail)}</span>` : ""
         }</div>`,
     )
     .join("");
