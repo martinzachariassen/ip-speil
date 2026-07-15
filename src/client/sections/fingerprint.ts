@@ -6,6 +6,10 @@ export function renderFingerprint(fp: FingerprintData, entropy: EntropyEstimate)
   const el = byId("body-fingerprint");
   const dot = entropy.bits >= 26 ? "bad" : entropy.bits >= 18 ? "warn" : "ok";
 
+  const badge = byId("badge-fingerprint");
+  badge.textContent = "1 notice";
+  badge.hidden = entropy.bits < 18;
+
   let html = note(
     dot,
     `Fingerprint uniqueness: ${entropy.rarity}`,

@@ -1,6 +1,6 @@
 import { fetchHeaders, fetchInfo } from "./api.ts";
 import { byId } from "./lib/dom.ts";
-import { estimateEntropy, isVpnSignal } from "./lib/heuristics.ts";
+import { estimateEntropy } from "./lib/heuristics.ts";
 import { getDnsLeak } from "./probes/dns-leak.ts";
 import { collectFingerprint } from "./probes/fingerprint.ts";
 import { getCFTrace, getDohReachable, getIPv4, getIPv6 } from "./probes/network.ts";
@@ -21,15 +21,19 @@ import type { Exits } from "./types.ts";
 const SECTION_IDS = ["privacy", "browser", "ipv6", "fingerprint", "headers", "webrtc"];
 
 let currentIP = "";
+let currentV6 = "";
 let latestReport: ReturnType<typeof buildReport> | null = null;
 
 function showSkeletons() {
   byId("ip-display").innerHTML = '<span class="skel skel-ip"></span>';
-  byId("copy-hint").textContent = "click to copy";
+  byId("copy-hint").textContent = "copy IP";
   byId("ip-btn").classList.remove("copied");
+  byId("v6-row").hidden = true;
   byId("hero-sub").innerHTML = '<span class="skel skel-text"></span>';
-  byId("hero-status").innerHTML = "";
-  byId("exposure-headline").innerHTML = '<span class="skel skel-text"></span>';
+  byId("verdict-dot").className = "dot off pulse";
+  byId("verdict-title").innerHTML = '<span class="skel skel-text"></span>';
+  byId("verdict-sub").textContent = "";
+  byId("badge-fingerprint").hidden = true;
   byId("exposure-grid").innerHTML = '<span class="skel skel-block"></span>';
   byId("facts").innerHTML =
     '<div class="fact"><div class="fact-l">Loading</div><div class="fact-v"><span class="skel skel-text"></span></div></div>';
@@ -59,6 +63,7 @@ async function load() {
   const entropy = estimateEntropy(fp);
 
   currentIP = data.query || "";
+  currentV6 = ipv6 ?? "";
   latestReport = buildReport({
     data,
     webrtc,
@@ -72,7 +77,7 @@ async function load() {
   });
 
   renderExposure({ d: data, webrtc, dnsLeak, doh, entropy });
-  renderHero(data, isVpnSignal(data));
+  renderHero(data, exits.v6);
   renderFacts(data, exits);
   renderPrivacy(data, webrtc, dnsLeak, doh);
   renderBrowser(data);
@@ -95,11 +100,23 @@ function copyIP() {
   navigator.clipboard.writeText(currentIP).then(() => {
     const btn = byId("ip-btn");
     const hint = byId("copy-hint");
+    const family = currentIP.includes(":") ? "IPv6" : "IPv4";
     hint.textContent = "copied ✓";
     btn.classList.add("copied");
     setTimeout(() => {
-      hint.textContent = "click to copy";
+      hint.textContent = `copy ${family}`;
       btn.classList.remove("copied");
+    }, 1800);
+  });
+}
+
+function copyV6() {
+  if (!currentV6) return;
+  navigator.clipboard.writeText(currentV6).then(() => {
+    const btn = byId("v6-btn");
+    btn.textContent = "copied ✓";
+    setTimeout(() => {
+      btn.textContent = "copy v6";
     }, 1800);
   });
 }
@@ -121,6 +138,7 @@ document.getElementById("theme-btn")?.addEventListener("click", toggleTheme);
 document.getElementById("refresh-btn")?.addEventListener("click", load);
 document.getElementById("report-btn")?.addEventListener("click", copyReport);
 document.getElementById("ip-btn")?.addEventListener("click", copyIP);
+document.getElementById("v6-btn")?.addEventListener("click", copyV6);
 for (const head of document.querySelectorAll(".rev-head")) {
   head.addEventListener("click", () => head.closest(".rev")?.classList.toggle("open"));
 }
