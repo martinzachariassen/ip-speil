@@ -1,8 +1,10 @@
 version: 2
 
 updates:
-  # Runtime + dev dependencies (Bun reads package.json / bun.lock via the npm ecosystem).
-  - package-ecosystem: "npm"
+  # Runtime + dev dependencies. Must be the dedicated "bun" ecosystem — "npm" only
+  # edits package.json and leaves bun.lock stale, which breaks --frozen-lockfile in CI.
+  # Note: "bun" supports version updates only, not security updates.
+  - package-ecosystem: "bun"
     directory: "/"
     schedule:
       interval: "weekly"
