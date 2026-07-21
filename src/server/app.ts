@@ -127,6 +127,9 @@ export function createApp(options: AppOptions = {}) {
   app.get("/", serveStatic({ ...staticOptions, rewriteRequestPath: () => "/index.html" }));
   app.get("/index.html", serveStatic(staticOptions));
   app.get("/robots.txt", serveStatic(staticOptions));
+  app.get("/favicon.ico", serveStatic(staticOptions));
+  app.get("/site.webmanifest", serveStatic(staticOptions));
+  app.get("/sitemap.xml", serveStatic(staticOptions));
   app.get("/assets/*", serveStatic(staticOptions));
 
   app.notFound((c) => c.text("Not found", 404));
