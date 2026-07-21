@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "ip-speil — your internet mirror",
+  "short_name": "ip-speil",
+  "description": "A privacy and network diagnostic mirror — see your public IP, VPN/proxy signals, WebRTC and DNS leaks, IPv6 routing, browser fingerprint and HTTP headers. No cookies, no database, no trackers.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#181712",
+  "theme_color": "#b9492f",
+  "icons": [
+    { "src": "/assets/icons/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/assets/icons/favicon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icons/favicon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/assets/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

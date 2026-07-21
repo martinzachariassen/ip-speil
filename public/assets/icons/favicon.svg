@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ip-speil">
+  <rect width="32" height="32" rx="7" fill="#b9492f"/>
+  <g fill="#ecebe4">
+    <path d="M16 5.5 24 15H8z"/>
+    <path d="M16 26.5 24 17H8z" opacity="0.4"/>
+  </g>
+  <rect x="6" y="15.4" width="20" height="1.2" rx="0.6" fill="#ecebe4" opacity="0.85"/>
+</svg>

@@ -16,6 +16,9 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+# Re-include the favicon dir — a global `Icon?` rule (macOS) matches `icons`
+# case-insensitively and would otherwise exclude it.
+!public/assets/icons/
 
 # Editor
 .vscode/
