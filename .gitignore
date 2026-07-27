@@ -2,7 +2,7 @@
 node_modules/
 
 # Build output (client bundle produced by `bun run build`)
-/public/assets/js/
+apps/web/public/assets/js/
 
 # Environment
 .env
@@ -18,7 +18,7 @@ npm-debug.log*
 Thumbs.db
 # Re-include the favicon dir — a global `Icon?` rule (macOS) matches `icons`
 # case-insensitively and would otherwise exclude it.
-!public/assets/icons/
+!apps/web/public/assets/icons/
 
 # Editor
 .vscode/

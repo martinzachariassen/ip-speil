@@ -6,11 +6,13 @@
 # Docs + tooling not needed in the image
 *.md
 biome.json
-tsconfig.json
+tsconfig.base.json
 railway.json
 mise.toml
-Dockerfile
 .dockerignore
+
+# The web app (frontend) is deployed to Cloudflare, not baked into the API image
+apps/web
 
 # Agent / editor internals
 .claude
@@ -19,8 +21,8 @@ Dockerfile
 .idea
 
 # Tests
-test
+apps/api/test
 
 # Dependencies + build output (installed / rebuilt inside the image)
 node_modules
-public/assets/js
+**/node_modules

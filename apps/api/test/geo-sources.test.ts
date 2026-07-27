@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
-import type { FetchLike } from "../../src/server/lib/fetch.ts";
-import { crossCheckGeo } from "../../src/server/lib/geo-sources.ts";
+import type { FetchLike } from "../src/lib/fetch.ts";
+import { crossCheckGeo } from "../src/lib/geo-sources.ts";
 
 test("crossCheckGeo counts country agreement across all sources", async () => {
   const fetchImpl: FetchLike = async (url) => {

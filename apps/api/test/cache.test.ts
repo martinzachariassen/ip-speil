@@ -5,7 +5,7 @@ import {
   createCachedFetcher,
   DailyBudget,
   TtlCache,
-} from "../../src/server/lib/cache.ts";
+} from "../src/lib/cache.ts";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

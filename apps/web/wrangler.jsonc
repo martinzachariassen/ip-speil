@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ip-speil-web",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-07-01",
+
+  // Serve the static site straight from ./public. The Worker only runs first for
+  // the dynamic routes below; every other path is served as a static asset.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/script.js"]
+  },
+
+  "observability": { "enabled": true },
+
+  // Non-secret config. PROXY_SECRET is set out-of-band with:
+  //   wrangler secret put PROXY_SECRET
+  "vars": {
+    "API_ORIGIN": "https://api.ip.mlz.no",
+    "UMAMI_SCRIPT_URL": "https://cloud.umami.is/script.js",
+    "UMAMI_SEND_URL": "https://api.umami.is/api/send"
+  }
+}

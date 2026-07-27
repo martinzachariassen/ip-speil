@@ -1,22 +1,15 @@
 import { secureHeaders } from "hono/secure-headers";
 
-import { CLIENT_CONNECT_SRC } from "./config.ts";
-
+// The API only serves JSON now. The page CSP (script-src, connect-src, fonts,
+// …) lives in the web app's Cloudflare `_headers` file; here we keep the
+// transport/typing hardening that still makes sense on API responses.
 export const securityMiddleware = secureHeaders({
   contentSecurityPolicy: {
-    defaultSrc: ["'self'"],
-    scriptSrc: ["'self'"],
-    connectSrc: [...CLIENT_CONNECT_SRC],
-    imgSrc: ["'self'", "data:"],
-    styleSrc: ["'self'"],
-    fontSrc: ["'self'"],
-    baseUri: ["'none'"],
-    formAction: ["'none'"],
+    defaultSrc: ["'none'"],
     frameAncestors: ["'none'"],
   },
   crossOriginOpenerPolicy: "same-origin",
   crossOriginResourcePolicy: "same-origin",
-  // Leave COEP off — enabling it would break the cross-origin probe fetches.
   crossOriginEmbedderPolicy: false,
   referrerPolicy: "no-referrer",
   strictTransportSecurity: "max-age=63072000; includeSubDomains; preload",

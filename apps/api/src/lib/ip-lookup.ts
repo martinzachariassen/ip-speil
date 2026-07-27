@@ -1,54 +1,11 @@
+import type { GeoCrossCheck, GeoSource, IpInfo } from "@ip-speil/shared";
+
 import { REQUEST_TIMEOUT_MS, UPSTREAM } from "../config.ts";
 import type { FetchLike } from "./fetch.ts";
 
-export type { FetchLike };
-
-// Field names mirror the legacy ip-api.com shape so the frontend doesn't churn;
-// ipapi.is' richer signals (tor/vpn/abuser) and our own enrichment sit on top.
-export interface IpInfo {
-  status: "success" | "fail";
-  message?: string;
-  query?: string;
-  country?: string;
-  countryCode?: string;
-  region?: string;
-  regionName?: string;
-  city?: string;
-  zip?: string;
-  lat?: number;
-  lon?: number;
-  timezone?: string;
-  offset?: number;
-  isp?: string;
-  org?: string;
-  as?: string;
-  asname?: string;
-  mobile?: boolean;
-  proxy?: boolean;
-  hosting?: boolean;
-  tor?: boolean;
-  vpn?: boolean;
-  abuser?: boolean;
-  bogon?: boolean;
-  reverse?: string;
-  blocklists?: string[];
-  geo?: GeoCrossCheck;
-}
-
-export interface GeoSource {
-  name: string;
-  country?: string;
-  countryCode?: string;
-  city?: string;
-  asn?: string;
-}
-
-export interface GeoCrossCheck {
-  agree: number;
-  total: number;
-  countryCode?: string;
-  sources: GeoSource[];
-}
+// Re-exported so the rest of the API keeps importing these from here; the
+// canonical definitions now live in @ip-speil/shared (shared with the client).
+export type { FetchLike, GeoCrossCheck, GeoSource, IpInfo };
 
 interface IpapiIsResponse {
   ip?: string;

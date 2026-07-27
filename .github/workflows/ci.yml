@@ -30,6 +30,7 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Bundles the client, typechecks server + client, lints, and runs tests.
+      # Bundles the client, typechecks every workspace (api + client + worker +
+      # shared), lints, and runs tests.
       - name: Check
         run: bun run check

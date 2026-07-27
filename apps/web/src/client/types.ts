@@ -1,47 +1,7 @@
-export interface GeoSource {
-  name: string;
-  country?: string;
-  countryCode?: string;
-  city?: string;
-  asn?: string;
-}
-
-export interface GeoCrossCheck {
-  agree: number;
-  total: number;
-  countryCode?: string;
-  sources: GeoSource[];
-}
-
-// The /api/info response as the client consumes it (all fields optional).
-export interface IpInfo {
-  status?: "success" | "fail";
-  query?: string;
-  country?: string;
-  countryCode?: string;
-  region?: string;
-  regionName?: string;
-  city?: string;
-  zip?: string;
-  lat?: number;
-  lon?: number;
-  timezone?: string;
-  offset?: number;
-  isp?: string;
-  org?: string;
-  as?: string;
-  asname?: string;
-  reverse?: string;
-  mobile?: boolean;
-  proxy?: boolean;
-  hosting?: boolean;
-  tor?: boolean;
-  vpn?: boolean;
-  abuser?: boolean;
-  bogon?: boolean;
-  blocklists?: string[];
-  geo?: GeoCrossCheck;
-}
+// Wire types (IpInfo, GeoCrossCheck, …) are shared with the API via the
+// @ip-speil/shared package so the two sides can't drift. Re-exported here so the
+// rest of the client keeps importing them from "./types.ts".
+export type { GeoCrossCheck, GeoSource, HeaderMap, IpInfo } from "@ip-speil/shared";
 
 export interface IceCandidateInfo {
   type: string;
@@ -63,8 +23,6 @@ export interface WebGLInfo {
   renderer: string;
   vendor: string;
 }
-
-export type HeaderMap = Record<string, string | string[]>;
 
 // Which exit IP the browser presents over each transport. `http` is whatever
 // family reached our server; `v4`/`v6` are forced single-family probes.

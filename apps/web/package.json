@@ -1,0 +1,20 @@
+{
+  "name": "@ip-speil/web",
+  "version": "2.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "bun build src/client/main.ts --outdir public/assets/js --target browser --minify --sourcemap=linked",
+    "build:watch": "bun build src/client/main.ts --outdir public/assets/js --target browser --sourcemap=linked --watch",
+    "dev": "wrangler dev",
+    "deploy": "bun run build && wrangler deploy",
+    "typecheck": "tsc -p src/client/tsconfig.json --noEmit && tsc -p src/worker/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ip-speil/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250712.0",
+    "wrangler": "^4.20.0"
+  }
+}
