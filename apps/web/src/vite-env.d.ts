@@ -1,7 +1,7 @@
+/// <reference types="vite/client" />
+
 // Ambient declarations for widely-shipped browser APIs that are missing from
 // (or only partially in) the standard DOM lib.
-export {};
-
 declare global {
   interface NetworkInformation {
     type?: string;
@@ -19,3 +19,5 @@ declare global {
     globalPrivacyControl?: boolean;
   }
 }
+
+export {};

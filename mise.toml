@@ -7,11 +7,11 @@ description = "Run the API (Railway) dev server with watch"
 run = "bun run dev:api"
 
 [tasks.dev-web]
-description = "Run the web app (Cloudflare Worker + static) via wrangler dev"
+description = "Run the web app (Vite + Cloudflare Worker) dev server"
 run = "bun run dev:web"
 
 [tasks.build]
-description = "Bundle the client TypeScript to apps/web/public/assets/js"
+description = "Build the React client + Worker with Vite → apps/web/dist"
 run = "bun run build"
 
 [tasks.typecheck]

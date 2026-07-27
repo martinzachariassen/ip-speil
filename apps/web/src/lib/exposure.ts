@@ -1,14 +1,7 @@
-import { byId } from "../lib/dom.ts";
-import { esc, isSuccessfulLookup } from "../lib/format.ts";
-import {
-  foreignResolvers,
-  ispSuggestsHosting,
-  isVpnSignal,
-  webrtcLeak,
-} from "../lib/heuristics.ts";
+import type { Severity } from "../components/primitives.tsx";
 import type { DnsLeakResult, EntropyEstimate, IpInfo, WebRTCResult } from "../types.ts";
-
-type Severity = "ok" | "warn" | "bad" | "off";
+import { isSuccessfulLookup } from "./format.ts";
+import { foreignResolvers, ispSuggestsHosting, isVpnSignal, webrtcLeak } from "./heuristics.ts";
 
 export interface ExposureItem {
   severity: Severity;
@@ -22,7 +15,7 @@ export interface Verdict {
   sub: string;
 }
 
-interface ExposureInput {
+export interface ExposureInput {
   d: IpInfo;
   webrtc: WebRTCResult;
   dnsLeak: DnsLeakResult;
@@ -30,6 +23,8 @@ interface ExposureInput {
   entropy: EntropyEstimate;
 }
 
+// Derive the rail verdict + "What sites can see" ledger from a scan. Kept as a
+// pure function so both the rail (verdict) and the ledger section consume it.
 export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureInput): {
   verdict: Verdict;
   items: ExposureItem[];
@@ -49,38 +44,22 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
 
   if (ok) {
     const place = [d.city, d.countryCode || d.country].filter(Boolean).join(", ");
-    items.push({
-      severity: "off",
-      label: "Approximate location",
-      detail: place || "unknown",
-    });
+    items.push({ severity: "off", label: "Approximate location", detail: place || "unknown" });
     items.push(
       anonymity
         ? { severity: "bad", label: "VPN / proxy / Tor", detail: "detected" }
         : { severity: "ok", label: "VPN / proxy / Tor", detail: "no signal" },
     );
     if (d.hosting === true || ispSuggestsHosting(d)) {
-      items.push({
-        severity: "warn",
-        label: "Datacenter / cloud IP",
-        detail: "hosting ASN",
-      });
+      items.push({ severity: "warn", label: "Datacenter / cloud IP", detail: "hosting ASN" });
       concerns.push("a datacenter IP");
     }
     if (d.blocklists?.length) {
-      items.push({
-        severity: "warn",
-        label: "Reputation DBs",
-        detail: d.blocklists.join(", "),
-      });
+      items.push({ severity: "warn", label: "Reputation DBs", detail: d.blocklists.join(", ") });
       concerns.push("a blocklist listing");
     }
     if (d.mobile) {
-      items.push({
-        severity: "off",
-        label: "Mobile network",
-        detail: "cellular ASN",
-      });
+      items.push({ severity: "off", label: "Mobile network", detail: "cellular ASN" });
     }
   }
 
@@ -127,11 +106,7 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
   }
 
   const verdict: Verdict = !ok
-    ? {
-        severity: "warn",
-        title: "Scan incomplete.",
-        sub: "The IP lookup failed — try Refresh.",
-      }
+    ? { severity: "warn", title: "Scan incomplete.", sub: "The IP lookup failed — try Refresh." }
     : anonymity
       ? {
           severity: "bad",
@@ -157,19 +132,4 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
             };
 
   return { verdict, items };
-}
-
-export function renderExposure(input: ExposureInput) {
-  const { verdict, items } = computeExposure(input);
-  byId("verdict-dot").className = `dot ${verdict.severity} pulse`;
-  byId("verdict-title").textContent = verdict.title;
-  byId("verdict-sub").textContent = verdict.sub;
-  byId("exposure-grid").innerHTML = items
-    .map(
-      (i) =>
-        `<div class="lrow"><span class="dot ${i.severity}"></span><span class="lrow-l">${esc(i.label)}</span>${
-          i.detail ? `<span class="lrow-d ${i.severity}">${esc(i.detail)}</span>` : ""
-        }</div>`,
-    )
-    .join("");
 }

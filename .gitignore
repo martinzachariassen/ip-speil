@@ -1,8 +1,11 @@
 # Dependencies
 node_modules/
 
-# Build output (client bundle produced by `bun run build`)
-apps/web/public/assets/js/
+# Build output (Vite build → dist/, produced by `bun run build`)
+apps/web/dist/
+
+# Wrangler local state (dev cache, redirected deploy config)
+apps/web/.wrangler/
 
 # Environment
 .env

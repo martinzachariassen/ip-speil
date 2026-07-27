@@ -4,12 +4,12 @@
   "main": "src/worker/index.ts",
   "compatibility_date": "2026-07-01",
 
-  // Serve the static site straight from ./public. The Worker only runs first for
-  // the dynamic routes below; every other path is served as a static asset.
-  // "/" runs the Worker so it can content-negotiate (curl → plain IP, browser →
-  // HTML page); "/ip" and "/json" are the explicit CLI endpoints.
+  // With @cloudflare/vite-plugin the assets `directory` is managed for us — the
+  // build points it at the Vite client output. The Worker only runs first for the
+  // dynamic routes below; every other path is served as a static asset. "/" runs
+  // the Worker so it can content-negotiate (curl → plain IP, browser → HTML page);
+  // "/ip" and "/json" are the explicit CLI endpoints.
   "assets": {
-    "directory": "./public",
     "binding": "ASSETS",
     "run_worker_first": ["/", "/ip", "/json", "/api/*", "/script.js"]
   },

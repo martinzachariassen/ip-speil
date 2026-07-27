@@ -4,17 +4,26 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun build src/client/main.ts --outdir public/assets/js --target browser --minify --sourcemap=linked",
-    "build:watch": "bun build src/client/main.ts --outdir public/assets/js --target browser --sourcemap=linked --watch",
-    "dev": "wrangler dev",
-    "deploy": "bun run build && wrangler deploy",
-    "typecheck": "tsc -p src/client/tsconfig.json --noEmit && tsc -p src/worker/tsconfig.json --noEmit"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "vite build && wrangler deploy",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/worker/tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ip-speil/shared": "workspace:*"
+    "@ip-speil/shared": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.47.0",
     "@cloudflare/workers-types": "^4.20250712.0",
-    "wrangler": "^4.20.0"
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.5",
+    "wrangler": "^4.114.0"
   }
 }

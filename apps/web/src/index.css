@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+/* ip-speil "Split pane" theme — paper/ink aesthetic, light + dark.
+   Theme is toggled with a data-theme attribute on <html> (persisted in
+   localStorage), so the dark variant keys off that attribute rather than the
+   OS preference. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Self-hosted to avoid leaking visitor IPs to Google Fonts. */
+@font-face {
+  font-family: "Schibsted Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/assets/fonts/schibsted-grotesk.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/ibm-plex-mono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/assets/fonts/ibm-plex-mono-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/assets/fonts/ibm-plex-mono-600.woff2") format("woff2");
+}
+
+/* Design tokens. The values switch with the theme; the Tailwind color/font
+   utilities below reference them, so `bg-paper`, `text-ink`, etc. re-colour
+   automatically when [data-theme] flips — no dark: variants needed for colour. */
+:root {
+  --paper: #ecebe4;
+  --paper-2: #e6e4da;
+  --ink: #1c1b17;
+  --ink-soft: #54524a;
+  --ink-faint: #8a877c;
+  --line: rgba(28, 27, 23, 0.13);
+  --line-2: rgba(28, 27, 23, 0.22);
+  --line-soft: rgba(28, 27, 23, 0.08);
+  --panel: rgba(28, 27, 23, 0.025);
+  --accent: #b9492f;
+  --ok: #3f6b4a;
+  --warn: #b07a26;
+  --skel-a: rgba(28, 27, 23, 0.06);
+  --skel-b: rgba(28, 27, 23, 0.12);
+}
+
+[data-theme="dark"] {
+  --paper: #181712;
+  --paper-2: #131210;
+  --ink: #ecebe4;
+  --ink-soft: #b6b3a8;
+  --ink-faint: #827f73;
+  --line: rgba(236, 235, 228, 0.12);
+  --line-2: rgba(236, 235, 228, 0.2);
+  --line-soft: rgba(236, 235, 228, 0.08);
+  --panel: rgba(236, 235, 228, 0.02);
+  --accent: #d96a4d;
+  --ok: #7ba884;
+  --warn: #d3a557;
+  --skel-a: rgba(236, 235, 228, 0.05);
+  --skel-b: rgba(236, 235, 228, 0.11);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-line-soft: var(--line-soft);
+  --color-panel: var(--panel);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+
+  --font-sans: "Schibsted Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --animate-shimmer: shimmer 1.4s infinite linear;
+  --animate-pulse-dot: pulseDot 2.4s ease-out infinite;
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    transition:
+      background 0.2s,
+      color 0.2s;
+  }
+  /* Super-wide viewports read the pane as a centred sheet on a darker ground. */
+  @media (min-width: 1280px) {
+    body {
+      background: var(--paper-2);
+    }
+  }
+  a {
+    color: inherit;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 22%, transparent);
+  }
+  /* Keyboard focus ring — matches the paper aesthetic. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -360px 0;
+  }
+  100% {
+    background-position: 360px 0;
+  }
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 50%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+/* Reduced motion — kill the shimmer, the pulse and the reveal slide. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
