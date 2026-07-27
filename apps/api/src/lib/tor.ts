@@ -1,4 +1,5 @@
 import type { FetchLike } from "./fetch.ts";
+import { log } from "./log.ts";
 
 // The Tor Project's bulk exit list: one IP per line, plain text. Downloading it
 // carries NO visitor IP (it's a public list), so this outbound call is allowed
@@ -14,6 +15,11 @@ let inflight: Promise<void> | null = null;
 /** True if `ip` is a known Tor exit node. Pure in-memory read (offline-safe). */
 export function isTorExit(ip: string): boolean {
   return exits.has(ip);
+}
+
+/** Number of Tor exit nodes currently loaded in memory. */
+export function torExitCount(): number {
+  return exits.size;
 }
 
 /**
@@ -37,8 +43,12 @@ export function refreshTorExits(fetchImpl: FetchLike = fetch, timeoutMs = 8000):
       }
       if (next.size > 0) exits = next;
       lastFetch = Date.now();
+      log.info("tor exit list refreshed", { exits: exits.size });
     } catch (err) {
-      console.warn("tor exit list refresh failed, keeping last good set:", err);
+      log.warn("tor exit list refresh failed, keeping last good set", {
+        kept: exits.size,
+        error: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       inflight = null;
     }

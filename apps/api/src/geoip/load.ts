@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 
+import { log } from "../lib/log.ts";
 import { parseDbIpCityCsv, parseIp2AsnV4, parseIp2AsnV6 } from "./parse.ts";
 import { type AsnPayload, buildRangesV4, buildRangesV6, type CityPayload, GeoDb } from "./store.ts";
 
@@ -92,7 +93,9 @@ export function loadGeoDb(dataDir: string = DEFAULT_DATA_DIR): GeoDb | null {
 
     return db;
   } catch (err) {
-    console.error("failed to load geoip datasets:", err);
+    log.error("failed to load geoip datasets", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }

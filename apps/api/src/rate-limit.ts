@@ -1,5 +1,7 @@
 import type { Context, MiddlewareHandler } from "hono";
 
+import { log } from "./lib/log.ts";
+
 export interface RateLimitOptions {
   windowMs: number;
   limit: number;
@@ -7,6 +9,9 @@ export interface RateLimitOptions {
   // The cross-IP backstop shares a route with the per-IP limiter; only one of
   // them should emit the standard RateLimit-* headers.
   standardHeaders?: boolean;
+  // Label used in the throttle log line so per-IP vs global rejections are
+  // distinguishable. The key itself (a visitor IP) is never logged.
+  name?: string;
 }
 
 interface Bucket {
@@ -24,6 +29,7 @@ export function rateLimit({
   limit,
   keyGenerator,
   standardHeaders = true,
+  name = "info",
 }: RateLimitOptions): MiddlewareHandler {
   const buckets = new Map<string, Bucket>();
 
@@ -53,6 +59,8 @@ export function rateLimit({
 
     if (bucket.count > limit) {
       c.header("Retry-After", String(resetSeconds));
+      // Log the throttle event (label + limit only — never the visitor key).
+      log.warn("rate limited", { limiter: name, limit, retryAfter: resetSeconds });
       return c.json({ error: "rate_limited" }, 429);
     }
 

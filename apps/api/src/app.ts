@@ -1,5 +1,5 @@
 import type { RoutingInfo } from "@ip-speil/shared";
-import type { Context } from "hono";
+import type { Context, MiddlewareHandler } from "hono";
 import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 
@@ -10,6 +10,7 @@ import { getClientIp } from "./lib/client-ip.ts";
 import { createEnricher } from "./lib/enrich.ts";
 import type { FetchLike } from "./lib/fetch.ts";
 import { createIpService } from "./lib/ip-service.ts";
+import { log } from "./lib/log.ts";
 import { createRoutingLookup } from "./lib/routing.ts";
 import { isTorExit as defaultIsTorExit } from "./lib/tor.ts";
 import { rateLimit } from "./rate-limit.ts";
@@ -43,6 +44,22 @@ export interface AppOptions {
   routingImpl?: (ip: string) => Promise<RoutingInfo | undefined>;
 }
 
+// Per-request access log. Uses `c.req.path` (pathname only, never the query
+// string) so a `?ip=` param can't leak a visitor address into the logs. Frequent
+// Railway health pings are demoted to debug so they don't drown the signal.
+const requestLogger: MiddlewareHandler = async (c, next) => {
+  const start = Date.now();
+  await next();
+  const ms = Date.now() - start;
+  const { method } = c.req;
+  const path = c.req.path;
+  const status = c.res.status;
+  const level = status >= 500 ? "error" : status >= 400 ? "warn" : "info";
+  const fields = { method, path, status, ms };
+  if (path === "/health") log.debug("request", fields);
+  else log[level]("request", fields);
+};
+
 export function createApp(options: AppOptions = {}) {
   const {
     requestTimeoutMs = REQUEST_TIMEOUT_MS,
@@ -56,6 +73,7 @@ export function createApp(options: AppOptions = {}) {
   } = options;
 
   const app = new Hono();
+  app.use("*", requestLogger);
   app.use("*", securityMiddleware);
 
   const clientIpFor = (c: Context): string => {
@@ -98,8 +116,14 @@ export function createApp(options: AppOptions = {}) {
       limit: RATE_LIMIT.infoGlobal,
       keyGenerator: () => "global",
       standardHeaders: false,
+      name: "info-global",
     }),
-    rateLimit({ windowMs: RATE_LIMIT.windowMs, limit: infoRateLimit, keyGenerator: clientIpFor }),
+    rateLimit({
+      windowMs: RATE_LIMIT.windowMs,
+      limit: infoRateLimit,
+      keyGenerator: clientIpFor,
+      name: "info-per-ip",
+    }),
     infoRoute({ lookup, clientIpFor }),
   );
 

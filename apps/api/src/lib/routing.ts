@@ -6,6 +6,7 @@ import { RIPESTAT, ROUTING_CACHE_MAX_ENTRIES, ROUTING_CACHE_TTL_MS } from "../co
 import { ipv6ToBigInt } from "../geoip/parse.ts";
 import { createCachedFetcher } from "./cache.ts";
 import { type FetchLike, fetchJson } from "./fetch.ts";
+import { log } from "./log.ts";
 
 // Zero the host bits of an IP so only a whole network block is ever sent to
 // RIPEstat. Returns e.g. "203.0.113.0/24" or "2001:db8:1::/48", or null for a
@@ -142,7 +143,16 @@ export function createRoutingLookup(options: RoutingLookupOptions = {}): Routing
     const resource = networkBlock(ip, ipv4PrefixBits, ipv6PrefixBits);
     if (!resource) return Promise.resolve(undefined);
     // Cache keyed by network block; a thrown/timed-out lookup degrades to
-    // undefined (and, being undefined, is retried rather than cached).
-    return cached(resource, () => fetchRouting(resource).catch(() => undefined));
+    // undefined (and, being undefined, is retried rather than cached). The
+    // resource is a whole network block (host bits zeroed), so it's safe to log.
+    return cached(resource, () =>
+      fetchRouting(resource).catch((err) => {
+        log.warn("routing lookup failed", {
+          resource,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return undefined;
+      }),
+    );
   };
 }
