@@ -1,5 +1,6 @@
+import { clientHintsStatus } from "./lib/client-hints.ts";
 import { networkLabel } from "./lib/format.ts";
-import { webrtcLeak } from "./lib/heuristics.ts";
+import { foreignResolvers, webrtcLeak } from "./lib/heuristics.ts";
 import type {
   CFTrace,
   DnsLeakResult,
@@ -33,11 +34,13 @@ export interface ReportInput {
   entropy: EntropyEstimate;
 }
 
+// The normalised, redacted diagnostics object. Reused as the unit stored for the
+// snapshot/diff feature and encoded into shareable links.
+export type Report = ReturnType<typeof buildReport>;
+
 export function buildReport(input: ReportInput) {
   const { data, webrtc, exits, ipv6Info, cfTrace, headers, dnsLeak, doh, entropy } = input;
-  const foreignResolvers = dnsLeak.resolvers.filter(
-    (r) => r.country && data.country && r.country !== data.country,
-  ).length;
+  const foreignCount = foreignResolvers(dnsLeak.resolvers, data.country).length;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -60,12 +63,13 @@ export function buildReport(input: ReportInput) {
       mobile: data.mobile === true,
       dohReachable: doh,
       dnsResolverCount: dnsLeak.available ? dnsLeak.resolvers.length : null,
-      dnsForeignResolvers: dnsLeak.available ? foreignResolvers : null,
+      dnsForeignResolvers: dnsLeak.available ? foreignCount : null,
       timezoneMismatch: !!(
         data.timezone && Intl.DateTimeFormat().resolvedOptions().timeZone !== data.timezone
       ),
       webrtcDifferentPublicIp: webrtcLeak(webrtc, data.query),
       fingerprintEntropyBits: entropy.bits,
+      fingerprintSignals: entropy.contributions.map((c) => c.label),
     },
     webrtc: {
       publicCount: webrtc.pub.length,
@@ -81,9 +85,19 @@ export function buildReport(input: ReportInput) {
           warp: cfTrace.warp || null,
           gateway: cfTrace.gateway || null,
           http: cfTrace.http || null,
+          tls: cfTrace.tls || null,
+          // sni=encrypted → Encrypted Client Hello was used on this connection.
+          ech: cfTrace.sni ? cfTrace.sni === "encrypted" : null,
+          keyExchange: cfTrace.kex || null,
         }
       : null,
     headersObserved: Object.keys(headers ?? {}).sort(),
+    // Presence/absence of the high-entropy client hints we solicited — never
+    // their values, to keep the report shareable.
+    clientHints: clientHintsStatus(headers ?? {}).map((h) => ({
+      header: h.header,
+      answered: h.value !== null,
+    })),
     note: "Redacted report: exact IPs and full header values are omitted. Browser fingerprint details stay local — only a coarse entropy estimate is included.",
   };
 }

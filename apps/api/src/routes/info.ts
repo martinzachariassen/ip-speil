@@ -1,7 +1,6 @@
 import type { Context, Handler } from "hono";
 
 import { CACHE_CONTROL } from "../config.ts";
-import { BudgetExhaustedError } from "../lib/cache.ts";
 import { isProbablyIp } from "../lib/client-ip.ts";
 import type { IpService } from "../lib/ip-service.ts";
 
@@ -23,11 +22,10 @@ export function infoRoute({ lookup, clientIpFor }: InfoRouteDeps): Handler {
       c.header("Cache-Control", CACHE_CONTROL.noStore);
       return c.json(data);
     } catch (err) {
-      if (err instanceof BudgetExhaustedError) {
-        return c.json({ error: "budget_exhausted" }, 503);
-      }
+      // The local path shouldn't throw (resolver calls degrade to fallbacks),
+      // but keep a defensive 502 so an unexpected failure isn't a 500.
       return c.json(
-        { error: "upstream_failed", message: err instanceof Error ? err.message : String(err) },
+        { error: "lookup_failed", message: err instanceof Error ? err.message : String(err) },
         502,
       );
     }

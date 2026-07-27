@@ -18,7 +18,7 @@ const CLEANUP_THRESHOLD = 10_000;
 
 // In-memory fixed-window limiter. Single-instance by design — ip-speil runs as
 // one Railway replica, so a shared store would be overkill. Its job is to shrug
-// off casual abuse; the real upstream-quota guard is the daily budget in cache.ts.
+// off casual abuse of the (now local) lookup + reverse-DNS/DNSBL resolver work.
 export function rateLimit({
   windowMs,
   limit,

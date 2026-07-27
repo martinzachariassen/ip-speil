@@ -43,6 +43,12 @@ export function renderFacts(d: IpInfo, exits: Exits) {
   if (d.geo && d.geo.total > 1) {
     html += fact("Geo agreement", `${d.geo.agree}/${d.geo.total} sources agree on country`);
   }
+  if (d.datasetDate) {
+    html += fact(
+      "Geo dataset",
+      `<span class="m sm">${esc(d.datasetDate.slice(0, 10))}</span> <span class="muted">DB-IP + iptoasn, resolved locally</span>`,
+    );
+  }
   html += fact(
     "Timezone",
     `${esc(d.timezone || tz.browserTz)}${tzWarn ? ` <span class="muted">browser: ${esc(tz.browserTz)} ⚠</span>` : ""}`,

@@ -1,88 +1,37 @@
-import { type FetchLike, fetchJson } from "./fetch.ts";
-import type { GeoCrossCheck, GeoSource, IpInfo } from "./ip-lookup.ts";
+import type { GeoCrossCheck, GeoSource } from "@ip-speil/shared";
 
-export interface GeoSourcesDeps {
-  fetchImpl: FetchLike;
-  timeoutMs: number;
-}
+import { countryName, type LocalGeo } from "../geoip/store.ts";
 
-interface IpwhoResponse {
-  success?: boolean;
-  country?: string;
-  country_code?: string;
-  city?: string;
-  connection?: { asn?: number };
-}
+// The cross-check is now "two independent LOCAL datasets agree on country":
+// DB-IP City Lite (the `countryCode`) vs iptoasn (the `asnCountry`). No network.
+export function crossCheckGeo(geo: LocalGeo | null): GeoCrossCheck | undefined {
+  if (!geo) return undefined;
 
-interface GeojsResponse {
-  country?: string;
-  country_code?: string;
-  city?: string;
-  asn?: number;
-}
-
-async function fromIpwho(ip: string, deps: GeoSourcesDeps): Promise<GeoSource | null> {
-  try {
-    const d = await fetchJson<IpwhoResponse>(
-      deps.fetchImpl,
-      `https://ipwho.is/${encodeURIComponent(ip)}`,
-      deps.timeoutMs,
-    );
-    if (d.success === false) return null;
-    return {
-      name: "ipwho.is",
-      country: d.country,
-      countryCode: d.country_code,
-      city: d.city,
-      asn: d.connection?.asn != null ? `AS${d.connection.asn}` : undefined,
-    };
-  } catch {
-    return null;
+  const sources: GeoSource[] = [];
+  if (geo.countryCode) {
+    sources.push({
+      name: "DB-IP",
+      country: geo.country,
+      countryCode: geo.countryCode,
+      city: geo.city,
+    });
   }
-}
-
-async function fromGeojs(ip: string, deps: GeoSourcesDeps): Promise<GeoSource | null> {
-  try {
-    const d = await fetchJson<GeojsResponse>(
-      deps.fetchImpl,
-      `https://get.geojs.io/v1/ip/geo/${encodeURIComponent(ip)}.json`,
-      deps.timeoutMs,
-    );
-    return {
-      name: "geojs.io",
-      country: d.country,
-      countryCode: d.country_code,
-      city: d.city,
-      asn: d.asn != null ? `AS${d.asn}` : undefined,
-    };
-  } catch {
-    return null;
+  if (geo.asnCountry) {
+    sources.push({
+      name: "iptoasn",
+      country: countryName(geo.asnCountry),
+      countryCode: geo.asnCountry,
+      asn: geo.asn != null ? `AS${geo.asn}` : undefined,
+    });
   }
-}
 
-// Fans out to keyless secondary providers and reports how many sources agree on
-// the country. Both are best-effort; a provider that errors is simply dropped.
-export async function crossCheckGeo(
-  info: IpInfo,
-  deps: GeoSourcesDeps,
-): Promise<GeoCrossCheck | undefined> {
-  const ip = info.query;
-  if (!ip) return undefined;
+  if (sources.length === 0) return undefined;
 
-  const secondary = (await Promise.all([fromIpwho(ip, deps), fromGeojs(ip, deps)])).filter(
-    (source): source is GeoSource => source !== null,
-  );
+  const agreed = geo.countryCode ?? geo.asnCountry;
+  const agreedUpper = agreed?.toUpperCase();
+  const agree = agreedUpper
+    ? sources.filter((s) => s.countryCode?.toUpperCase() === agreedUpper).length
+    : 0;
 
-  const primary: GeoSource = {
-    name: "ipapi.is",
-    country: info.country,
-    countryCode: info.countryCode,
-    city: info.city,
-    asn: info.as,
-  };
-  const sources = [primary, ...secondary];
-  const cc = info.countryCode?.toUpperCase();
-  const agree = cc ? sources.filter((s) => s.countryCode?.toUpperCase() === cc).length : 0;
-
-  return { agree, total: sources.length, countryCode: info.countryCode, sources };
+  return { agree, total: sources.length, countryCode: agreed, sources };
 }

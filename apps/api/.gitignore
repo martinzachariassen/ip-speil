@@ -1,0 +1,4 @@
+# Local geoip datasets are fetched at Docker build time (see scripts/fetch-datasets.ts)
+# and are never committed. The directory is kept via .gitkeep.
+/data/*
+!/data/.gitkeep

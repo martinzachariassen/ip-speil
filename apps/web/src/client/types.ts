@@ -42,6 +42,8 @@ export interface DnsLeakResult {
   available: boolean;
   conclusion?: string;
   resolvers: DnsResolver[];
+  // Which provider answered ("bash.ws"), or undefined when the test could not run.
+  source?: string;
 }
 
 export interface ConnectionInfo {
@@ -72,8 +74,16 @@ export interface FingerprintData {
   connection: ConnectionInfo | null;
 }
 
+export interface EntropyContribution {
+  label: string;
+  bits: number;
+}
+
 export interface EntropyEstimate {
   bits: number;
-  oneIn: string;
   rarity: "low" | "moderate" | "high" | "very high";
+  // Per-signal breakdown (present signals only, sorted most→least identifying).
+  // We deliberately do NOT publish a "1 in N browsers" figure: we have no
+  // measured population, so any such number would be fabricated.
+  contributions: EntropyContribution[];
 }

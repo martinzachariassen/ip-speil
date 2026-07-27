@@ -1,6 +1,11 @@
 import { byId } from "../lib/dom.ts";
 import { esc, isSuccessfulLookup } from "../lib/format.ts";
-import { ispSuggestsHosting, isVpnSignal, webrtcLeak } from "../lib/heuristics.ts";
+import {
+  foreignResolvers,
+  ispSuggestsHosting,
+  isVpnSignal,
+  webrtcLeak,
+} from "../lib/heuristics.ts";
 import type { DnsLeakResult, EntropyEstimate, IpInfo, WebRTCResult } from "../types.ts";
 
 type Severity = "ok" | "warn" | "bad" | "off";
@@ -44,14 +49,22 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
 
   if (ok) {
     const place = [d.city, d.countryCode || d.country].filter(Boolean).join(", ");
-    items.push({ severity: "off", label: "Approximate location", detail: place || "unknown" });
+    items.push({
+      severity: "off",
+      label: "Approximate location",
+      detail: place || "unknown",
+    });
     items.push(
       anonymity
         ? { severity: "bad", label: "VPN / proxy / Tor", detail: "detected" }
         : { severity: "ok", label: "VPN / proxy / Tor", detail: "no signal" },
     );
     if (d.hosting === true || ispSuggestsHosting(d)) {
-      items.push({ severity: "warn", label: "Datacenter / cloud IP", detail: "hosting ASN" });
+      items.push({
+        severity: "warn",
+        label: "Datacenter / cloud IP",
+        detail: "hosting ASN",
+      });
       concerns.push("a datacenter IP");
     }
     if (d.blocklists?.length) {
@@ -63,7 +76,11 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
       concerns.push("a blocklist listing");
     }
     if (d.mobile) {
-      items.push({ severity: "off", label: "Mobile network", detail: "cellular ASN" });
+      items.push({
+        severity: "off",
+        label: "Mobile network",
+        detail: "cellular ASN",
+      });
     }
   }
 
@@ -76,16 +93,18 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
   if (leak) concerns.push("a WebRTC leak");
 
   if (dnsLeak.available) {
-    const foreign = dnsLeak.resolvers.filter(
-      (r) => r.country && d.country && r.country !== d.country,
-    );
+    const foreign = foreignResolvers(dnsLeak.resolvers, d.country);
     const n = dnsLeak.resolvers.length;
     items.push({
       severity: foreign.length ? "warn" : "ok",
       label: "DNS leak",
       detail: foreign.length
-        ? `${foreign.length} foreign resolver${foreign.length === 1 ? "" : "s"}`
-        : `none · ${n} resolver${n === 1 ? "" : "s"}`,
+        ? foreign.length === 1
+          ? `${foreign.length} foreign resolver`
+          : `${foreign.length} foreign resolvers`
+        : n === 1
+          ? `none · ${n} resolver`
+          : `none · ${n} resolvers`,
     });
     if (foreign.length) concerns.push("a DNS leak");
   } else if (doh === false) {

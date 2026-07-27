@@ -1,22 +1,16 @@
 import { expect, test } from "bun:test";
 
-import {
-  BudgetExhaustedError,
-  createCachedFetcher,
-  DailyBudget,
-  TtlCache,
-} from "../src/lib/cache.ts";
+import { createCachedFetcher, TtlCache } from "../src/lib/cache.ts";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-test("TtlCache expires entries after the ttl but keeps them for stale reads", async () => {
+test("TtlCache returns a value within its ttl and expires it afterwards", async () => {
   const cache = new TtlCache<string>(20);
   cache.set("k", "v");
   expect(cache.get("k")).toBe("v");
 
   await sleep(40);
   expect(cache.get("k")).toBeUndefined();
-  expect(cache.getStale("k")).toBe("v");
 });
 
 test("createCachedFetcher serves a cached value without reloading", async () => {
@@ -47,19 +41,15 @@ test("createCachedFetcher coalesces concurrent loads for the same key", async ()
   expect(loads).toBe(1);
 });
 
-test("DailyBudget blocks loads past the cap and throws when nothing is cached", async () => {
-  const budget = new DailyBudget(1);
-  const fetcher = createCachedFetcher<number>({ ttlMs: 60_000, budget });
+test("createCachedFetcher reloads after the ttl lapses", async () => {
+  let loads = 0;
+  const fetcher = createCachedFetcher<number>({ ttlMs: 10 });
+  const load = async () => {
+    loads += 1;
+    return loads;
+  };
 
-  expect(await fetcher("a", async () => 1)).toBe(1);
-  await expect(fetcher("b", async () => 2)).rejects.toBeInstanceOf(BudgetExhaustedError);
-});
-
-test("createCachedFetcher serves a stale value once the budget is spent", async () => {
-  const budget = new DailyBudget(1);
-  const fetcher = createCachedFetcher<number>({ ttlMs: 10, budget });
-
-  expect(await fetcher("a", async () => 10)).toBe(10);
+  expect(await fetcher("k", load)).toBe(1);
   await sleep(25);
-  expect(await fetcher("a", async () => 999)).toBe(10);
+  expect(await fetcher("k", load)).toBe(2);
 });

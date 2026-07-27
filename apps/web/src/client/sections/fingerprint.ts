@@ -12,9 +12,16 @@ export function renderFingerprint(fp: FingerprintData, entropy: EntropyEstimate)
 
   let html = note(
     dot,
-    `Fingerprint uniqueness: ${entropy.rarity}`,
-    `~${entropy.bits} bits of entropy — very roughly 1 in ${entropy.oneIn} browsers share this profile. Estimate only, computed locally.`,
+    `Fingerprint distinctiveness: ${entropy.rarity}`,
+    `About ${entropy.bits} bits of identifying information are exposed here — the more distinctive signals, the fewer browsers look like yours. This is a local, order-of-magnitude estimate (EFF Cover Your Tracks method); it is not a "1 in N" population figure, since we measure no population.`,
   );
+
+  if (entropy.contributions.length) {
+    html += `<div class="sub-l">${esc("What makes this browser identifiable")}</div>`;
+    for (const c of entropy.contributions) {
+      html += kv(c.label, c.bits === 1 ? `~${c.bits} bit` : `~${c.bits} bits`);
+    }
+  }
 
   if (fp.canvas) html += kv("Canvas fingerprint", `<span class="m">${esc(fp.canvas)}…</span>`);
   if (fp.audio) html += kv("Audio fingerprint", `<span class="m">${esc(fp.audio)}…</span>`);
@@ -44,7 +51,7 @@ export function renderFingerprint(fp: FingerprintData, entropy: EntropyEstimate)
   if (vectors.length) html += kv("Storage vectors", vectors.join(", "));
 
   if (fp.connection) {
-    html += `<div class="sub-l">Connection — also a tracking signal</div>`;
+    html += `<div class="sub-l">${esc("Connection — also a tracking signal")}</div>`;
     const c = fp.connection;
     if (c.type) html += kv("Type", esc(c.type));
     if (c.effectiveType) html += kv("Effective type", esc(c.effectiveType));

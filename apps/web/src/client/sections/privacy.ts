@@ -1,25 +1,29 @@
 import { byId, note } from "../lib/dom.ts";
 import { isSuccessfulLookup } from "../lib/format.ts";
-import { ispSuggestsHosting, ispSuggestsVpn, webrtcLeak } from "../lib/heuristics.ts";
+import {
+  foreignResolvers,
+  ispSuggestsHosting,
+  ispSuggestsVpn,
+  webrtcLeak,
+} from "../lib/heuristics.ts";
 import type { DnsLeakResult, IpInfo, WebRTCResult } from "../types.ts";
 
 function dnsNote(dnsLeak: DnsLeakResult, doh: boolean | null, d: IpInfo): string {
+  const via = dnsLeak.source ? ` (via ${dnsLeak.source})` : "";
   if (dnsLeak.available) {
-    const foreign = dnsLeak.resolvers.filter(
-      (r) => r.country && d.country && r.country !== d.country,
-    );
+    const foreign = foreignResolvers(dnsLeak.resolvers, d.country);
     if (foreign.length) {
       const where = [...new Set(foreign.map((r) => r.country))].join(", ");
       return note(
         "warn",
         "Possible DNS leak",
-        `${foreign.length} resolver(s) in ${where} differ from your IP's country (${d.country}).`,
+        `${foreign.length} resolver(s) in ${where} differ from your IP's country (${d.country ?? ""})${via}.`,
       );
     }
     return note(
       "ok",
       "No DNS leak detected",
-      dnsLeak.conclusion || `${dnsLeak.resolvers.length} resolver(s) in your IP's country.`,
+      dnsLeak.conclusion || `${dnsLeak.resolvers.length} resolver(s) in your IP's country${via}.`,
     );
   }
   if (doh === true) {
@@ -38,8 +42,8 @@ function dnsNote(dnsLeak: DnsLeakResult, doh: boolean | null, d: IpInfo): string
   }
   return note(
     "off",
-    "DNS test unavailable",
-    "The DNS-leak probe could not complete from this network.",
+    "DNS-leak test unavailable",
+    "The dedicated DNS-leak provider could not be reached, so this falls back to the DoH-reachability signal above.",
   );
 }
 

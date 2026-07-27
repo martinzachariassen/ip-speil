@@ -1,45 +1,52 @@
-import {
-  IP_CACHE_MAX_ENTRIES,
-  IP_CACHE_TTL_MS,
-  IPAPI_DAILY_BUDGET,
-  REQUEST_TIMEOUT_MS,
-  UPSTREAM,
-} from "../config.ts";
-import { createCachedFetcher, DailyBudget } from "./cache.ts";
+import { IP_CACHE_MAX_ENTRIES, IP_CACHE_TTL_MS, REQUEST_TIMEOUT_MS, UPSTREAM } from "../config.ts";
+import type { LocalGeo } from "../geoip/store.ts";
+import { createCachedFetcher } from "./cache.ts";
 import type { FetchLike } from "./fetch.ts";
 import { getIpInfo, type IpInfo } from "./ip-lookup.ts";
 
 export interface IpServiceOptions {
+  geoLookup?: (ip: string) => LocalGeo | null;
+  isTorExit?: (ip: string) => boolean;
+  enableOnlineTiebreaker?: boolean;
   fetchImpl?: FetchLike;
   ipApiBaseUrl?: string;
   timeoutMs?: number;
-  dailyBudget?: number;
   cacheTtlMs?: number;
   enrich?: (info: IpInfo) => Promise<IpInfo>;
 }
 
 export type IpService = (ip: string) => Promise<IpInfo>;
 
+// A scan makes zero outbound requests carrying the visitor IP: geo/ASN come from
+// the local GeoDb. The TtlCache + single-flight now only spare the reverse-DNS /
+// DNSBL resolver calls in the enricher — there's no upstream quota to protect.
 export function createIpService(options: IpServiceOptions = {}): IpService {
   const {
+    geoLookup,
+    isTorExit,
+    enableOnlineTiebreaker,
     fetchImpl = fetch,
     ipApiBaseUrl = UPSTREAM.ipApiBaseUrl,
     timeoutMs = REQUEST_TIMEOUT_MS,
-    dailyBudget = IPAPI_DAILY_BUDGET,
     cacheTtlMs = IP_CACHE_TTL_MS,
     enrich,
   } = options;
 
-  const budget = new DailyBudget(dailyBudget);
   const cached = createCachedFetcher<IpInfo>({
     ttlMs: cacheTtlMs,
     maxEntries: IP_CACHE_MAX_ENTRIES,
-    budget,
   });
 
   return (ip: string) =>
     cached(ip, async () => {
-      const base = await getIpInfo(ip, { fetchImpl, ipApiBaseUrl, timeoutMs });
+      const base = await getIpInfo(ip, {
+        geoLookup,
+        isTorExit,
+        enableOnlineTiebreaker,
+        fetchImpl,
+        ipApiBaseUrl,
+        timeoutMs,
+      });
       return enrich ? enrich(base) : base;
     });
 }

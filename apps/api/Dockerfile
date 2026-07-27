@@ -20,6 +20,11 @@ RUN bun install --frozen-lockfile --production
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 
+# Bake the local geoip datasets into the image so /api/info resolves geo/ASN
+# without sending the visitor IP to a third party at request time. Fails the
+# build on a total download failure (a data-less image would be broken).
+RUN bun apps/api/scripts/fetch-datasets.ts
+
 # oven/bun ships a non-root `bun` user.
 USER bun
 

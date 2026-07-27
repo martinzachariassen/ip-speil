@@ -11,6 +11,7 @@
   Cross-Origin-Resource-Policy: same-origin
   Permissions-Policy: browsing-topics=()
   Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self' https://1.1.1.1 https://ipv4.icanhazip.com https://ipv6.icanhazip.com https://cloudflare-dns.com https://bash.ws https://*.bash.ws; img-src 'self' data:; style-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Accept-CH: Sec-CH-UA-Full-Version-List, Sec-CH-UA-Platform-Version, Sec-CH-UA-Arch, Sec-CH-UA-Model, Sec-CH-UA-Bitness
 
 /assets/fonts/*
   Cache-Control: public, max-age=31536000, immutable

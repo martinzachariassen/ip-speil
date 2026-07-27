@@ -1,37 +1,39 @@
 import { expect, test } from "bun:test";
 
-import type { FetchLike } from "../src/lib/fetch.ts";
 import { crossCheckGeo } from "../src/lib/geo-sources.ts";
 
-test("crossCheckGeo counts country agreement across all sources", async () => {
-  const fetchImpl: FetchLike = async (url) => {
-    const u = String(url);
-    if (u.includes("ipwho.is")) return Response.json({ success: true, country_code: "NO" });
-    if (u.includes("geojs.io")) return Response.json({ country_code: "SE" });
-    return Response.json({});
-  };
+test("crossCheckGeo agrees when both local datasets report the same country", () => {
+  const geo = crossCheckGeo({
+    countryCode: "NO",
+    country: "Norway",
+    city: "Oslo",
+    asn: 2119,
+    asnCountry: "NO",
+  });
 
-  const geo = await crossCheckGeo(
-    { status: "success", query: "203.0.113.10", countryCode: "NO" },
-    { fetchImpl, timeoutMs: 100 },
-  );
-
-  expect(geo?.total).toBe(3);
-  // ipapi.is (NO) + ipwho.is (NO) agree; geojs.io (SE) differs.
+  expect(geo?.total).toBe(2);
   expect(geo?.agree).toBe(2);
+  expect(geo?.countryCode).toBe("NO");
+  expect(geo?.sources.map((s) => s.name)).toEqual(["DB-IP", "iptoasn"]);
 });
 
-test("crossCheckGeo drops providers that error and still reports the primary", async () => {
-  const fetchImpl: FetchLike = async () => {
-    throw new Error("network down");
-  };
+test("crossCheckGeo flags disagreement between DB-IP and iptoasn", () => {
+  const geo = crossCheckGeo({ countryCode: "NO", asn: 3301, asnCountry: "SE" });
 
-  const geo = await crossCheckGeo(
-    { status: "success", query: "203.0.113.10", countryCode: "NO" },
-    { fetchImpl, timeoutMs: 100 },
-  );
+  expect(geo?.total).toBe(2);
+  // Only DB-IP matches the agreed (DB-IP-preferred) code.
+  expect(geo?.agree).toBe(1);
+  expect(geo?.countryCode).toBe("NO");
+});
 
+test("crossCheckGeo reports a single source when only one dataset has a country", () => {
+  const geo = crossCheckGeo({ asn: 2119, asnCountry: "NO" });
   expect(geo?.total).toBe(1);
   expect(geo?.agree).toBe(1);
-  expect(geo?.sources[0]?.name).toBe("ipapi.is");
+  expect(geo?.sources[0]?.name).toBe("iptoasn");
+});
+
+test("crossCheckGeo returns undefined without any country or geo", () => {
+  expect(crossCheckGeo({ asn: 2119 })).toBeUndefined();
+  expect(crossCheckGeo(null)).toBeUndefined();
 });

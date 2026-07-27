@@ -3,7 +3,7 @@ import { esc, flag, formatPlace, networkLabel } from "../lib/format.ts";
 import type { CFTrace, Exits, IpInfo } from "../types.ts";
 
 function cloudflareTrace(cfTrace: CFTrace | null): string {
-  let html = `<div class="divider"></div><div class="sub-l">Cloudflare trace</div>`;
+  let html = `<div class="divider"></div><div class="sub-l">${esc("Connection security & Cloudflare trace")}</div>`;
   if (!cfTrace) {
     return (
       html +
@@ -21,9 +21,26 @@ function cloudflareTrace(cfTrace: CFTrace | null): string {
         : "Cloudflare WARP not detected",
     warp ? "Your traffic is routed through Cloudflare WARP VPN." : "",
   );
+
+  // Encrypted Client Hello: when sni=encrypted, the hostname you requested was
+  // hidden inside the TLS handshake instead of sent in the clear.
+  if (cfTrace.sni) {
+    const ech = cfTrace.sni === "encrypted";
+    html += note(
+      ech ? "ok" : "warn",
+      ech ? "Encrypted Client Hello (ECH) in use" : "SNI sent in the clear",
+      ech
+        ? "The site name you requested was encrypted in the TLS handshake — on-path observers can't see which host you visited."
+        : "The hostname you requested is visible to anyone on the network path, in the TLS ClientHello. ECH would hide it.",
+    );
+  }
+
+  if (cfTrace.tls) html += kv("TLS version", esc(cfTrace.tls));
+  if (cfTrace.http) html += kv("HTTP version", esc(cfTrace.http));
+  // e.g. X25519MLKEM768 signals a post-quantum key exchange.
+  if (cfTrace.kex) html += kv("Key exchange", esc(cfTrace.kex));
   if (cfTrace.colo) html += kv("Nearest CF datacenter", esc(cfTrace.colo));
   if (cfTrace.loc) html += kv("CF sees country", `${flag(cfTrace.loc)} ${esc(cfTrace.loc)}`);
-  if (cfTrace.http) html += kv("CF reports protocol", esc(cfTrace.http));
   return html;
 }
 

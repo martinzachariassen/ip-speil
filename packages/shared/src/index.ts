@@ -47,6 +47,8 @@ export interface IpInfo {
   reverse?: string;
   blocklists?: string[];
   geo?: GeoCrossCheck;
+  // ISO timestamp of the local geoip dataset build (see apps/api/src/geoip).
+  datasetDate?: string;
 }
 
 // Echoed request headers from /api/headers (hop-by-hop headers stripped).

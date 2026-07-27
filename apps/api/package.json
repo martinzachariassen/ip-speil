@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun src/index.ts",
     "dev": "bun --watch src/index.ts",
+    "fetch-datasets": "bun scripts/fetch-datasets.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

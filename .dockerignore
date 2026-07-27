@@ -23,6 +23,10 @@ apps/web
 # Tests
 apps/api/test
 
+# Local geoip datasets — the image fetches fresh ones at build time
+# (apps/api/scripts/fetch-datasets.ts), so don't copy a dev-local copy in.
+apps/api/data
+
 # Dependencies + build output (installed / rebuilt inside the image)
 node_modules
 **/node_modules

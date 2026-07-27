@@ -1,3 +1,4 @@
+import { plainIp, wantsPlainText } from "./cli.ts";
 import { echoHeaders } from "./headers.ts";
 import { proxyInfo } from "./proxy.ts";
 import { umamiScript, umamiSend } from "./umami.ts";
@@ -20,6 +21,14 @@ export default {
     const { pathname } = new URL(request.url);
 
     switch (pathname) {
+      // CLI helpers: `curl ip.mlz.no` → bare IP; `/ip` and `/json` are explicit.
+      case "/ip":
+        return plainIp(request);
+      case "/json":
+        return proxyInfo(request, env);
+      case "/":
+        // Content negotiation: terminals get plain text, browsers get the page.
+        return wantsPlainText(request) ? plainIp(request) : env.ASSETS.fetch(request);
       case "/api/headers":
         return echoHeaders(request);
       case "/api/info":

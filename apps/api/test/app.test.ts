@@ -1,16 +1,38 @@
 import { expect, test } from "bun:test";
-
 import { createApp } from "../src/app.ts";
-import type { FetchLike } from "../src/lib/ip-lookup.ts";
+import type { LocalGeo } from "../src/geoip/store.ts";
 
-// Enrichment does real DNS + secondary-provider calls; default it off so the
-// core route tests stay network-free. Enrichment is covered separately below.
+// A fake local dataset so the route tests stay fully offline.
+const geoLookupImpl = (ip: string): LocalGeo | null => {
+  if (ip === "203.0.113.10") {
+    return {
+      countryCode: "NO",
+      country: "Norway",
+      region: "Oslo",
+      city: "Oslo",
+      asn: 2119,
+      asName: "Telenor",
+      org: "Telenor",
+      asnCountry: "NO",
+    };
+  }
+  if (ip === "2001:db8::42") {
+    return { countryCode: "NO", country: "Norway", asnCountry: "NO", asn: 2119, org: "Telenor" };
+  }
+  if (ip === "203.0.113.99") return { countryCode: "NO" };
+  return null;
+};
+
+// Enrichment does real DNS work by default; inject no-op impls so the core route
+// tests stay network-free. Geo comes from the injected local lookup, not upstream.
 const app = (options: Parameters<typeof createApp>[0] = {}) =>
   createApp({
     requestTimeoutMs: 100,
     reverseDnsImpl: async () => undefined,
     blocklistImpl: async () => [],
     enableGeoCrossCheck: false,
+    isTorExit: () => false,
+    geoLookupImpl,
     ...options,
   });
 
@@ -37,19 +59,8 @@ test("rejects unsupported methods on known paths", async () => {
   expect(res.status).toBe(404);
 });
 
-test("api info uses the first forwarded ip and returns normalised json", async () => {
-  const calls: string[] = [];
-  const fetchImpl: FetchLike = async (url) => {
-    calls.push(String(url));
-    return Response.json({
-      ip: "203.0.113.10",
-      location: { country: "Norway", country_code: "NO" },
-      company: { name: "Telenor" },
-      asn: { asn: 2119, org: "Telenor" },
-    });
-  };
-
-  const res = await app({ fetchImpl }).request("/api/info", {
+test("api info uses the first forwarded ip and returns local geo", async () => {
+  const res = await app().request("/api/info", {
     headers: { "x-forwarded-for": "203.0.113.10, 198.51.100.20" },
   });
 
@@ -62,16 +73,16 @@ test("api info uses the first forwarded ip and returns normalised json", async (
   expect(body.country).toBe("Norway");
   expect(body.countryCode).toBe("NO");
   expect(body.isp).toBe("Telenor");
-  expect(calls[0]).toMatch(/\?q=203\.0\.113\.10$/);
+  expect(body.as).toBe("AS2119");
 });
 
 test("api info caches repeat lookups for the same ip", async () => {
   let calls = 0;
-  const fetchImpl: FetchLike = async () => {
+  const counting = (): LocalGeo => {
     calls += 1;
-    return Response.json({ ip: "203.0.113.10", location: { country_code: "NO" } });
+    return { countryCode: "NO" };
   };
-  const server = app({ fetchImpl });
+  const server = app({ geoLookupImpl: counting });
   const headers = { "x-forwarded-for": "203.0.113.10" };
 
   await server.request("/api/info", { headers });
@@ -80,28 +91,22 @@ test("api info caches repeat lookups for the same ip", async () => {
   expect(calls).toBe(1);
 });
 
-test("api info enriches with reverse dns, blocklists, and a geo cross-check", async () => {
-  const fetchImpl: FetchLike = async (url) => {
-    const u = String(url);
-    if (u.startsWith("https://ipwho.is/")) {
-      return Response.json({ success: true, country_code: "NO", city: "Oslo" });
-    }
-    if (u.startsWith("https://get.geojs.io/")) {
-      return Response.json({ country_code: "NO", city: "Oslo" });
-    }
-    return Response.json({
-      ip: "203.0.113.10",
-      location: { country: "Norway", country_code: "NO", city: "Oslo" },
-      asn: { asn: 2119, org: "Telenor" },
-    });
-  };
-
+test("api info enriches with reverse dns, blocklists, and a two-source geo cross-check", async () => {
   const server = createApp({
     requestTimeoutMs: 100,
-    fetchImpl,
     reverseDnsImpl: async () => "host.example.no",
     blocklistImpl: async () => ["Spamhaus ZEN"],
     enableGeoCrossCheck: true,
+    isTorExit: () => false,
+    geoLookupImpl: () => ({
+      countryCode: "NO",
+      country: "Norway",
+      city: "Oslo",
+      asn: 2119,
+      asnCountry: "NO",
+      org: "Telenor",
+      asName: "Telenor",
+    }),
   });
 
   const res = await server.request("/api/info", {
@@ -113,59 +118,51 @@ test("api info enriches with reverse dns, blocklists, and a geo cross-check", as
   expect(body.reverse).toBe("host.example.no");
   expect(body.blocklists).toEqual(["Spamhaus ZEN"]);
   const geo = body.geo as { agree: number; total: number };
-  expect(geo.total).toBe(3);
-  expect(geo.agree).toBe(3);
+  expect(geo.total).toBe(2);
+  expect(geo.agree).toBe(2);
 });
 
 test("api info looks up an explicit ip query", async () => {
-  const calls: string[] = [];
-  const fetchImpl: FetchLike = async (url) => {
-    calls.push(String(url));
-    return Response.json({
-      ip: "2001:db8::42",
-      location: { country: "Norway", country_code: "NO" },
-    });
-  };
-
-  const res = await app({ fetchImpl }).request("/api/info?ip=2001%3Adb8%3A%3A42", {
+  const res = await app().request("/api/info?ip=2001%3Adb8%3A%3A42", {
     headers: { "x-forwarded-for": "203.0.113.10" },
   });
 
   expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
   expect(body.query).toBe("2001:db8::42");
-  expect(calls[0]).toMatch(/\?q=2001%3Adb8%3A%3A42$/);
+  expect(body.countryCode).toBe("NO");
 });
 
 test("api info rejects a syntactically invalid ip with 400", async () => {
   let called = false;
-  const fetchImpl: FetchLike = async () => {
-    called = true;
-    return Response.json({});
-  };
+  const server = app({
+    geoLookupImpl: () => {
+      called = true;
+      return null;
+    },
+  });
 
-  const res = await app({ fetchImpl }).request("/api/info?ip=not-an-ip");
+  const res = await server.request("/api/info?ip=not-an-ip");
 
   expect(res.status).toBe(400);
   expect(await res.json()).toEqual({ error: "invalid_ip" });
   expect(called).toBe(false);
 });
 
-test("api info reports failed upstream lookups as bad gateway", async () => {
-  const fetchImpl: FetchLike = async () =>
-    Response.json({ error: "Invalid IP Address or AS Number" });
+test("api info returns success with limited data for an ip absent from the dataset", async () => {
+  const res = await app().request("/api/info", {
+    headers: { "x-forwarded-for": "198.51.100.7" },
+  });
 
-  const res = await app({ fetchImpl }).request("/api/info");
+  expect(res.status).toBe(200);
   const body = (await res.json()) as Record<string, unknown>;
-
-  expect(res.status).toBe(502);
-  expect(body.error).toBe("upstream_failed");
-  expect(body.message).toMatch(/Invalid IP Address/);
+  expect(body.status).toBe("success");
+  expect(body.query).toBe("198.51.100.7");
+  expect(body.countryCode).toBeUndefined();
 });
 
 test("api info rate limits a client after the configured number of requests", async () => {
-  const fetchImpl: FetchLike = async () => Response.json({ ip: "203.0.113.10" });
-  const server = app({ fetchImpl, infoRateLimit: 2 });
+  const server = app({ infoRateLimit: 2 });
   const headers = { "x-forwarded-for": "203.0.113.99" };
 
   const first = await server.request("/api/info", { headers });
@@ -180,8 +177,7 @@ test("api info rate limits a client after the configured number of requests", as
 });
 
 test("api info rejects calls without the proxy token when one is configured", async () => {
-  const fetchImpl: FetchLike = async () => Response.json({ ip: "203.0.113.10" });
-  const server = app({ fetchImpl, proxySecret: "edge-token-abc" });
+  const server = app({ proxySecret: "edge-token-abc" });
 
   const missing = await server.request("/api/info");
   expect(missing.status).toBe(401);
@@ -194,9 +190,7 @@ test("api info rejects calls without the proxy token when one is configured", as
 });
 
 test("api info accepts calls carrying the matching proxy token", async () => {
-  const fetchImpl: FetchLike = async () =>
-    Response.json({ ip: "203.0.113.10", location: { country_code: "NO" } });
-  const server = app({ fetchImpl, proxySecret: "edge-token-abc" });
+  const server = app({ proxySecret: "edge-token-abc" });
 
   const res = await server.request("/api/info", {
     headers: { authorization: "Bearer edge-token-abc", "x-forwarded-for": "203.0.113.10" },

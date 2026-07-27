@@ -1,32 +1,31 @@
-import type { FetchLike } from "./fetch.ts";
+import { getGeoDb } from "../geoip/load.ts";
+import type { LocalGeo } from "../geoip/store.ts";
 import { crossCheckGeo } from "./geo-sources.ts";
 import type { IpInfo } from "./ip-lookup.ts";
 import { checkBlocklists, reverseDns } from "./reputation.ts";
 
 export interface EnrichDeps {
-  fetchImpl: FetchLike;
-  timeoutMs: number;
   reverseDnsImpl?: (ip: string) => Promise<string | undefined>;
   blocklistImpl?: (ip: string) => Promise<string[]>;
   geoCrossCheck?: boolean;
+  geoLookup?: (ip: string) => LocalGeo | null;
 }
 
-// Runs alongside a successful ipapi.is lookup; the result is cached with it, so
-// the extra DNS/geo work happens at most once per IP per cache window.
+// Composes reverse DNS (local resolver) + DNS-blocklist hits (local resolver) +
+// a local two-dataset country cross-check. Cached alongside the base result, so
+// the DNS work happens at most once per IP per cache window.
 export function createEnricher(deps: EnrichDeps): (info: IpInfo) => Promise<IpInfo> {
   const doReverse = deps.reverseDnsImpl ?? ((ip: string) => reverseDns(ip));
   const doBlocklist = deps.blocklistImpl ?? ((ip: string) => checkBlocklists(ip));
   const geoOn = deps.geoCrossCheck ?? true;
+  const geoLookup = deps.geoLookup ?? ((ip: string) => getGeoDb()?.lookup(ip) ?? null);
 
   return async (info) => {
     const ip = info.query;
     if (!ip || info.status !== "success") return info;
 
-    const [reverse, blocklists, geo] = await Promise.all([
-      doReverse(ip),
-      doBlocklist(ip),
-      geoOn ? crossCheckGeo(info, deps) : Promise.resolve(undefined),
-    ]);
+    const [reverse, blocklists] = await Promise.all([doReverse(ip), doBlocklist(ip)]);
+    const geo = geoOn ? crossCheckGeo(geoLookup(ip)) : undefined;
 
     return {
       ...info,

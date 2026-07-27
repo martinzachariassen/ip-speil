@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 
+import type { LocalGeo } from "../src/geoip/store.ts";
 import { getClientIp, isProbablyIp, isUnroutableIp } from "../src/lib/client-ip.ts";
-import { type FetchLike, getIpInfo } from "../src/lib/ip-lookup.ts";
+import { getIpInfo } from "../src/lib/ip-lookup.ts";
 
 const headers = (init: Record<string, string>) => new Headers(init);
 
@@ -74,66 +75,77 @@ test("isUnroutableIp lets public addresses through", () => {
   }
 });
 
-test("getIpInfo encodes the requested ip and normalises the response", async () => {
-  const calls: string[] = [];
-  const fetchImpl: FetchLike = async (url) => {
-    calls.push(String(url));
-    return Response.json({
-      ip: "2001:db8::1",
-      is_bogon: false,
-      is_mobile: false,
-      is_datacenter: true,
-      is_tor: false,
-      is_proxy: false,
-      is_vpn: true,
-      is_abuser: false,
-      company: { name: "Example ISP" },
-      asn: {
-        asn: 64500,
-        descr: "EXAMPLE - Example, US",
-        org: "Example LLC",
-        route: "2001:db8::/32",
-      },
-      location: {
-        country: "Examplestan",
-        country_code: "EX",
-        state: "Sample State",
-        city: "Sample City",
-        zip: "00000",
-        latitude: 1.23,
-        longitude: 4.56,
-        timezone: "Europe/Oslo",
-        utcoffset: "+02:00",
-      },
-    });
-  };
+test("getIpInfo maps a local dataset lookup into IpInfo (no network)", async () => {
+  const geoLookup = (ip: string): LocalGeo | null =>
+    ip === "2001:db8::1"
+      ? {
+          countryCode: "EX",
+          country: "Examplestan",
+          region: "Sample State",
+          city: "Sample City",
+          lat: 1.23,
+          lon: 4.56,
+          asn: 64500,
+          asName: "Example LLC",
+          org: "Example LLC",
+          asnCountry: "EX",
+        }
+      : null;
 
-  const result = await getIpInfo("2001:db8::1", {
-    fetchImpl,
-    ipApiBaseUrl: "https://example.test",
-    timeoutMs: 100,
-  });
+  const result = await getIpInfo("2001:db8::1", { geoLookup, isTorExit: () => false });
 
-  expect(calls[0]).toMatch(/^https:\/\/example\.test\/\?q=2001%3Adb8%3A%3A1$/);
   expect(result.status).toBe("success");
   expect(result.query).toBe("2001:db8::1");
+  expect(result.country).toBe("Examplestan");
   expect(result.countryCode).toBe("EX");
   expect(result.city).toBe("Sample City");
-  expect(result.timezone).toBe("Europe/Oslo");
-  expect(result.offset).toBe(7200);
-  expect(result.isp).toBe("Example ISP");
-  expect(result.as).toBe("AS64500 2001:db8::/32");
+  expect(result.lat).toBe(1.23);
+  expect(result.as).toBe("AS64500");
   expect(result.asname).toBe("Example LLC");
-  expect(result.hosting).toBe(true);
-  expect(result.vpn).toBe(true);
-  expect(result.tor).toBe(false);
+  expect(result.isp).toBe("Example LLC");
+  // Not derivable from local data → left undefined, never fabricated.
+  expect(result.vpn).toBeUndefined();
+  expect(result.proxy).toBeUndefined();
 });
 
-test("getIpInfo surfaces upstream errors", async () => {
-  const fetchImpl: FetchLike = async () =>
-    Response.json({ error: "Invalid IP Address or AS Number" });
+test("getIpInfo marks Tor exits and infers hosting from the ASN org", async () => {
+  const geoLookup = (): LocalGeo => ({
+    countryCode: "US",
+    asnCountry: "US",
+    asn: 16509,
+    org: "Amazon.com, Inc.",
+    asName: "AMAZON-02",
+  });
 
-  await expect(
-    getIpInfo("nope", { fetchImpl, ipApiBaseUrl: "https://example.test", timeoutMs: 100 }),
-  ).rejects.toThrow(/Invalid IP Address/);
+  const result = await getIpInfo("52.0.0.1", { geoLookup, isTorExit: (ip) => ip === "52.0.0.1" });
+
+  expect(result.hosting).toBe(true);
+  expect(result.tor).toBe(true);
+});
+
+test("getIpInfo returns fail for an invalid ip and never touches the dataset", async () => {
+  let called = false;
+  const result = await getIpInfo("not-an-ip", {
+    geoLookup: () => {
+      called = true;
+      return null;
+    },
+  });
+
+  expect(result.status).toBe("fail");
+  expect(called).toBe(false);
+});
+
+test("getIpInfo returns success with limited data for an ip absent from the dataset", async () => {
+  const result = await getIpInfo("198.51.100.7", { geoLookup: () => null });
+
+  expect(result.status).toBe("success");
+  expect(result.query).toBe("198.51.100.7");
+  expect(result.countryCode).toBeUndefined();
+  expect(result.hosting).toBeUndefined();
+});
+
+test("getIpInfo flags private addresses as bogon", async () => {
+  const result = await getIpInfo("192.168.1.5", { geoLookup: () => null });
+  expect(result.bogon).toBe(true);
 });

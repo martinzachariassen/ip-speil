@@ -79,7 +79,7 @@
 
           <div class="rail-actions">
             <button class="btn" id="refresh-btn" type="button">
-              <span class="ico" id="refresh-ico">↻</span> Refresh
+              <span class="ico" id="refresh-ico">↻</span> <span>Refresh</span>
             </button>
             <button
               class="btn ghost"
@@ -89,7 +89,28 @@
             >
               Copy report
             </button>
-            <button class="btn ghost" id="theme-btn" type="button" title="Toggle light/dark"></button>
+            <button
+              class="btn ghost"
+              id="snapshot-btn"
+              type="button"
+              title="Save this scan locally to compare against later"
+            >
+              Snapshot
+            </button>
+            <button
+              class="btn ghost"
+              id="share-btn"
+              type="button"
+              title="Copy a link with the redacted report in the URL fragment"
+            >
+              Share
+            </button>
+            <button
+              class="btn ghost"
+              id="theme-btn"
+              type="button"
+              title="Toggle light/dark"
+            ></button>
           </div>
 
           <div class="rail-foot">
@@ -99,6 +120,19 @@
         </aside>
 
         <main class="main">
+          <section class="sec" id="share-sec" aria-label="Shared snapshot" hidden>
+            <div class="sec-l">Shared snapshot</div>
+            <div id="share-body"></div>
+          </section>
+
+          <section class="sec" id="diff-sec" aria-label="Changes since your snapshot" hidden>
+            <div class="sec-l">
+              Since your snapshot
+              <button class="btn mini" id="clear-snapshot-btn" type="button">Clear snapshot</button>
+            </div>
+            <div id="diff-body"></div>
+          </section>
+
           <section class="sec" aria-label="Exposure summary">
             <div class="sec-l">What sites can see</div>
             <div class="ledger" id="exposure-grid"><span class="skel skel-block"></span></div>
@@ -209,12 +243,14 @@
               <div>
                 <h4>How this works</h4>
                 <p>
-                  On Refresh, the server looks up the HTTP IP it sees with ipapi.is and cross-checks
-                  the country against ipwho.is and geojs.io, adds a reverse-DNS and blocklist check,
-                  and caches the result. Your browser separately probes its IPv4 and IPv6 exits, runs
-                  a DNS-leak test, inspects WebRTC candidates via a public STUN server, and estimates
-                  a fingerprint. Fingerprint data is computed entirely in your browser and never sent
-                  back.
+                  On Refresh, the server maps the HTTP IP it sees to geolocation and network (ASN)
+                  data using local datasets — DB-IP City Lite and iptoasn — so your IP is never sent
+                  to a third-party geolocation API. It cross-checks the country between those two
+                  datasets, adds a reverse-DNS and DNS-blocklist check, flags Tor exit nodes from a
+                  locally cached list, and caches the result in memory. Your browser separately probes
+                  its IPv4 and IPv6 exits, runs a DNS-leak test, inspects WebRTC candidates via a
+                  public STUN server, and estimates a fingerprint. Fingerprint data is computed
+                  entirely in your browser and never sent back.
                 </p>
               </div>
               <div>
@@ -229,9 +265,9 @@
             </div>
             <div class="sources">
               <span>Sources</span>
-              <a href="https://ipapi.is" target="_blank" rel="noopener">ipapi.is</a>
-              <a href="https://ipwho.is" target="_blank" rel="noopener">ipwho.is</a>
-              <a href="https://www.geojs.io" target="_blank" rel="noopener">geojs.io</a>
+              <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>
+              <a href="https://iptoasn.com" target="_blank" rel="noopener">iptoasn.com</a>
+              <a href="https://www.torproject.org" target="_blank" rel="noopener">Tor exit list</a>
               <a href="https://1.1.1.1/cdn-cgi/trace" target="_blank" rel="noopener">Cloudflare trace</a>
               <a href="https://bash.ws" target="_blank" rel="noopener">bash.ws DNS leak</a>
               <a href="https://icanhazip.com" target="_blank" rel="noopener">icanhazip</a>

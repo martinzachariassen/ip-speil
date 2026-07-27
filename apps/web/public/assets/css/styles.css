@@ -455,6 +455,13 @@ a {
   letter-spacing: 0;
   font-size: 12px;
 }
+/* Section headers that carry an inline control (e.g. Clear snapshot). */
+#diff-sec .sec-l {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 
 /* exposure ledger */
 .ledger {
