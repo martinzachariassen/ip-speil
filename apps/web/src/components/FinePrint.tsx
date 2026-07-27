@@ -85,21 +85,9 @@ export function FinePrint() {
 
 export function Footer() {
   return (
-    <footer className="mt-[30px] flex flex-wrap items-baseline justify-between gap-4 border-t border-line pt-5 font-mono text-[12px] text-ink-faint max-[560px]:flex-col max-[560px]:items-start max-[560px]:gap-2">
-      <div>
-        Made with <span className="text-accent">♥</span> by{" "}
-        <a
-          href="https://mlz.no"
-          target="_blank"
-          rel="noopener"
-          className="border-b border-line-2 text-ink-soft transition-colors hover:border-accent hover:text-accent"
-        >
-          Martin Zachariassen
-        </a>
-      </div>
-      <div>
-        <i>speil</i> — Norwegian for mirror
-      </div>
+    <footer className="mt-[30px] flex items-center justify-between gap-3 border-t border-line pt-5 pb-[max(20px,env(safe-area-inset-bottom))] font-mono text-[10px] tracking-[0.2em] text-ink-faint uppercase sm:text-[11px]">
+      <span>© 2026 · Martin Zachariassen</span>
+      <span>59°N · 10°E</span>
     </footer>
   );
 }
