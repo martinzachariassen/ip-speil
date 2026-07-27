@@ -48,8 +48,11 @@ findings alongside a plain-language verdict, and **stores nothing**.
 | **IP reputation** | Whether the address is listed in abuse blocklists (Spamhaus, Barracuda) |
 | **WebRTC leak** | Whether a public IP leaks through browser peer-to-peer APIs — IP-family aware, no false alarms |
 | **DNS leak** | Which resolvers actually answered your queries, and whether they exit a different country |
+| **DNSSEC validation** | Whether your resolver rejects a deliberately-broken signed domain — i.e. enforces DNSSEC |
 | **IPv6 & dual-stack** | Forced IPv4 and IPv6 exits, compared against the HTTP IP for split-routing / VPN leaks |
-| **Browser fingerprint** | Canvas / audio / WebGL hashes, fonts, voices, devices, plus a rough entropy ("1 in N") estimate |
+| **Routing & RPKI** | Your network's announced BGP prefix, origin ASN, RPKI route-origin validity and abuse contact (RIPEstat) |
+| **Browser fingerprint** | Canvas / audio / WebGL hashes, fonts, voices, devices, plus a per-signal entropy estimate (EFF Cover-Your-Tracks style — no fabricated "1 in N") |
+| **Storage surfaces** | Which persistence a site could use — cookies, local/session storage, IndexedDB, Cache API, service workers, Storage Access API, quota |
 | **Privacy signals** | Do Not Track, Global Privacy Control, timezone and locale-vs-geo mismatches |
 | **HTTP headers** | Everything your browser sends automatically with each request |
 | **Redacted report** | A copyable diagnostics summary with exact IPs and header values omitted |
@@ -58,11 +61,14 @@ findings alongside a plain-language verdict, and **stores nothing**.
 
 The server resolves the HTTP IP with [ipapi.is](https://ipapi.is), cross-checks the
 country against [ipwho.is](https://ipwho.is) and [geojs.io](https://geojs.io), and adds
-reverse-DNS and DNS-blocklist lookups via `node:dns` — then hands back one enriched
-payload. Separately, the browser probes its own IPv4/IPv6 exits, runs a
-[bash.ws](https://bash.ws) DNS-leak test, inspects WebRTC candidates through a public STUN
-server, reads [Cloudflare's trace](https://1.1.1.1/cdn-cgi/trace), and estimates a
-fingerprint. **The fingerprint is computed entirely client-side and never leaves the device.**
+reverse-DNS and DNS-blocklist lookups via `node:dns` — plus a routing/RPKI/abuse lookup
+against [RIPEstat](https://stat.ripe.net) that sends only a **truncated network block**
+(/24 or /48), never your exact address — then hands back one enriched payload. Separately,
+the browser probes its own IPv4/IPv6 exits, runs a [bash.ws](https://bash.ws) DNS-leak test
+and a DNSSEC-validation check, inspects WebRTC candidates through a public STUN server, reads
+[Cloudflare's trace](https://1.1.1.1/cdn-cgi/trace), audits its reachable storage surfaces,
+and estimates a fingerprint. **The fingerprint is computed entirely client-side and never
+leaves the device.**
 
 Every outbound call to a third party goes through a small in-memory guard layer
 ([`lib/cache.ts`](src/server/lib/cache.ts)) so the free-tier providers are never

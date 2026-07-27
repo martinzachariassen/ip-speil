@@ -117,6 +117,16 @@ export function languageGeoCheck(
   return { mismatch: !regions.includes(countryCode.toUpperCase()), langRegion: regions[0] };
 }
 
+// DNSSEC-validation verdict from the two reachability probes (see
+// probes/dnssec.ts). `null` when the control domain is unreachable — we can't
+// tell a validating resolver from a plain network failure, so we stay honest.
+export function dnssecVerdict(controlReachable: boolean, brokenReachable: boolean): boolean | null {
+  if (!controlReachable) return null;
+  // Control resolves but the deliberately-broken domain does not → the resolver
+  // enforced DNSSEC and blocked it.
+  return !brokenReachable;
+}
+
 // Resolvers whose country differs from the connection's country — the DNS-leak
 // signal. Pure so it can be unit-tested and reused by report + exposure.
 export function foreignResolvers(

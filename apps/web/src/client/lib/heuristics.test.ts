@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import type { FingerprintData, IpInfo, WebRTCResult } from "../types.ts";
 import {
+  dnssecVerdict,
   estimateEntropy,
   foreignResolvers,
   isForeignPublicIp,
@@ -12,6 +13,17 @@ import {
   timezoneCheck,
   webrtcLeak,
 } from "./heuristics.ts";
+
+const NO_STORAGE = {
+  cookies: false,
+  localStorage: false,
+  sessionStorage: false,
+  indexedDB: false,
+  cacheAPI: false,
+  serviceWorker: false,
+  storageAccessApi: false,
+  quotaMb: null,
+};
 
 function mkFp(overrides: Partial<FingerprintData> = {}): FingerprintData {
   return {
@@ -29,7 +41,7 @@ function mkFp(overrides: Partial<FingerprintData> = {}): FingerprintData {
     fonts: [],
     voices: 0,
     devices: null,
-    storage: { localStorage: false, indexedDB: false, cacheAPI: false, serviceWorker: false },
+    storage: NO_STORAGE,
     languages: ["en"],
     connection: null,
     ...overrides,
@@ -74,7 +86,7 @@ test("estimateEntropy rises as more distinguishing signals are present", () => {
     fonts: [],
     voices: 0,
     devices: null,
-    storage: { localStorage: false, indexedDB: false, cacheAPI: false, serviceWorker: false },
+    storage: NO_STORAGE,
     languages: ["en"],
     connection: null,
   };
@@ -141,6 +153,13 @@ test("languageGeoCheck compares locale region against the IP country", () => {
   expect(languageGeoCheck("NO", ["en-US"])).toEqual({ mismatch: true, langRegion: "US" });
   expect(languageGeoCheck("US", ["en"])).toEqual({ mismatch: false });
   expect(languageGeoCheck(undefined, ["en-US"])).toEqual({ mismatch: false });
+});
+
+test("dnssecVerdict: broken domain blocked → validates; reachable → not; control down → null", () => {
+  expect(dnssecVerdict(true, false)).toBe(true);
+  expect(dnssecVerdict(true, true)).toBe(false);
+  expect(dnssecVerdict(false, false)).toBeNull();
+  expect(dnssecVerdict(false, true)).toBeNull();
 });
 
 test("foreignResolvers returns resolvers whose country differs", () => {

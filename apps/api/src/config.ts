@@ -24,3 +24,24 @@ export const RATE_LIMIT = {
 
 export const IP_CACHE_TTL_MS = 10 * 60 * 1000;
 export const IP_CACHE_MAX_ENTRIES = 5000;
+
+// --- Routing / RPKI enrichment (RIPEstat) ------------------------------------
+// Unlike the local geo lookup, routing context comes from RIPEstat (free, no
+// key). This is the one enrichment that reaches a third party with anything
+// IP-derived, so we send only a truncated network block — the visitor's exact
+// address never leaves the server (see lib/routing.ts).
+export const ENABLE_ROUTING = true;
+
+export const RIPESTAT = {
+  baseUrl: "https://stat.ripe.net/data",
+  // Host bits below these prefix lengths are zeroed before the lookup, so the
+  // resource sent upstream is a whole network block shared by many visitors.
+  ipv4PrefixBits: 24,
+  ipv6PrefixBits: 48,
+  timeoutMs: 4000,
+} as const;
+
+// Routing and ROAs change slowly and thousands of visitors share one prefix, so
+// a long TTL keeps upstream load trivial and the cache hit-rate very high.
+export const ROUTING_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+export const ROUTING_CACHE_MAX_ENTRIES = 5000;

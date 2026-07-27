@@ -229,6 +229,19 @@
                 <div class="rev-body" id="body-webrtc"><span class="skel skel-block"></span></div>
               </div>
             </div>
+
+            <div class="rev" id="rev-routing">
+              <button class="rev-head" type="button">
+                <span class="rev-num">07</span>
+                <span class="rev-title"
+                  ><b>Routing &amp; RPKI</b><em>BGP prefix, origin ASN and route-origin validation</em></span
+                >
+                <span class="rev-sign"></span>
+              </button>
+              <div class="rev-wrap">
+                <div class="rev-body" id="body-routing"><span class="skel skel-block"></span></div>
+              </div>
+            </div>
           </div>
 
           <div class="fine">
@@ -247,10 +260,12 @@
                   data using local datasets — DB-IP City Lite and iptoasn — so your IP is never sent
                   to a third-party geolocation API. It cross-checks the country between those two
                   datasets, adds a reverse-DNS and DNS-blocklist check, flags Tor exit nodes from a
-                  locally cached list, and caches the result in memory. Your browser separately probes
-                  its IPv4 and IPv6 exits, runs a DNS-leak test, inspects WebRTC candidates via a
-                  public STUN server, and estimates a fingerprint. Fingerprint data is computed
-                  entirely in your browser and never sent back.
+                  locally cached list, and looks up your network's BGP prefix, origin ASN and RPKI
+                  route-origin status via RIPEstat — sending only a truncated network block, never your
+                  exact address — then caches the result in memory. Your browser separately probes its
+                  IPv4 and IPv6 exits, runs DNS-leak and DNSSEC-validation tests, inspects WebRTC
+                  candidates via a public STUN server, and estimates a fingerprint. Fingerprint data is
+                  computed entirely in your browser and never sent back.
                 </p>
               </div>
               <div>
@@ -271,6 +286,8 @@
               <a href="https://1.1.1.1/cdn-cgi/trace" target="_blank" rel="noopener">Cloudflare trace</a>
               <a href="https://bash.ws" target="_blank" rel="noopener">bash.ws DNS leak</a>
               <a href="https://icanhazip.com" target="_blank" rel="noopener">icanhazip</a>
+              <a href="https://stat.ripe.net" target="_blank" rel="noopener">RIPEstat routing</a>
+              <a href="https://dnssec.works" target="_blank" rel="noopener">DNSSEC test</a>
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { createApp, DEFAULT_PORT } from "./app.ts";
+import { ENABLE_ROUTING } from "./config.ts";
 import { datasetMeta, getGeoDb } from "./geoip/load.ts";
 import { refreshTorExits } from "./lib/tor.ts";
 
@@ -29,7 +30,7 @@ const torTimer = setInterval(() => void refreshTorExits(), 60 * 60 * 1000);
 torTimer.unref?.();
 
 const port = Number.parseInt(process.env.PORT ?? String(DEFAULT_PORT), 10);
-const app = createApp({ proxySecret });
+const app = createApp({ proxySecret, enableRouting: ENABLE_ROUTING });
 
 const server = Bun.serve({ port, fetch: app.fetch });
 console.log(`▶  http://localhost:${server.port}`);

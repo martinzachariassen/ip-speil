@@ -1,7 +1,14 @@
 // Wire types (IpInfo, GeoCrossCheck, …) are shared with the API via the
 // @ip-speil/shared package so the two sides can't drift. Re-exported here so the
 // rest of the client keeps importing them from "./types.ts".
-export type { GeoCrossCheck, GeoSource, HeaderMap, IpInfo } from "@ip-speil/shared";
+export type {
+  GeoCrossCheck,
+  GeoSource,
+  HeaderMap,
+  IpInfo,
+  RoutingInfo,
+  RpkiInfo,
+} from "@ip-speil/shared";
 
 export interface IceCandidateInfo {
   type: string;
@@ -46,6 +53,28 @@ export interface DnsLeakResult {
   source?: string;
 }
 
+export interface DnssecResult {
+  // true = the resolver validates DNSSEC (it blocked a deliberately-broken
+  // domain); false = it does not; null = inconclusive (control unreachable).
+  validates: boolean | null;
+  controlReachable: boolean;
+  brokenReachable: boolean;
+}
+
+// What persistent-storage surfaces are reachable from this page. Each boolean is
+// the result of a write-then-cleanup probe (or a capability check); the audit
+// never leaves data behind. `quotaMb` is the origin's reported storage budget.
+export interface StorageAudit {
+  cookies: boolean;
+  localStorage: boolean;
+  sessionStorage: boolean;
+  indexedDB: boolean;
+  cacheAPI: boolean;
+  serviceWorker: boolean;
+  storageAccessApi: boolean;
+  quotaMb: number | null;
+}
+
 export interface ConnectionInfo {
   type?: string;
   effectiveType?: string;
@@ -69,7 +98,7 @@ export interface FingerprintData {
   fonts: string[];
   voices: number;
   devices: { audioIn: number; audioOut: number; videoIn: number } | null;
-  storage: { localStorage: boolean; indexedDB: boolean; cacheAPI: boolean; serviceWorker: boolean };
+  storage: StorageAudit;
   languages: string[];
   connection: ConnectionInfo | null;
 }

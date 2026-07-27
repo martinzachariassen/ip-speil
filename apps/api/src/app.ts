@@ -1,3 +1,4 @@
+import type { RoutingInfo } from "@ip-speil/shared";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
@@ -9,6 +10,7 @@ import { getClientIp } from "./lib/client-ip.ts";
 import { createEnricher } from "./lib/enrich.ts";
 import type { FetchLike } from "./lib/fetch.ts";
 import { createIpService } from "./lib/ip-service.ts";
+import { createRoutingLookup } from "./lib/routing.ts";
 import { isTorExit as defaultIsTorExit } from "./lib/tor.ts";
 import { rateLimit } from "./rate-limit.ts";
 import { healthRoute } from "./routes/health.ts";
@@ -34,6 +36,11 @@ export interface AppOptions {
   enableOnlineTiebreaker?: boolean;
   fetchImpl?: FetchLike;
   ipApiBaseUrl?: string;
+  // RIPEstat routing enrichment. Off by default so tests stay offline; the
+  // production entry (index.ts) turns it on. A `routingImpl` overrides the
+  // default lookup (used by integration tests).
+  enableRouting?: boolean;
+  routingImpl?: (ip: string) => Promise<RoutingInfo | undefined>;
 }
 
 export function createApp(options: AppOptions = {}) {
@@ -45,6 +52,7 @@ export function createApp(options: AppOptions = {}) {
     fetchImpl = fetch,
     ipApiBaseUrl = UPSTREAM.ipApiBaseUrl,
     isTorExit = defaultIsTorExit,
+    enableRouting = false,
   } = options;
 
   const app = new Hono();
@@ -60,11 +68,15 @@ export function createApp(options: AppOptions = {}) {
     return getClientIp(c.req.raw.headers, socketAddress);
   };
 
+  const routingImpl =
+    options.routingImpl ?? (enableRouting ? createRoutingLookup({ fetchImpl }) : undefined);
+
   const enrich = createEnricher({
     reverseDnsImpl: options.reverseDnsImpl,
     blocklistImpl: options.blocklistImpl,
     geoCrossCheck: options.enableGeoCrossCheck,
     geoLookup: options.geoLookupImpl,
+    routingImpl,
   });
   const lookup = createIpService({
     geoLookup: options.geoLookupImpl,

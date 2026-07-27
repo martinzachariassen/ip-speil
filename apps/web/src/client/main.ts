@@ -12,6 +12,7 @@ import {
   saveSnapshot,
 } from "./lib/snapshot.ts";
 import { getDnsLeak } from "./probes/dns-leak.ts";
+import { getDnssec } from "./probes/dnssec.ts";
 import { collectFingerprint } from "./probes/fingerprint.ts";
 import { getCFTrace, getDohReachable, getIPv4, getIPv6 } from "./probes/network.ts";
 import { getWebRTCIPs } from "./probes/webrtc.ts";
@@ -25,11 +26,13 @@ import { renderHeaders } from "./sections/headers.ts";
 import { renderHero } from "./sections/hero.ts";
 import { renderIPv6 } from "./sections/ipv6.ts";
 import { renderPrivacy } from "./sections/privacy.ts";
+import { renderRouting } from "./sections/routing.ts";
 import { renderWebRTC } from "./sections/webrtc.ts";
 import { initTheme, toggleTheme } from "./theme.ts";
 import type {
   CFTrace,
   DnsLeakResult,
+  DnssecResult,
   EntropyEstimate,
   Exits,
   FingerprintData,
@@ -38,7 +41,7 @@ import type {
   WebRTCResult,
 } from "./types.ts";
 
-const SECTION_IDS = ["privacy", "browser", "ipv6", "fingerprint", "headers", "webrtc"];
+const SECTION_IDS = ["privacy", "routing", "browser", "ipv6", "fingerprint", "headers", "webrtc"];
 
 // Everything a full render needs, grouped so load() collects once and paints.
 interface Scan {
@@ -49,6 +52,7 @@ interface Scan {
   headers: HeaderMap;
   doh: boolean | null;
   dnsLeak: DnsLeakResult;
+  dnssec: DnssecResult;
   fp: FingerprintData;
   entropy: EntropyEstimate;
   exits: Exits;
@@ -90,12 +94,14 @@ function showSkeletons() {
 
 // Paint every section from an already-collected scan. Pure DOM work, no network.
 function renderAll(scan: Scan) {
-  const { data, webrtc, ipv6Info, cfTrace, headers, doh, dnsLeak, fp, entropy, exits } = scan;
+  const { data, webrtc, ipv6Info, cfTrace, headers, doh, dnsLeak, dnssec, fp, entropy, exits } =
+    scan;
 
   renderExposure({ d: data, webrtc, dnsLeak, doh, entropy });
   renderHero(data, exits.v6);
   renderFacts(data, exits);
-  renderPrivacy(data, webrtc, dnsLeak, doh);
+  renderPrivacy(data, webrtc, dnsLeak, doh, dnssec);
+  renderRouting(data);
   renderBrowser(data);
   renderIPv6(exits, ipv6Info, cfTrace, data);
   renderFingerprint(fp, entropy);
@@ -116,7 +122,7 @@ async function load() {
   ico?.classList.add("spin");
   showSkeletons();
 
-  const [data, webrtc, ipv4, ipv6, cfTrace, headers, doh, dnsLeak, fp] = await Promise.all([
+  const [data, webrtc, ipv4, ipv6, cfTrace, headers, doh, dnsLeak, dnssec, fp] = await Promise.all([
     fetchInfo(),
     getWebRTCIPs(),
     getIPv4(),
@@ -125,6 +131,7 @@ async function load() {
     fetchHeaders(),
     getDohReachable(),
     getDnsLeak(),
+    getDnssec(),
     collectFingerprint(),
   ]);
   const ipv6Info = ipv6 ? await fetchInfo(ipv6) : null;
@@ -142,11 +149,24 @@ async function load() {
     cfTrace,
     headers,
     dnsLeak,
+    dnssec,
     doh,
     entropy,
   });
 
-  const scan: Scan = { data, webrtc, ipv6Info, cfTrace, headers, doh, dnsLeak, fp, entropy, exits };
+  const scan: Scan = {
+    data,
+    webrtc,
+    ipv6Info,
+    cfTrace,
+    headers,
+    doh,
+    dnsLeak,
+    dnssec,
+    fp,
+    entropy,
+    exits,
+  };
   renderAll(scan);
 
   ico?.classList.remove("spin");

@@ -45,10 +45,17 @@ export function renderFingerprint(fp: FingerprintData, entropy: EntropyEstimate)
       `${fp.devices.audioIn} mic · ${fp.devices.audioOut} out · ${fp.devices.videoIn} cam`,
     );
   }
-  const vectors = Object.entries(fp.storage)
-    .filter(([, on]) => on)
-    .map(([name]) => name);
-  if (vectors.length) html += kv("Storage vectors", vectors.join(", "));
+  const s = fp.storage;
+  const yn = (on: boolean) => (on ? "Available" : "Blocked");
+  html += `<div class="sub-l">${esc("Storage & state surfaces")}</div>`;
+  html += kv("Cookies", yn(s.cookies));
+  html += kv("localStorage", yn(s.localStorage));
+  html += kv("sessionStorage", yn(s.sessionStorage));
+  html += kv("IndexedDB", yn(s.indexedDB));
+  html += kv("Cache API", yn(s.cacheAPI));
+  html += kv("Service workers", yn(s.serviceWorker));
+  html += kv("Storage Access API", yn(s.storageAccessApi));
+  if (s.quotaMb != null) html += kv("Storage quota", `~${s.quotaMb.toLocaleString()} MB`);
 
   if (fp.connection) {
     html += `<div class="sub-l">${esc("Connection — also a tracking signal")}</div>`;

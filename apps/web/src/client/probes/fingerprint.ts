@@ -1,5 +1,5 @@
 import { sha256Hex } from "../lib/hash.ts";
-import type { FingerprintData, WebGLInfo } from "../types.ts";
+import type { FingerprintData, StorageAudit, WebGLInfo } from "../types.ts";
 
 export function getWebGL(): WebGLInfo | null {
   try {
@@ -166,28 +166,59 @@ async function countDevices(): Promise<FingerprintData["devices"]> {
   }
 }
 
-function storageVectors(): FingerprintData["storage"] {
-  const safe = (fn: () => boolean) => {
+// Audit which client-side storage surfaces a site could actually use to persist
+// or re-identify. Web Storage is verified with a write-read-delete probe (a bare
+// capability check lies in private mode / when storage is blocked); the probe
+// removes its own key, so nothing is left behind. Cookies are reported via the
+// capability flag only — this app deliberately never writes one. `quotaMb` is the
+// origin's storage budget, itself a coarse fingerprinting signal.
+async function storageAudit(): Promise<StorageAudit> {
+  const safe = (fn: () => boolean): boolean => {
     try {
       return fn();
     } catch {
       return false;
     }
   };
+
+  const writeProbe = (get: () => Storage | undefined): boolean =>
+    safe(() => {
+      const store = get();
+      if (!store) return false;
+      const key = "__ipspeil_probe__";
+      store.setItem(key, "1");
+      const ok = store.getItem(key) === "1";
+      store.removeItem(key);
+      return ok;
+    });
+
+  let quotaMb: number | null = null;
+  try {
+    const est = await navigator.storage?.estimate?.();
+    if (est && typeof est.quota === "number") quotaMb = Math.round(est.quota / (1024 * 1024));
+  } catch {
+    quotaMb = null;
+  }
+
   return {
-    localStorage: safe(() => !!window.localStorage),
+    cookies: safe(() => navigator.cookieEnabled === true),
+    localStorage: writeProbe(() => window.localStorage),
+    sessionStorage: writeProbe(() => window.sessionStorage),
     indexedDB: safe(() => !!window.indexedDB),
     cacheAPI: safe(() => "caches" in window),
     serviceWorker: safe(() => "serviceWorker" in navigator),
+    storageAccessApi: safe(() => typeof document.hasStorageAccess === "function"),
+    quotaMb,
   };
 }
 
 export async function collectFingerprint(): Promise<FingerprintData> {
-  const [canvas, audio, voices, devices] = await Promise.all([
+  const [canvas, audio, voices, devices, storage] = await Promise.all([
     getCanvasHash(),
     getAudioHash(),
     countVoices(),
     countDevices(),
+    storageAudit(),
   ]);
   const conn =
     navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
@@ -207,7 +238,7 @@ export async function collectFingerprint(): Promise<FingerprintData> {
     fonts: detectFonts(),
     voices,
     devices,
-    storage: storageVectors(),
+    storage,
     languages: [...(navigator.languages || [navigator.language])],
     connection: conn
       ? {

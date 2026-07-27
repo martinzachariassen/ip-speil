@@ -6,7 +6,29 @@ import {
   ispSuggestsVpn,
   webrtcLeak,
 } from "../lib/heuristics.ts";
-import type { DnsLeakResult, IpInfo, WebRTCResult } from "../types.ts";
+import type { DnsLeakResult, DnssecResult, IpInfo, WebRTCResult } from "../types.ts";
+
+function dnssecNote(dnssec: DnssecResult): string {
+  if (dnssec.validates === true) {
+    return note(
+      "ok",
+      "DNSSEC validated by your resolver",
+      "Your resolver refused a domain with a deliberately broken DNSSEC signature — forged DNS answers for signed zones would be rejected.",
+    );
+  }
+  if (dnssec.validates === false) {
+    return note(
+      "warn",
+      "No DNSSEC validation",
+      "Your resolver still answered for a domain with a broken DNSSEC signature, so it does not validate — signed zones aren't protected against DNS spoofing.",
+    );
+  }
+  return note(
+    "off",
+    "DNSSEC test inconclusive",
+    "The control domain could not be reached, so validation behaviour couldn't be determined.",
+  );
+}
 
 function dnsNote(dnsLeak: DnsLeakResult, doh: boolean | null, d: IpInfo): string {
   const via = dnsLeak.source ? ` (via ${dnsLeak.source})` : "";
@@ -52,6 +74,7 @@ export function renderPrivacy(
   webrtc: WebRTCResult,
   dnsLeak: DnsLeakResult,
   doh: boolean | null,
+  dnssec: DnssecResult,
 ) {
   const el = byId("body-privacy");
   if (!isSuccessfulLookup(d)) {
@@ -145,6 +168,7 @@ export function renderPrivacy(
   if (d.mobile) items.push(note("off", "Mobile / cellular network", ""));
 
   items.push(dnsNote(dnsLeak, doh, d));
+  items.push(dnssecNote(dnssec));
 
   el.innerHTML = items.join("");
 }

@@ -4,6 +4,7 @@ import { foreignResolvers, webrtcLeak } from "./lib/heuristics.ts";
 import type {
   CFTrace,
   DnsLeakResult,
+  DnssecResult,
   EntropyEstimate,
   Exits,
   HeaderMap,
@@ -30,6 +31,7 @@ export interface ReportInput {
   cfTrace: CFTrace | null;
   headers: HeaderMap;
   dnsLeak: DnsLeakResult;
+  dnssec: DnssecResult;
   doh: boolean | null;
   entropy: EntropyEstimate;
 }
@@ -39,8 +41,9 @@ export interface ReportInput {
 export type Report = ReturnType<typeof buildReport>;
 
 export function buildReport(input: ReportInput) {
-  const { data, webrtc, exits, ipv6Info, cfTrace, headers, dnsLeak, doh, entropy } = input;
+  const { data, webrtc, exits, ipv6Info, cfTrace, headers, dnsLeak, dnssec, doh, entropy } = input;
   const foreignCount = foreignResolvers(dnsLeak.resolvers, data.country).length;
+  const routing = data.routing;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -53,6 +56,14 @@ export function buildReport(input: ReportInput) {
     ipv6Network: ipv6Info?.status === "success" ? networkLabel(ipv6Info) : null,
     ipv6Country: ipv6Info?.countryCode || null,
     geoAgreement: data.geo ? `${data.geo.agree}/${data.geo.total}` : null,
+    routing: routing
+      ? {
+          prefix: routing.prefix || null,
+          originAsn: routing.originAsn || null,
+          rpki: routing.rpki?.state ?? null,
+          abuseContacts: routing.abuseContacts ?? [],
+        }
+      : null,
     signals: {
       proxy: data.proxy === true,
       vpn: data.vpn === true,
@@ -62,6 +73,7 @@ export function buildReport(input: ReportInput) {
       hosting: data.hosting === true,
       mobile: data.mobile === true,
       dohReachable: doh,
+      dnssecValidated: dnssec.validates,
       dnsResolverCount: dnsLeak.available ? dnsLeak.resolvers.length : null,
       dnsForeignResolvers: dnsLeak.available ? foreignCount : null,
       timezoneMismatch: !!(
