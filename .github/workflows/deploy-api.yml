@@ -1,64 +1,65 @@
-name: Deploy API
 
-# Deploys apps/api to Railway — the Hono enrichment backend, built from
-# apps/api/Dockerfile with the repo root as build context (see railway.json).
-# `railway up` uploads the repo and Railway builds the image on its own infra;
-# the runner never builds Docker itself.
-#
-# Only runs when the API, the shared wire types, the Dockerfile/railway config,
-# or the root manifests change — a web-only change won't redeploy the backend.
-#
-# Requires:
-#   secret   RAILWAY_TOKEN    — a Railway project token (Project → Settings → Tokens)
-#   variable RAILWAY_SERVICE  — the Railway service name for the API
-#
-# NOTE: if the Railway service also has GitHub auto-deploy enabled, disable it so
-# only this workflow drives deploys (otherwise every push deploys twice).
-on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/api/**"
-      - "packages/shared/**"
-      - "package.json"
-      - "bun.lock"
-      - "railway.json"
-      - "apps/api/Dockerfile"
-      - ".dockerignore"
-      - ".github/workflows/deploy-api.yml"
-  workflow_dispatch:
+  name: Deploy API
 
-# Least privilege: auth to Railway is via RAILWAY_TOKEN, not the workflow token.
-permissions:
-  contents: read
+  # Deploys apps/api to Railway — the Hono enrichment backend, built from
+  # apps/api/Dockerfile with the repo root as build context (see railway.json).
+  # `railway up` uploads the repo and Railway builds the image on its own infra;
+  # the runner never builds Docker itself.
+  #
+  # Only runs when the API, the shared wire types, the Dockerfile/railway config,
+  # or the root manifests change — a web-only change won't redeploy the backend.
+  #
+  # Requires:
+  #   secret   RAILWAY_TOKEN    — a Railway project token (Project → Settings → Tokens)
+  #   variable RAILWAY_SERVICE  — the Railway service name for the API
+  #
+  # NOTE: if the Railway service also has GitHub auto-deploy enabled, disable it so
+  # only this workflow drives deploys (otherwise every push deploys twice).
+  on:
+    push:
+      branches: [main]
+      paths:
+        - "apps/api/**"
+        - "packages/shared/**"
+        - "package.json"
+        - "bun.lock"
+        - "railway.json"
+        - "apps/api/Dockerfile"
+        - ".dockerignore"
+        - ".github/workflows/deploy-api.yml"
+    workflow_dispatch:
 
-# Never let two API deploys race.
-concurrency:
-  group: deploy-api
-  cancel-in-progress: false
+  # Least privilege: auth to Railway is via RAILWAY_TOKEN, not the workflow token.
+  permissions:
+    contents: read
 
-jobs:
-  deploy:
-    name: deploy to Railway
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment:
-      name: production
-      url: https://api.ip.mlz.no
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
+  # Never let two API deploys race.
+  concurrency:
+    group: deploy-api
+    cancel-in-progress: false
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3.14"
+  jobs:
+    deploy:
+      name: deploy to Railway
+      runs-on: ubuntu-latest
+      timeout-minutes: 15
+      environment:
+        name: production
+        url: https://api.ip.mlz.no
+      steps:
+        - uses: actions/checkout@v7
+          with:
+            persist-credentials: false
 
-      # `--ci` streams the remote build logs and exits non-zero if the deploy
-      # fails, so a broken build fails the workflow instead of passing silently.
-      - name: Deploy
-        run: bunx @railway/cli up --ci --service "$RAILWAY_SERVICE"
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
+        - name: Set up Bun
+          uses: oven-sh/setup-bun@v2
+          with:
+            bun-version: "1.3.14"
+
+        # `--ci` streams the remote build logs and exits non-zero if the deploy
+        # fails, so a broken build fails the workflow instead of passing silently.
+        - name: Deploy
+          run: bunx @railway/cli up --ci --service "$RAILWAY_SERVICE"
+          env:
+            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+            RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}

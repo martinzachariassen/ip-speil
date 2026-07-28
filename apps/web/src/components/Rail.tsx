@@ -4,7 +4,27 @@ import { cx } from "../lib/cx.ts";
 import type { Verdict } from "../lib/exposure.ts";
 import type { Scan } from "../hooks/useScan.ts";
 import { useFlash } from "../hooks/useFlash.ts";
+import { Icon, type IconName } from "@martinzachariassen/design";
 import { Button, Dot, Skel } from "./primitives.tsx";
+
+// Button content: a leading icon + label. On transient success (`flash` set) the
+// icon swaps to a check and the label shows the flash text — no glyph in a string.
+function ActionLabel({
+  icon,
+  label,
+  flash,
+}: {
+  icon: IconName;
+  label: string;
+  flash: string | null;
+}) {
+  return (
+    <>
+      <Icon name={flash ? "check" : icon} size="sm" className="flex-none" />
+      <span>{flash ?? label}</span>
+    </>
+  );
+}
 
 // Middle-truncate a long IPv6 so the rail chip stays one line; the full address
 // is in the title attribute and is what the copy button copies.
@@ -65,7 +85,7 @@ export function Rail({
 
   function copyV6() {
     if (!v6) return;
-    copy(v6).then(() => flashV6("copied ✓"));
+    copy(v6).then(() => flashV6("copied"));
   }
 
   return (
@@ -99,23 +119,11 @@ export function Rail({
             "mt-4 inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-[9px] border-0 px-4 py-3 font-mono text-[11.5px] font-semibold uppercase tracking-[0.06em] transition-colors duration-150 focus-visible:outline-offset-4",
             ipCopied
               ? "bg-ok text-paper"
-              : "bg-ink text-paper hover:bg-accent hover:text-white",
+              : "bg-ink text-paper hover:bg-accent hover:text-accent-foreground",
           )}
         >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.4"
-            aria-hidden="true"
-            className="flex-none"
-          >
-            <rect x="9" y="9" width="12" height="12" rx="2" />
-            <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-          </svg>
-          <span>{ipCopied ? "copied ✓" : hasLookup ? `copy ${family}` : "try refresh"}</span>
+          <Icon name={ipCopied ? "check" : "copy"} size="xs" className="flex-none" />
+          <span>{ipCopied ? "copied" : hasLookup ? `copy ${family}` : "try refresh"}</span>
         </button>
 
         {v6 && v6 !== ip ? (
@@ -127,7 +135,7 @@ export function Rail({
               {shortV6(v6)}
             </span>
             <Button mini onClick={copyV6} title="Copy your IPv6 address">
-              {v6Flash ?? "copy v6"}
+              <ActionLabel icon="copy" label="copy v6" flash={v6Flash} />
             </Button>
           </div>
         ) : null}
@@ -170,32 +178,37 @@ export function Rail({
       {/* actions */}
       <div className="mt-4 flex flex-wrap gap-2 max-[380px]:flex-col max-[380px]:items-stretch">
         <Button onClick={onRefresh} className="max-[380px]:w-full">
-          <span className={cx("inline-block leading-none", loading && "animate-spin")}>↻</span>
+          <Icon name="refresh-cw" size="sm" className={cx(loading && "animate-spin")} />
           <span>Refresh</span>
         </Button>
         <Button
           variant="ghost"
-          onClick={() => onCopyReport().then((ok) => ok && flashReport("Copied ✓"))}
+          onClick={() => onCopyReport().then((ok) => ok && flashReport("Copied"))}
           title="Copy redacted diagnostics report"
         >
-          {reportFlash ?? "Copy report"}
+          <ActionLabel icon="clipboard" label="Copy report" flash={reportFlash} />
         </Button>
         <Button
           variant="ghost"
-          onClick={() => onSnapshot() && flashSnap("Saved ✓")}
+          onClick={() => onSnapshot() && flashSnap("Saved")}
           title="Save this scan locally to compare against later"
         >
-          {snapFlash ?? "Snapshot"}
+          <ActionLabel icon="save" label="Snapshot" flash={snapFlash} />
         </Button>
         <Button
           variant="ghost"
-          onClick={() => onShare().then((ok) => ok && flashShare("Link copied ✓"))}
+          onClick={() => onShare().then((ok) => ok && flashShare("Link copied"))}
           title="Copy a link with the redacted report in the URL fragment"
         >
-          {shareFlash ?? "Share"}
+          <ActionLabel icon="share-2" label="Share" flash={shareFlash} />
         </Button>
-        <Button variant="ghost" onClick={onToggleTheme} title="Toggle light/dark">
-          {theme === "dark" ? "☀" : "☾"}
+        <Button
+          variant="ghost"
+          onClick={onToggleTheme}
+          title="Toggle light/dark"
+          aria-label="Toggle light or dark theme"
+        >
+          <Icon name={theme === "dark" ? "sun" : "moon"} size="sm" />
         </Button>
       </div>
 

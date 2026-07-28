@@ -1,12 +1,15 @@
 import type { Severity } from "../components/primitives.tsx";
 import type { DnsLeakResult, EntropyEstimate, IpInfo, WebRTCResult } from "../types.ts";
 import { isSuccessfulLookup } from "./format.ts";
+import type { GlossaryKey } from "./glossary.tsx";
 import { foreignResolvers, ispSuggestsHosting, isVpnSignal, webrtcLeak } from "./heuristics.ts";
 
 export interface ExposureItem {
   severity: Severity;
   label: string;
   detail?: string;
+  /** Optional glossary term explained by an inline info-tip beside the label. */
+  tip?: GlossaryKey;
 }
 
 export interface Verdict {
@@ -40,6 +43,7 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
     severity: ok ? "off" : "warn",
     label: ok ? "Public IP" : "IP lookup",
     detail: ok ? d.query : "failed",
+    tip: ok ? "publicIp" : undefined,
   });
 
   if (ok) {
@@ -47,15 +51,25 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
     items.push({ severity: "off", label: "Approximate location", detail: place || "unknown" });
     items.push(
       anonymity
-        ? { severity: "bad", label: "VPN / proxy / Tor", detail: "detected" }
-        : { severity: "ok", label: "VPN / proxy / Tor", detail: "no signal" },
+        ? { severity: "bad", label: "VPN / proxy / Tor", detail: "detected", tip: "vpnProxyTor" }
+        : { severity: "ok", label: "VPN / proxy / Tor", detail: "no signal", tip: "vpnProxyTor" },
     );
     if (d.hosting === true || ispSuggestsHosting(d)) {
-      items.push({ severity: "warn", label: "Datacenter / cloud IP", detail: "hosting ASN" });
+      items.push({
+        severity: "warn",
+        label: "Datacenter / cloud IP",
+        detail: "hosting ASN",
+        tip: "datacenterIp",
+      });
       concerns.push("a datacenter IP");
     }
     if (d.blocklists?.length) {
-      items.push({ severity: "warn", label: "Reputation DBs", detail: d.blocklists.join(", ") });
+      items.push({
+        severity: "warn",
+        label: "Reputation DBs",
+        detail: d.blocklists.join(", "),
+        tip: "reputationDb",
+      });
       concerns.push("a blocklist listing");
     }
     if (d.mobile) {
@@ -68,6 +82,7 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
     severity: leak ? "warn" : "ok",
     label: "WebRTC leak",
     detail: leak ? "IP exposed" : "none",
+    tip: "webrtcLeak",
   });
   if (leak) concerns.push("a WebRTC leak");
 
@@ -84,10 +99,11 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
         : n === 1
           ? `none · ${n} resolver`
           : `none · ${n} resolvers`,
+      tip: "dnsLeak",
     });
     if (foreign.length) concerns.push("a DNS leak");
   } else if (doh === false) {
-    items.push({ severity: "warn", label: "DNS-over-HTTPS", detail: "blocked" });
+    items.push({ severity: "warn", label: "DNS-over-HTTPS", detail: "blocked", tip: "doh" });
   }
 
   const fpHigh = entropy.bits >= 18;
@@ -95,6 +111,7 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
     severity: entropy.bits >= 26 ? "bad" : fpHigh ? "warn" : "ok",
     label: "Fingerprint",
     detail: `${entropy.rarity} · ~${entropy.bits} bits`,
+    tip: "fingerprint",
   });
 
   if (d.geo && d.geo.total > 1) {
@@ -102,6 +119,7 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
       severity: "off",
       label: "Geo cross-check",
       detail: `${d.geo.agree}/${d.geo.total} agree`,
+      tip: "geoCrossCheck",
     });
   }
 

@@ -1,0 +1,10 @@
+# Template for apps/web/.dev.vars — copy to `.dev.vars` (gitignored) for local dev.
+# These override wrangler.jsonc `vars` during `vite dev` so the Worker talks to a
+# local API instead of production. See CLAUDE.md → "Local development".
+
+# Local Railway API from `bun run dev:api`.
+API_ORIGIN=http://localhost:3000
+
+# Optional: to exercise the real proxy gate, add a PROXY_SECRET line here whose
+# value matches the API's PROXY_SECRET env var. Leave it out and the API's gate
+# stays a no-op, which is all local preview needs.

@@ -1,12 +1,13 @@
 import type { ExposureItem } from "../../lib/exposure.ts";
 import { cx } from "../../lib/cx.ts";
+import { Tip } from "../../lib/glossary.tsx";
 import { Dot } from "../primitives.tsx";
 
 const DETAIL_COLOR: Record<ExposureItem["severity"], string> = {
   ok: "text-ink-faint",
   off: "text-ink-faint",
   warn: "text-warn",
-  bad: "text-accent",
+  bad: "text-destructive",
 };
 
 // The "What sites can see" ledger — a responsive two-column grid of status rows.
@@ -20,6 +21,7 @@ export function Exposure({ items }: { items: ExposureItem[] }) {
         >
           <Dot severity={i.severity} />
           <span className="font-medium text-ink">{i.label}</span>
+          {i.tip ? <Tip k={i.tip} /> : null}
           {i.detail ? (
             <span
               className={cx(

@@ -13,7 +13,18 @@ export async function proxyInfo(request: Request, env: Env): Promise<Response> {
   const ip = request.headers.get("cf-connecting-ip");
   if (ip) headers.set("x-forwarded-for", ip);
 
-  const upstream = await fetch(target, { headers });
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, { headers });
+  } catch {
+    // The upstream API is unreachable (e.g. local dev with no API running, or a
+    // network blip). Surface a clean 502 instead of workerd's opaque
+    // "internal error; reference = …" 500 so the failure is diagnosable.
+    return Response.json(
+      { error: "upstream_unreachable", detail: `${env.API_ORIGIN} did not respond` },
+      { status: 502, headers: { "cache-control": "no-store" } },
+    );
+  }
   const res = new Response(upstream.body, upstream);
   res.headers.set("cache-control", "no-store");
   return res;

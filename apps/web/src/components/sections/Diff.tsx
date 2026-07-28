@@ -1,5 +1,6 @@
 import { flattenReport, type SnapshotDiff } from "../../lib/diff.ts";
 import type { Report } from "../../report.ts";
+import { Icon } from "@martinzachariassen/design";
 import { KV, Mono, Muted, Note } from "../primitives.tsx";
 
 function when(iso: string): string {
@@ -24,7 +25,13 @@ export function Diff({ diff }: { diff: SnapshotDiff }) {
       />
       {diff.fields.map((f) => (
         <KV key={f.label} k={f.label}>
-          <Muted>{f.before}</Muted> → <Mono>{f.after}</Mono>
+          <Muted>{f.before}</Muted>
+          <Icon
+            name="arrow-right"
+            size="xs"
+            className="mx-1 inline-block align-[-2px] text-ink-faint"
+          />
+          <Mono>{f.after}</Mono>
         </KV>
       ))}
       {/* Fingerprint is reported changed/unchanged only — the hash is never shown. */}

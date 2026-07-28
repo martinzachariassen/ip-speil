@@ -3,9 +3,22 @@ import type { Env } from "./index.ts";
 // First-party proxy of the Umami tracker script. Same-origin keeps it out of
 // adblock lists; Cloudflare's cache holds the upstream copy.
 export async function umamiScript(env: Env): Promise<Response> {
-  const upstream = await fetch(env.UMAMI_SCRIPT_URL, {
-    cf: { cacheTtl: 3600, cacheEverything: true },
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(env.UMAMI_SCRIPT_URL, {
+      cf: { cacheTtl: 3600, cacheEverything: true },
+    });
+  } catch {
+    // Analytics is non-essential; if the upstream is unreachable (e.g. offline
+    // local dev) serve an empty, cacheable no-op so the page keeps working
+    // instead of throwing an opaque worker 500.
+    return new Response("", {
+      headers: {
+        "content-type": "text/javascript; charset=utf-8",
+        "cache-control": "public, max-age=60",
+      },
+    });
+  }
   const res = new Response(upstream.body, upstream);
   res.headers.set("cache-control", "public, max-age=3600");
   return res;
@@ -21,11 +34,18 @@ export async function umamiSend(request: Request, env: Env): Promise<Response> {
   const ip = request.headers.get("cf-connecting-ip");
   if (ip) headers.set("x-forwarded-for", ip);
 
-  const upstream = await fetch(env.UMAMI_SEND_URL, {
-    method: "POST",
-    headers,
-    body: await request.arrayBuffer(),
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(env.UMAMI_SEND_URL, {
+      method: "POST",
+      headers,
+      body: await request.arrayBuffer(),
+    });
+  } catch {
+    // Swallow analytics send failures (e.g. offline local dev) — the visitor's
+    // page must never error because a tracker beacon couldn't be delivered.
+    return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
+  }
   const res = new Response(upstream.body, upstream);
   res.headers.set("cache-control", "no-store");
   return res;

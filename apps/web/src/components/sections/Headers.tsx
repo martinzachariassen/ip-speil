@@ -23,7 +23,7 @@ function ClientHintsBlock({ headers }: { headers: HeaderMap }) {
 
   return (
     <>
-      <SubLabel>Client Hints this site requested</SubLabel>
+      <SubLabel tip="clientHints">Client Hints this site requested</SubLabel>
       <BodyIntro>
         Unlike the headers above, these were not sent automatically. This page opted in with an{" "}
         <Mono>Accept-CH</Mono> response header, and a Chromium-based browser answers on its next

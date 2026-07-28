@@ -1,160 +1,55 @@
 @import "tailwindcss";
+/* The whole design system — semantic tokens, self-hosted fonts (Space Mono +
+   Space Grotesk, bundled same-origin so it holds under `font-src 'self'`), and a
+   thin base layer (resets, body colour/font, focus ring, reduced-motion). Its
+   theme.css keys dark mode off `[data-theme="dark"]`, which main.tsx sets on
+   <html> pre-paint — so ip-speil's existing theme toggle keeps working. */
+@import "@martinzachariassen/design/styles/index-self-hosted.css";
 
-/* ip-speil "Split pane" theme — paper/ink aesthetic, light + dark.
-   Theme is toggled with a data-theme attribute on <html> (persisted in
-   localStorage), so the dark variant keys off that attribute rather than the
-   OS preference. */
+/* Keep Tailwind's `dark:` variant aligned to the same attribute the design
+   system uses, for the handful of app-level dark: utilities. Colour never needs
+   it (the semantic tokens re-resolve on the [data-theme] flip). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Self-hosted to avoid leaking visitor IPs to Google Fonts. */
-@font-face {
-  font-family: "Schibsted Grotesk";
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url("/assets/fonts/schibsted-grotesk.woff2") format("woff2");
-}
-@font-face {
-  font-family: "IBM Plex Mono";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/assets/fonts/ibm-plex-mono-400.woff2") format("woff2");
-}
-@font-face {
-  font-family: "IBM Plex Mono";
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("/assets/fonts/ibm-plex-mono-500.woff2") format("woff2");
-}
-@font-face {
-  font-family: "IBM Plex Mono";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("/assets/fonts/ibm-plex-mono-600.woff2") format("woff2");
-}
+/* ── Token bridge ──────────────────────────────────────────────────────────
+   ip-speil's components were written against local colour names (paper/ink/line
+   …). Rather than rewrite every call site, we re-expose those names as thin
+   aliases over the design system's semantic tokens — so every colour now comes
+   from the design system, but the existing utility classes keep resolving.
+   `@theme inline` keeps the values as var() references, so they re-resolve per
+   theme (and per `data-accent`) at runtime.
 
-/* Design tokens. The values switch with the theme; the Tailwind color/font
-   utilities below reference them, so `bg-paper`, `text-ink`, etc. re-colour
-   automatically when [data-theme] flips — no dark: variants needed for colour. */
-:root {
-  --paper: #ecebe4;
-  --paper-2: #e6e4da;
-  --ink: #1c1b17;
-  --ink-soft: #54524a;
-  --ink-faint: #8a877c;
-  --line: rgba(28, 27, 23, 0.13);
-  --line-2: rgba(28, 27, 23, 0.22);
-  --line-soft: rgba(28, 27, 23, 0.08);
-  --panel: rgba(28, 27, 23, 0.025);
-  --accent: #b9492f;
-  --ok: #3f6b4a;
-  --warn: #b07a26;
-  --skel-a: rgba(28, 27, 23, 0.06);
-  --skel-b: rgba(28, 27, 23, 0.12);
-}
-
-[data-theme="dark"] {
-  --paper: #181712;
-  --paper-2: #131210;
-  --ink: #ecebe4;
-  --ink-soft: #b6b3a8;
-  --ink-faint: #827f73;
-  --line: rgba(236, 235, 228, 0.12);
-  --line-2: rgba(236, 235, 228, 0.2);
-  --line-soft: rgba(236, 235, 228, 0.08);
-  --panel: rgba(236, 235, 228, 0.02);
-  --accent: #d96a4d;
-  --ok: #7ba884;
-  --warn: #d3a557;
-  --skel-a: rgba(236, 235, 228, 0.05);
-  --skel-b: rgba(236, 235, 228, 0.11);
-}
-
+   ip-speil carries three ink levels where the system has two (foreground /
+   muted-foreground); the third (`ink-faint`) and the finer hairlines are derived
+   from the system tokens with color-mix, so they still track the active theme.
+   Signal roles (ok/warn/bad) map onto the system's success/warning/destructive
+   +accent and are applied at the call sites via StatusDot / signal utilities. */
 @theme inline {
-  --color-paper: var(--paper);
-  --color-paper-2: var(--paper-2);
-  --color-ink: var(--ink);
-  --color-ink-soft: var(--ink-soft);
-  --color-ink-faint: var(--ink-faint);
-  --color-line: var(--line);
-  --color-line-2: var(--line-2);
-  --color-line-soft: var(--line-soft);
-  --color-panel: var(--panel);
+  --color-paper: var(--background);
+  --color-paper-2: var(--secondary);
+  --color-ink: var(--foreground);
+  --color-ink-soft: var(--muted-foreground);
+  --color-ink-faint: color-mix(in oklab, var(--foreground) 42%, var(--background));
+  --color-line: var(--border);
+  --color-line-2: color-mix(in oklab, var(--foreground) 22%, transparent);
+  --color-line-soft: color-mix(in oklab, var(--foreground) 8%, transparent);
+  --color-panel: color-mix(in oklab, var(--foreground) 3%, transparent);
+
+  /* Signals & brand accent → the design system's semantic roles. `accent` is the
+     house accent (cyan) used for interactive/active states; the "bad" severity
+     maps to `destructive` at the call sites, so accent never carries danger. */
   --color-accent: var(--accent);
-  --color-ok: var(--ok);
-  --color-warn: var(--warn);
-
-  --font-sans: "Schibsted Grotesk", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-
-  --animate-shimmer: shimmer 1.4s infinite linear;
-  --animate-pulse-dot: pulseDot 2.4s ease-out infinite;
+  --color-ok: var(--success);
+  --color-warn: var(--warning);
 }
 
 @layer base {
-  html,
-  body {
-    margin: 0;
-  }
-  body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-    transition:
-      background 0.2s,
-      color 0.2s;
-  }
-  /* Super-wide viewports read the pane as a centred sheet on a darker ground. */
+  /* Super-wide viewports read the pane as a centred sheet on a darker ground.
+     (The rest of the body posture — colour, font, smoothing — comes from the
+     design system's base.css.) */
   @media (min-width: 1280px) {
     body {
-      background: var(--paper-2);
+      background: var(--secondary);
     }
-  }
-  a {
-    color: inherit;
-  }
-  ::selection {
-    background: color-mix(in oklab, var(--accent) 22%, transparent);
-  }
-  /* Keyboard focus ring — matches the paper aesthetic. */
-  :focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-    border-radius: 4px;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -360px 0;
-  }
-  100% {
-    background-position: 360px 0;
-  }
-}
-
-@keyframes pulseDot {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 50%, transparent);
-  }
-  60% {
-    box-shadow: 0 0 0 6px transparent;
-  }
-}
-
-/* Reduced motion — kill the shimmer, the pulse and the reveal slide. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
   }
 }

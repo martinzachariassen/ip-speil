@@ -7,6 +7,10 @@ apps/web/dist/
 # Wrangler local state (dev cache, redirected deploy config)
 apps/web/.wrangler/
 
+# Local Worker dev overrides (secrets/vars for `vite dev`); commit .dev.vars.example
+apps/web/.dev.vars
+apps/web/.dev.vars.local
+
 # Environment
 .env
 .env.local

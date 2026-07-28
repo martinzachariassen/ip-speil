@@ -1,3 +1,5 @@
+import { Icon } from "@martinzachariassen/design";
+
 const PILLS = [
   "No cookies",
   "No database",
@@ -73,9 +75,10 @@ export function FinePrint() {
             href={href}
             target="_blank"
             rel="noopener"
-            className="border-b border-line-2 pb-px text-ink-soft transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex items-center gap-1 border-b border-line-2 pb-px text-ink-soft transition-colors hover:border-accent hover:text-accent"
           >
             {label}
+            <Icon name="external-link" size="xs" className="opacity-60" />
           </a>
         ))}
       </div>

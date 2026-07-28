@@ -19,6 +19,7 @@ export function Fingerprint({
       <Note
         severity={dot}
         title={`Fingerprint distinctiveness: ${entropy.rarity}`}
+        tip="entropy"
         desc={`About ${entropy.bits} bits of identifying information are exposed here — the more distinctive signals, the fewer browsers look like yours. This is a local, order-of-magnitude estimate (EFF Cover Your Tracks method); it is not a "1 in N" population figure, since we measure no population.`}
       />
 
@@ -34,18 +35,20 @@ export function Fingerprint({
       ) : null}
 
       {fp.canvas ? (
-        <KV k="Canvas fingerprint">
+        <KV k="Canvas fingerprint" tip="canvasFp">
           <Mono>{fp.canvas}…</Mono>
         </KV>
       ) : null}
       {fp.audio ? (
-        <KV k="Audio fingerprint">
+        <KV k="Audio fingerprint" tip="audioFp">
           <Mono>{fp.audio}…</Mono>
         </KV>
       ) : null}
       {fp.webgl ? (
         <>
-          <KV k="GPU renderer">{fp.webgl.renderer}</KV>
+          <KV k="GPU renderer" tip="gpuRenderer">
+            {fp.webgl.renderer}
+          </KV>
           <KV k="GPU vendor">{fp.webgl.vendor}</KV>
         </>
       ) : null}

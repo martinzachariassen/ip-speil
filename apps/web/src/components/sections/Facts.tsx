@@ -1,16 +1,19 @@
 import { flag, formatPlace, isSuccessfulLookup } from "../../lib/format.ts";
+import { type GlossaryKey, Tip } from "../../lib/glossary.tsx";
 import { timezoneCheck } from "../../lib/heuristics.ts";
 import type { Exits, IpInfo } from "../../types.ts";
 import type { ReactNode } from "react";
+import { Icon } from "@martinzachariassen/design";
 import { MonoSm, Muted } from "../primitives.tsx";
 
 // One label/value row in the "Connection details" grid. Collapses to a single
 // column on narrow screens.
-function Fact({ label, children }: { label: string; children: ReactNode }) {
+function Fact({ label, tip, children }: { label: string; tip?: GlossaryKey; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[124px_1fr] items-baseline gap-[18px] border-b border-line-soft py-3 max-[560px]:grid-cols-1 max-[560px]:gap-1">
-      <div className="font-mono text-[10.5px] tracking-[0.13em] text-ink-faint uppercase">
+      <div className="flex items-center gap-1.5 font-mono text-[10.5px] tracking-[0.13em] text-ink-faint uppercase">
         {label}
+        {tip ? <Tip k={tip} /> : null}
       </div>
       <div className="flex flex-wrap items-center gap-2.5 break-words text-[14.5px] text-ink">
         {children}
@@ -28,7 +31,9 @@ export function Facts({ d, exits }: { d: IpInfo; exits: Exits }) {
         <Fact label="Status">
           <Muted>IP lookup unavailable — try Refresh</Muted>
         </Fact>
-        <Fact label="IPv6">{ipv6Fact}</Fact>
+        <Fact label="IPv6" tip="ipv6">
+        {ipv6Fact}
+      </Fact>
       </div>
     );
   }
@@ -60,21 +65,21 @@ export function Facts({ d, exits }: { d: IpInfo; exits: Exits }) {
       ) : null}
       <Fact label="Network">{d.isp || d.org ? d.isp || d.org : <Muted>unknown</Muted>}</Fact>
       {d.as ? (
-        <Fact label="ASN">
+        <Fact label="ASN" tip="asn">
           <MonoSm>{d.as}</MonoSm>
           {d.asname ? <Muted>{d.asname}</Muted> : null}
         </Fact>
       ) : null}
-      <Fact label="Reverse DNS">
+      <Fact label="Reverse DNS" tip="reverseDns">
         {d.reverse ? <MonoSm>{d.reverse}</MonoSm> : <Muted>none</Muted>}
       </Fact>
       {d.geo && d.geo.total > 1 ? (
-        <Fact label="Geo agreement">
+        <Fact label="Geo agreement" tip="geoAgreement">
           {d.geo.agree}/{d.geo.total} sources agree on country
         </Fact>
       ) : null}
       {d.datasetDate ? (
-        <Fact label="Geo dataset">
+        <Fact label="Geo dataset" tip="geoDataset">
           <MonoSm>{d.datasetDate.slice(0, 10)}</MonoSm>{" "}
           <Muted>DB-IP + iptoasn, resolved locally</Muted>
         </Fact>
@@ -83,11 +88,19 @@ export function Facts({ d, exits }: { d: IpInfo; exits: Exits }) {
         <span>{d.timezone || tz.browserTz}</span>
         {tzWarn ? (
           <Muted>
-            browser: {tz.browserTz} <span className="text-warn">⚠</span>
+            browser: {tz.browserTz}{" "}
+            <Icon
+              name="triangle-alert"
+              size="xs"
+              label="timezone mismatch"
+              className="inline-block align-[-2px] text-warn"
+            />
           </Muted>
         ) : null}
       </Fact>
-      <Fact label="IPv6">{ipv6Fact}</Fact>
+      <Fact label="IPv6" tip="ipv6">
+        {ipv6Fact}
+      </Fact>
     </div>
   );
 }

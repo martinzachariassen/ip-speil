@@ -7,7 +7,7 @@ function CloudflareTrace({ cfTrace }: { cfTrace: CFTrace | null }) {
     return (
       <>
         <Divider />
-        <SubLabel>Connection security &amp; Cloudflare trace</SubLabel>
+        <SubLabel tip="cloudflareTrace">Connection security &amp; Cloudflare trace</SubLabel>
         <Note
           severity="off"
           title="Cloudflare trace unavailable"
@@ -27,6 +27,7 @@ function CloudflareTrace({ cfTrace }: { cfTrace: CFTrace | null }) {
       <SubLabel>Connection security &amp; Cloudflare trace</SubLabel>
       <Note
         severity={warp || gateway ? "ok" : "off"}
+        tip="warp"
         title={
           warp
             ? "Cloudflare WARP active"
@@ -39,6 +40,7 @@ function CloudflareTrace({ cfTrace }: { cfTrace: CFTrace | null }) {
       {cfTrace.sni ? (
         <Note
           severity={ech ? "ok" : "warn"}
+          tip={ech ? "ech" : "sni"}
           title={ech ? "Encrypted Client Hello (ECH) in use" : "SNI sent in the clear"}
           desc={
             ech
@@ -47,9 +49,17 @@ function CloudflareTrace({ cfTrace }: { cfTrace: CFTrace | null }) {
           }
         />
       ) : null}
-      {cfTrace.tls ? <KV k="TLS version">{cfTrace.tls}</KV> : null}
+      {cfTrace.tls ? (
+        <KV k="TLS version" tip="tls">
+          {cfTrace.tls}
+        </KV>
+      ) : null}
       {cfTrace.http ? <KV k="HTTP version">{cfTrace.http}</KV> : null}
-      {cfTrace.kex ? <KV k="Key exchange">{cfTrace.kex}</KV> : null}
+      {cfTrace.kex ? (
+        <KV k="Key exchange" tip="keyExchange">
+          {cfTrace.kex}
+        </KV>
+      ) : null}
       {cfTrace.colo ? <KV k="Nearest CF datacenter">{cfTrace.colo}</KV> : null}
       {cfTrace.loc ? (
         <KV k="CF sees country">
@@ -85,7 +95,7 @@ export function IPv6({
   return (
     <>
       {exits.http ? (
-        <KV k="HTTP exit IP">
+        <KV k="HTTP exit IP" tip="exitIp">
           <Mono>{exits.http}</Mono>
         </KV>
       ) : null}
@@ -97,6 +107,7 @@ export function IPv6({
       {exits.v4 && exits.http && exits.v4 !== exits.http ? (
         <Note
           severity="warn"
+          tip="splitRouting"
           title="IPv4 exit differs from HTTP IP"
           desc="Your forced-IPv4 exit is a different address than the server saw — split routing or a proxy."
         />

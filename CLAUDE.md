@@ -85,6 +85,27 @@ pinned via `mise.toml` and root `package.json` engines. `mise.toml` also exposes
 apps/api/src/index.ts` is fine for parallel smoke tests so the dev `--watch` instance
 on 3000 stays untouched.
 
+## Local development
+
+To preview the **whole app** locally you need both targets running, and the Worker
+must proxy `/api/info` to your **local** API instead of production:
+
+- `bun run dev` — starts the API (`:3000`) and the web dev server (`:5173`)
+  together (Ctrl-C stops both). Or run `bun run dev:api` and `bun run dev:web` in
+  two terminals.
+- **`apps/web/.dev.vars`** (gitignored; copy from `.dev.vars.example`) overrides the
+  `wrangler.jsonc` `vars` during `vite dev`. It sets `API_ORIGIN=http://localhost:3000`
+  so the proxy hits the local API. **Without it the Worker fetches the prod API
+  (`https://api.ip.mlz.no`), which is unreachable from a dev box — the proxied
+  `fetch` throws and workerd returns the opaque `internal error; reference = …`
+  500.** The Worker's external-fetch routes (`proxy.ts`, `umami.ts`) now catch an
+  unreachable upstream and return a clean 502 / no-op instead of that 500.
+- The API's proxy gate is a **no-op when `PROXY_SECRET` is unset**, so local preview
+  needs no secret. To exercise the real gate, set `PROXY_SECRET` on both sides
+  (a matching line in `apps/web/.dev.vars` and the API's env).
+- Optional: `bun apps/api/scripts/fetch-datasets.ts` populates the local geoip
+  datasets so `/api/info` returns full data instead of the limited fallback.
+
 ## Layout
 
 ```text

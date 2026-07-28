@@ -14,6 +14,7 @@ function DnssecNote({ dnssec }: { dnssec: DnssecResult }) {
     return (
       <Note
         severity="ok"
+        tip="dnssec"
         title="DNSSEC validated by your resolver"
         desc="Your resolver refused a domain with a deliberately broken DNSSEC signature — forged DNS answers for signed zones would be rejected."
       />
@@ -23,6 +24,7 @@ function DnssecNote({ dnssec }: { dnssec: DnssecResult }) {
     return (
       <Note
         severity="warn"
+        tip="dnssec"
         title="No DNSSEC validation"
         desc="Your resolver still answered for a domain with a broken DNSSEC signature, so it does not validate — signed zones aren't protected against DNS spoofing."
       />
@@ -31,6 +33,7 @@ function DnssecNote({ dnssec }: { dnssec: DnssecResult }) {
   return (
     <Note
       severity="off"
+      tip="dnssec"
       title="DNSSEC test inconclusive"
       desc="The control domain could not be reached, so validation behaviour couldn't be determined."
     />
@@ -54,6 +57,7 @@ function DnsNote({
       return (
         <Note
           severity="warn"
+          tip="dnsLeak"
           title="Possible DNS leak"
           desc={`${foreign.length} resolver(s) in ${where} differ from your IP's country (${d.country ?? ""})${via}.`}
         />
@@ -62,6 +66,7 @@ function DnsNote({
     return (
       <Note
         severity="ok"
+        tip="dnsLeak"
         title="No DNS leak detected"
         desc={dnsLeak.conclusion || `${dnsLeak.resolvers.length} resolver(s) in your IP's country${via}.`}
       />
@@ -71,6 +76,7 @@ function DnsNote({
     return (
       <Note
         severity="ok"
+        tip="doh"
         title="DNS-over-HTTPS reachable"
         desc="Cloudflare's DoH endpoint responds — no DPI middlebox is blocking it."
       />
@@ -80,6 +86,7 @@ function DnsNote({
     return (
       <Note
         severity="warn"
+        tip="doh"
         title="DNS-over-HTTPS unreachable"
         desc="A captive portal, VPN or corporate DPI may be intercepting DNS."
       />
@@ -123,6 +130,7 @@ export function Privacy({
     notes.push(
       <Note
         severity="bad"
+        tip="vpnProxyTor"
         title="Tor exit node"
         desc="A known Tor exit relay. Sites may apply extra friction or block requests."
       />,
@@ -133,6 +141,7 @@ export function Privacy({
     notes.push(
       <Note
         severity="bad"
+        tip="vpnProxyTor"
         title="VPN / proxy detected"
         desc={
           d.vpn === true
@@ -147,6 +156,7 @@ export function Privacy({
     notes.push(
       <Note
         severity="ok"
+        tip="vpnProxyTor"
         title="No known VPN / proxy"
         desc="Not flagged as a proxy, VPN or anonymizer."
       />,
@@ -162,6 +172,7 @@ export function Privacy({
     notes.push(
       <Note
         severity="warn"
+        tip="reputationDb"
         title="Listed in reputation databases"
         desc={`Flagged by ${blocklists.join(", ")} — sites may treat this address with extra caution.`}
       />,
@@ -172,6 +183,7 @@ export function Privacy({
     notes.push(
       <Note
         severity="warn"
+        tip="datacenterIp"
         title="Datacenter / cloud IP"
         desc="Traffic routes through a commercial hosting network — common with VPNs."
       />,
@@ -180,6 +192,7 @@ export function Privacy({
     notes.push(
       <Note
         severity="ok"
+        tip="datacenterIp"
         title="Not flagged as hosting"
         desc="Not identified as a datacenter or cloud network."
       />,
@@ -190,6 +203,7 @@ export function Privacy({
     notes.push(
       <Note
         severity="warn"
+        tip="webrtcLeak"
         title="WebRTC public IP differs"
         desc="WebRTC exposed a public IP that does not match the HTTP IP — a possible VPN or routing leak."
       />,
@@ -198,6 +212,7 @@ export function Privacy({
     notes.push(
       <Note
         severity="ok"
+        tip="webrtcLeak"
         title="WebRTC blocked or no public leak"
         desc={
           webrtc.mdns
@@ -208,7 +223,12 @@ export function Privacy({
     );
   } else {
     notes.push(
-      <Note severity="ok" title="No WebRTC leak" desc="WebRTC IP matches your public IP." />,
+      <Note
+        severity="ok"
+        tip="webrtcLeak"
+        title="No WebRTC leak"
+        desc="WebRTC IP matches your public IP."
+      />,
     );
   }
 

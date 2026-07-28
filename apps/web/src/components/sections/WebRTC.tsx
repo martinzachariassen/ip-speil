@@ -1,4 +1,6 @@
+import { Icon } from "@martinzachariassen/design";
 import { cx } from "../../lib/cx.ts";
+import { Tip } from "../../lib/glossary.tsx";
 import { isForeignPublicIp, webrtcLeak } from "../../lib/heuristics.ts";
 import type { WebRTCResult } from "../../types.ts";
 import type { ReactNode } from "react";
@@ -12,7 +14,7 @@ function Tag({ children, variant }: { children: ReactNode; variant?: "leak" | "l
     <span
       className={cx(
         TAG_BASE,
-        variant === "leak" && "border-accent text-accent",
+        variant === "leak" && "border-destructive text-destructive",
         variant === "local" && "border-dashed",
       )}
     >
@@ -21,10 +23,27 @@ function Tag({ children, variant }: { children: ReactNode; variant?: "leak" | "l
   );
 }
 
+// An IP tag with an optional trailing annotation, introduced by a left-pointing
+// arrow icon (not a glyph in a string) so it reads "<ip> ← <note>".
 function PublicTag({ ip, httpIp }: { ip: string; httpIp: string | undefined }) {
-  if (isForeignPublicIp(ip, httpIp)) return <Tag variant="leak">{ip} ← differs</Tag>;
-  if (ip === httpIp) return <Tag>{ip} ← matches HTTP</Tag>;
-  return <Tag>{ip}</Tag>;
+  const note = isForeignPublicIp(ip, httpIp)
+    ? "differs"
+    : ip === httpIp
+      ? "matches HTTP"
+      : null;
+  return (
+    <Tag variant={note === "differs" ? "leak" : undefined}>
+      <span className="inline-flex items-center gap-1.5">
+        {ip}
+        {note ? (
+          <>
+            <Icon name="arrow-left" size="xs" className="flex-none" />
+            {note}
+          </>
+        ) : null}
+      </span>
+    </Tag>
+  );
 }
 
 function TagGroup({ children }: { children: ReactNode }) {
@@ -44,6 +63,7 @@ export function WebRTC({
     return (
       <Note
         severity="off"
+        tip="iceCandidate"
         title="No IP candidates exposed"
         desc="WebRTC may be blocked or unavailable in this browser."
       />
@@ -57,12 +77,14 @@ export function WebRTC({
       {leak ? (
         <Note
           severity="warn"
+          tip="webrtcLeak"
           title="Different public IP exposed"
           desc="WebRTC revealed a public address that differs from the one seen by normal HTTP requests."
         />
       ) : (
         <Note
           severity="ok"
+          tip="webrtcLeak"
           title="No different public IP exposed"
           desc="WebRTC did not reveal a public IP different from your HTTP IP."
         />
@@ -81,7 +103,7 @@ export function WebRTC({
 
       {lan.length > 0 ? (
         <>
-          <SubLabel>Local / LAN IPs</SubLabel>
+          <SubLabel tip="lanIp">Local / LAN IPs</SubLabel>
           <TagGroup>
             {lan.map((ip) => (
               <Tag key={ip} variant="local">
@@ -94,7 +116,7 @@ export function WebRTC({
 
       {relay.length > 0 ? (
         <>
-          <SubLabel>Relay candidates</SubLabel>
+          <SubLabel tip="turn">Relay candidates</SubLabel>
           <TagGroup>
             {relay.map((ip) => (
               <Tag key={ip}>{ip}</Tag>
@@ -106,13 +128,13 @@ export function WebRTC({
       {mdns > 0 ? (
         <BodyIntro>
           {mdns} local candidate{mdns === 1 ? " was" : "s were"} hidden behind browser mDNS privacy
-          masking.
+          masking <Tip k="mdns" />.
         </BodyIntro>
       ) : null}
 
       {candidates.length > 0 ? (
         <>
-          <SubLabel>All candidates</SubLabel>
+          <SubLabel tip="iceCandidate">All candidates</SubLabel>
           {candidates.map((c, i) => (
             <div
               // biome-ignore lint/suspicious/noArrayIndexKey: candidate order is stable within a scan

@@ -7,6 +7,7 @@ function RpkiNote({ rpki }: { rpki: RpkiInfo }) {
     return (
       <Note
         severity="ok"
+        tip="rpki"
         title="RPKI valid"
         desc="The BGP route for your network is cryptographically authorised — a signed ROA matches the announcing ASN and prefix."
       />
@@ -16,6 +17,7 @@ function RpkiNote({ rpki }: { rpki: RpkiInfo }) {
     return (
       <Note
         severity="bad"
+        tip="rpki"
         title="RPKI invalid"
         desc="The route announcement does not match any signed ROA. This can indicate a misconfiguration or a route hijack."
       />
@@ -24,6 +26,7 @@ function RpkiNote({ rpki }: { rpki: RpkiInfo }) {
   return (
     <Note
       severity="off"
+      tip="rpki"
       title="RPKI unknown"
       desc="No ROA covers this prefix, so origin validation is inconclusive. This is common and not a problem in itself."
     />
@@ -58,16 +61,24 @@ export function Routing({ d }: { d: IpInfo }) {
     <>
       {r.rpki ? <RpkiNote rpki={r.rpki} /> : null}
       {r.prefix ? (
-        <KV k="Announced prefix">
+        <KV k="Announced prefix" tip="bgpPrefix">
           <Mono>{r.prefix}</Mono>
         </KV>
       ) : null}
-      {r.originAsn ? <KV k="Origin ASN">{r.originAsn}</KV> : null}
-      {r.rpki ? <KV k="RPKI state">{r.rpki.state}</KV> : null}
+      {r.originAsn ? (
+        <KV k="Origin ASN" tip="originAsn">
+          {r.originAsn}
+        </KV>
+      ) : null}
+      {r.rpki ? (
+        <KV k="RPKI state" tip="rpki">
+          {r.rpki.state}
+        </KV>
+      ) : null}
 
       {roas.length ? (
         <>
-          <SubLabel>Route Origin Authorisations</SubLabel>
+          <SubLabel tip="roa">Route Origin Authorisations</SubLabel>
           {roas.map((roa, i) => {
             const detail = [
               roa.origin,
@@ -87,7 +98,7 @@ export function Routing({ d }: { d: IpInfo }) {
       ) : null}
 
       {r.abuseContacts?.length ? (
-        <KV k="Abuse contact">
+        <KV k="Abuse contact" tip="abuseContact">
           <MonoSm>{r.abuseContacts.join(", ")}</MonoSm>
         </KV>
       ) : null}
