@@ -162,12 +162,18 @@ apps/
       probes/          network (IPv4/IPv6/DoH/CF trace), webrtc, fingerprint, dns-leak
       lib/             cx, format, hash, heuristics (leak verdict, entropy), exposure,
                        diff, snapshot, client-hints  (+ *.test.ts, run by `bun test`)
+    scripts/
+      gen-brand-assets.ts  Renders the brand-asset set (favicons, app icons, OG/
+                           Twitter cards) from the "mirror mark" via headless
+                           Chromium at 2× DPI. Run: `bun run --filter @ip-speil/web
+                           gen:assets`. Fonts are the design system's own woff2.
     public/            Static root copied into dist/client, served by ASSETS
       robots.txt       Disallows /api/
       _headers         Cloudflare security headers + page CSP + font caching
+      favicon.ico      Packed 16+32 icon (generated)
       assets/
-        fonts/*.woff2  Self-hosted (no Google Fonts, no visitor-IP leak)
-        icons/         Favicons / app icons
+        icons/         favicon.svg (source of truth) + PNG/maskable app icons (generated)
+        social/        og.png + twitter-card.png — 1200×630 share cards (generated)
     tsconfig.json      Client typecheck (jsx react-jsx; excludes worker + *.test.ts)
     wrangler.jsonc     Worker config: main, assets (run_worker_first), vars (API_ORIGIN…)
     dist/              Vite build output (gitignored): client/ + Worker bundle
@@ -252,8 +258,15 @@ static asset (`env.ASSETS.fetch`).
   'self'` / `style-src 'self'`: no inline `<script>`/`<style>` or `style=""`
   attributes (React's `style={{}}` prop is fine — it's CSSOM, not an HTML attribute).
 - New browser code is just imported by a component/hook/probe — Vite bundles it, so
-  there's no per-file allowlist. New webfonts drop into
-  `apps/web/public/assets/fonts/` and get an `@font-face` in `src/index.css`.
+  there's no per-file allowlist. Fonts (Space Mono + Space Grotesk) come from the
+  design system's `index-self-hosted.css` — don't re-add local webfonts.
+- **The brand is the mirror mark.** ip-speil's identity is a monochrome mark built
+  the same way as the MLZ mark in `@martinzachariassen/design` (solid polygon glyph
+  on an ink tile, accent never in the mark): two triangles mirroring across a central
+  rule — a peak and its dimmed reflection. It's defined once in
+  `scripts/gen-brand-assets.ts`, which regenerates every favicon/app-icon and the
+  1200×630 OG/Twitter cards (`bun run --filter @ip-speil/web gen:assets`). Edit the
+  geometry there and re-run — don't hand-edit the generated PNGs/ICO.
 - No DB, no request logs, no cookies. Don't add persistence or trackers.
 
 ## Notes / gotchas
