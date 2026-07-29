@@ -1,7 +1,7 @@
 import { flattenReport, type SnapshotDiff } from "../../lib/diff.ts";
 import type { Report } from "../../report.ts";
 import { Icon } from "@martinzachariassen/design";
-import { KV, Mono, Muted, Note } from "../primitives.tsx";
+import { KV, KVList, Mono, Muted, Note } from "../primitives.tsx";
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -23,19 +23,23 @@ export function Diff({ diff }: { diff: SnapshotDiff }) {
         }
         desc={`Snapshot taken ${when(diff.savedAt)}.`}
       />
-      {diff.fields.map((f) => (
-        <KV key={f.label} k={f.label}>
-          <Muted>{f.before}</Muted>
-          <Icon
-            name="arrow-right"
-            size="xs"
-            className="mx-1 inline-block align-[-2px] text-ink-faint"
-          />
-          <Mono>{f.after}</Mono>
-        </KV>
-      ))}
-      {/* Fingerprint is reported changed/unchanged only — the hash is never shown. */}
-      <KV k="Browser fingerprint">{diff.fingerprintChanged ? "changed" : "unchanged"}</KV>
+      <KVList>
+        {diff.fields.map((f) => (
+          <KV key={f.label} k={f.label}>
+            <Muted>{f.before}</Muted>
+            {/* sr-only phrasing gives the before→after pair a spoken relationship. */}
+            <span className="sr-only"> changed to </span>
+            <Icon
+              name="arrow-right"
+              size="xs"
+              className="mx-1 inline-block align-[-2px] text-ink-faint"
+            />
+            <Mono>{f.after}</Mono>
+          </KV>
+        ))}
+        {/* Fingerprint is reported changed/unchanged only — the hash is never shown. */}
+        <KV k="Browser fingerprint">{diff.fingerprintChanged ? "changed" : "unchanged"}</KV>
+      </KVList>
     </>
   );
 }
@@ -50,13 +54,15 @@ export function Shared({ report }: { report: Report }) {
         title="Viewing a shared snapshot"
         desc={`This read-only summary was shared with you via a link and contains only redacted values.${stamp}`}
       />
-      {flattenReport(report)
-        .filter((f) => f.value !== "—")
-        .map((f) => (
-          <KV key={f.label} k={f.label}>
-            <Mono>{f.value}</Mono>
-          </KV>
-        ))}
+      <KVList>
+        {flattenReport(report)
+          .filter((f) => f.value !== "—")
+          .map((f) => (
+            <KV key={f.label} k={f.label}>
+              <Mono>{f.value}</Mono>
+            </KV>
+          ))}
+      </KVList>
     </>
   );
 }

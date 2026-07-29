@@ -74,11 +74,12 @@ export function FinePrint() {
             key={href}
             href={href}
             target="_blank"
-            rel="noopener"
-            className="inline-flex items-center gap-1 border-b border-line-2 pb-px text-ink-soft transition-colors hover:border-accent hover:text-accent"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded-xs border-b border-line-2 pb-px text-ink-soft transition-colors hover:border-accent hover:text-accent focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
             {label}
-            <Icon name="external-link" size="xs" className="opacity-60" />
+            <Icon name="external-link" size="xs" className="opacity-60" aria-hidden />
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
         ))}
       </div>

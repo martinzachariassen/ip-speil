@@ -1,6 +1,6 @@
 import { clientHintsStatus, isClientHintHeader } from "../../lib/client-hints.ts";
 import type { HeaderMap } from "../../types.ts";
-import { BodyIntro, KV, Mono, Muted, Note, SubLabel } from "../primitives.tsx";
+import { BodyIntro, KV, KVList, Mono, Muted, Note, SubLabel } from "../primitives.tsx";
 
 const PRIORITY = [
   "user-agent",
@@ -36,11 +36,13 @@ function ClientHintsBlock({ headers }: { headers: HeaderMap }) {
           desc="Your browser did not answer the Accept-CH request — typical of Firefox and Safari, which don't support these hints."
         />
       ) : (
-        statuses.map((s) => (
-          <KV key={s.header} k={s.header}>
-            {s.value !== null ? <Mono>{s.value}</Mono> : <Muted>— not sent</Muted>}
-          </KV>
-        ))
+        <KVList>
+          {statuses.map((s) => (
+            <KV key={s.header} k={s.header}>
+              {s.value !== null ? <Mono>{s.value}</Mono> : <Muted>— not sent</Muted>}
+            </KV>
+          ))}
+        </KVList>
       )}
     </>
   );
@@ -65,11 +67,13 @@ export function Headers({ headers }: { headers: HeaderMap }) {
         set depending on browser policy, permissions, and server opt-ins.
       </BodyIntro>
       {entries.length ? (
-        entries.map(([k, v]) => (
-          <KV key={k} k={k}>
-            <Mono>{Array.isArray(v) ? v.join(", ") : v}</Mono>
-          </KV>
-        ))
+        <KVList>
+          {entries.map(([k, v]) => (
+            <KV key={k} k={k}>
+              <Mono>{Array.isArray(v) ? v.join(", ") : v}</Mono>
+            </KV>
+          ))}
+        </KVList>
       ) : (
         <Note
           severity="off"

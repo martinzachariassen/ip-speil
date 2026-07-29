@@ -1,7 +1,7 @@
 import { languageGeoCheck, timezoneCheck } from "../../lib/heuristics.ts";
 import type { IpInfo } from "../../types.ts";
 import { Icon } from "@martinzachariassen/design";
-import { BodyIntro, KV, Mono } from "../primitives.tsx";
+import { BodyIntro, KV, KVList, Mono } from "../primitives.tsx";
 
 export function Browser({ d }: { d: IpInfo }) {
   const tz = timezoneCheck(d);
@@ -37,29 +37,35 @@ export function Browser({ d }: { d: IpInfo }) {
           VPN.
         </BodyIntro>
       ) : null}
-      <KV k="Timezone">
-        {tz.browserTz}
-        {tzMismatch ? (
-          <Icon
-            name="triangle-alert"
-            size="xs"
-            label="timezone mismatch"
-            className="ml-1.5 inline-block align-[-2px] text-warn"
-          />
-        ) : null}
-      </KV>
-      <KV k="Language">{navigator.language}</KV>
-      <KV k="All languages">{languages}</KV>
-      <KV k="Do Not Track" tip="doNotTrack">
-        {dnt}
-      </KV>
-      <KV k="Global Privacy Control" tip="gpc">
-        {gpc}
-      </KV>
-      <KV k="Cookies">{navigator.cookieEnabled ? "Enabled" : "Disabled"}</KV>
-      <KV k="User agent" tip="userAgent">
-        <Mono>{navigator.userAgent}</Mono>
-      </KV>
+      <KVList>
+        <KV k="Timezone" mono>
+          {tz.browserTz}
+          {tzMismatch ? (
+            <Icon
+              name="triangle-alert"
+              size="xs"
+              label="timezone mismatch"
+              className="ml-1.5 inline-block align-[-2px] text-warn"
+            />
+          ) : null}
+        </KV>
+        <KV k="Language" mono>
+          {navigator.language}
+        </KV>
+        <KV k="All languages" mono>
+          {languages}
+        </KV>
+        <KV k="Do Not Track" tip="doNotTrack">
+          {dnt}
+        </KV>
+        <KV k="Global Privacy Control" tip="gpc">
+          {gpc}
+        </KV>
+        <KV k="Cookies">{navigator.cookieEnabled ? "Enabled" : "Disabled"}</KV>
+        <KV k="User agent" tip="userAgent">
+          <Mono>{navigator.userAgent}</Mono>
+        </KV>
+      </KVList>
     </>
   );
 }

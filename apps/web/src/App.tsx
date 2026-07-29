@@ -1,3 +1,4 @@
+import { Accordion } from "@martinzachariassen/design";
 import { useMemo } from "react";
 import { Rail } from "./components/Rail.tsx";
 import { Reveal } from "./components/Reveal.tsx";
@@ -105,14 +106,18 @@ export function App() {
           ) : null}
 
           {diff ? (
-            <section className="mt-[30px]" aria-label="Changes since your snapshot">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <SectionLabel>Since your snapshot</SectionLabel>
-                <Button mini onClick={clearSnapshot}>
-                  Clear snapshot
-                </Button>
+            <section className="mt-6 min-[900px]:mt-0" aria-label="Changes since your snapshot">
+              <div className="rounded-xl border border-line bg-panel p-4 min-[900px]:p-5">
+                <div className="mb-3.5 flex items-center justify-between gap-3 border-b border-line-soft pb-3">
+                  <span className="font-mono text-[10.5px] tracking-[0.14em] text-ink-faint uppercase">
+                    Since your snapshot
+                  </span>
+                  <Button mini onClick={clearSnapshot} aria-label="Clear the saved snapshot">
+                    Clear snapshot
+                  </Button>
+                </div>
+                <Diff diff={diff} />
               </div>
-              <Diff diff={diff} />
             </section>
           ) : null}
 
@@ -129,87 +134,96 @@ export function App() {
             {scan ? <Facts d={scan.data} exits={scan.exits} /> : <SkelBlock />}
           </section>
 
-          <div className="mt-[30px]">
+          <section className="mt-[30px]" aria-label="Deeper look">
             <SectionLabel>
-              Deeper look <span>— tap any section to expand</span>
+              Deeper look <span>— open a section for the full detail</span>
             </SectionLabel>
 
-            <Reveal
-              num="01"
-              title="Privacy checks"
-              subtitle="VPN, proxy, reputation, WebRTC & DNS signals"
-            >
-              {scan ? (
-                <Privacy
-                  d={scan.data}
-                  webrtc={scan.webrtc}
-                  dnsLeak={scan.dnsLeak}
-                  doh={scan.doh}
-                  dnssec={scan.dnssec}
-                />
-              ) : (
-                <SkelBlock />
-              )}
-            </Reveal>
+            <Accordion type="single" collapsible>
+              <Reveal
+                value="privacy"
+                num="01"
+                title="Privacy checks"
+                subtitle="VPN, proxy, reputation, WebRTC & DNS signals"
+              >
+                {scan ? (
+                  <Privacy
+                    d={scan.data}
+                    webrtc={scan.webrtc}
+                    dnsLeak={scan.dnsLeak}
+                    doh={scan.doh}
+                    dnssec={scan.dnssec}
+                  />
+                ) : (
+                  <SkelBlock />
+                )}
+              </Reveal>
 
-            <Reveal
-              num="02"
-              title="Your browser"
-              subtitle="language, privacy signals & user agent"
-            >
-              {scan ? <Browser d={scan.data} /> : <SkelBlock />}
-            </Reveal>
+              <Reveal
+                value="browser"
+                num="02"
+                title="Your browser"
+                subtitle="language, privacy signals & user agent"
+              >
+                {scan ? <Browser d={scan.data} /> : <SkelBlock />}
+              </Reveal>
 
-            <Reveal
-              num="03"
-              title="IPv6 & routing"
-              subtitle="compares IPv4 / IPv6 exit and Cloudflare trace"
-            >
-              {scan ? (
-                <IPv6
-                  exits={scan.exits}
-                  ipv6Info={scan.ipv6Info}
-                  cfTrace={scan.cfTrace}
-                  httpInfo={scan.data}
-                />
-              ) : (
-                <SkelBlock />
-              )}
-            </Reveal>
+              <Reveal
+                value="ipv6"
+                num="03"
+                title="IPv6 & routing"
+                subtitle="compares IPv4 / IPv6 exit and Cloudflare trace"
+              >
+                {scan ? (
+                  <IPv6
+                    exits={scan.exits}
+                    ipv6Info={scan.ipv6Info}
+                    cfTrace={scan.cfTrace}
+                    httpInfo={scan.data}
+                  />
+                ) : (
+                  <SkelBlock />
+                )}
+              </Reveal>
 
-            <Reveal
-              num="04"
-              title="Browser fingerprint"
-              subtitle="how sites track you beyond your IP"
-              badge={fpBadge}
-            >
-              {scan ? <Fingerprint fp={scan.fp} entropy={scan.entropy} /> : <SkelBlock />}
-            </Reveal>
+              <Reveal
+                value="fingerprint"
+                num="04"
+                title="Browser fingerprint"
+                subtitle="how sites track you beyond your IP"
+                badge={fpBadge}
+              >
+                {scan ? <Fingerprint fp={scan.fp} entropy={scan.entropy} /> : <SkelBlock />}
+              </Reveal>
 
-            <Reveal
-              num="05"
-              title="What the server sees"
-              subtitle="HTTP headers your browser sent to this page"
-            >
-              {scan ? <Headers headers={scan.headers} /> : <SkelBlock />}
-            </Reveal>
+              <Reveal
+                value="headers"
+                num="05"
+                title="What the server sees"
+                subtitle="HTTP headers your browser sent to this page"
+              >
+                {scan ? <Headers headers={scan.headers} /> : <SkelBlock />}
+              </Reveal>
 
-            <Reveal
-              num="06"
-              title="WebRTC leak test"
-              subtitle="peer-to-peer candidates your browser exposes"
-            >
-              {scan ? <WebRTC webrtc={scan.webrtc} httpIp={scan.data.query} /> : <SkelBlock />}
-            </Reveal>
+              <Reveal
+                value="webrtc"
+                num="06"
+                title="WebRTC leak test"
+                subtitle="peer-to-peer candidates your browser exposes"
+              >
+                {scan ? <WebRTC webrtc={scan.webrtc} httpIp={scan.data.query} /> : <SkelBlock />}
+              </Reveal>
 
-            <Reveal
-              num="07"
-              title="Routing & RPKI"
-              subtitle="BGP prefix, origin ASN and route-origin validation"
-            >
-              {scan ? <Routing d={scan.data} /> : <SkelBlock />}
-            </Reveal>
-          </div>
+              <Reveal
+                value="routing"
+                num="07"
+                title="Routing & RPKI"
+                subtitle="BGP prefix, origin ASN and route-origin validation"
+              >
+                {scan ? <Routing d={scan.data} /> : <SkelBlock />}
+              </Reveal>
+            </Accordion>
+          </section>
 
           <FinePrint />
           <Footer />

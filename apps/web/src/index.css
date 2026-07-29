@@ -19,9 +19,10 @@
    `@theme inline` keeps the values as var() references, so they re-resolve per
    theme (and per `data-accent`) at runtime.
 
-   ip-speil carries three ink levels where the system has two (foreground /
-   muted-foreground); the third (`ink-faint`) and the finer hairlines are derived
-   from the system tokens with color-mix, so they still track the active theme.
+   ip-speil carries three ink levels; the system now provides all three
+   (foreground / muted-foreground / muted-foreground-2), so `ink-faint` maps
+   straight onto the system's AA-safe faint tone. The finer hairlines are still
+   derived from the system tokens with color-mix, so they track the active theme.
    Signal roles (ok/warn/bad) map onto the system's success/warning/destructive
    +accent and are applied at the call sites via StatusDot / signal utilities. */
 @theme inline {
@@ -29,7 +30,9 @@
   --color-paper-2: var(--secondary);
   --color-ink: var(--foreground);
   --color-ink-soft: var(--muted-foreground);
-  --color-ink-faint: color-mix(in oklab, var(--foreground) 42%, var(--background));
+  /* Faintest ink level → the design system's AA-safe faint tone (was a local 42%
+     mix at ~2.58:1, below WCAG AA). Now clears AA in both themes. */
+  --color-ink-faint: var(--muted-foreground-2);
   --color-line: var(--border);
   --color-line-2: color-mix(in oklab, var(--foreground) 22%, transparent);
   --color-line-soft: color-mix(in oklab, var(--foreground) 8%, transparent);

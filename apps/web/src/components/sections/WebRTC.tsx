@@ -135,17 +135,32 @@ export function WebRTC({
       {candidates.length > 0 ? (
         <>
           <SubLabel tip="iceCandidate">All candidates</SubLabel>
-          {candidates.map((c, i) => (
-            <div
-              // biome-ignore lint/suspicious/noArrayIndexKey: candidate order is stable within a scan
-              key={i}
-              className="grid grid-cols-[minmax(56px,0.4fr)_minmax(0,1fr)_minmax(70px,0.5fr)] gap-2.5 border-b border-dashed border-line py-[7px] text-[12px] last:border-b-0 max-[560px]:grid-cols-1 max-[560px]:gap-0.5"
-            >
-              <span className="break-words font-mono text-ink-faint">{c.type}</span>
-              <span className="break-words font-mono">{c.address}</span>
-              <span className="break-words font-mono text-ink-faint">{c.scope}</span>
-            </div>
-          ))}
+          <table className="w-full border-collapse text-[12px]">
+            <thead className="sr-only">
+              <tr>
+                <th scope="col">Candidate type</th>
+                <th scope="col">Address</th>
+                <th scope="col">Scope</th>
+              </tr>
+            </thead>
+            <tbody>
+              {candidates.map((c, i) => (
+                <tr
+                  // biome-ignore lint/suspicious/noArrayIndexKey: candidate order is stable within a scan
+                  key={i}
+                  className="border-b border-dashed border-line last:border-b-0"
+                >
+                  <td className="w-[22%] break-words py-[7px] pr-2.5 align-top font-mono text-ink-soft">
+                    {c.type}
+                  </td>
+                  <td className="break-words py-[7px] pr-2.5 align-top font-mono">{c.address}</td>
+                  <td className="w-[26%] break-words py-[7px] align-top font-mono text-ink-soft">
+                    {c.scope}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </>
       ) : null}
 

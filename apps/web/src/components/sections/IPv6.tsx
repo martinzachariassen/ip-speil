@@ -1,6 +1,6 @@
 import { flag, formatPlace, networkLabel } from "../../lib/format.ts";
 import type { CFTrace, Exits, IpInfo } from "../../types.ts";
-import { Divider, KV, Mono, Note, SubLabel } from "../primitives.tsx";
+import { Divider, KV, KVList, Mono, Note, SubLabel } from "../primitives.tsx";
 
 function CloudflareTrace({ cfTrace }: { cfTrace: CFTrace | null }) {
   if (!cfTrace) {
@@ -49,23 +49,33 @@ function CloudflareTrace({ cfTrace }: { cfTrace: CFTrace | null }) {
           }
         />
       ) : null}
-      {cfTrace.tls ? (
-        <KV k="TLS version" tip="tls">
-          {cfTrace.tls}
-        </KV>
-      ) : null}
-      {cfTrace.http ? <KV k="HTTP version">{cfTrace.http}</KV> : null}
-      {cfTrace.kex ? (
-        <KV k="Key exchange" tip="keyExchange">
-          {cfTrace.kex}
-        </KV>
-      ) : null}
-      {cfTrace.colo ? <KV k="Nearest CF datacenter">{cfTrace.colo}</KV> : null}
-      {cfTrace.loc ? (
-        <KV k="CF sees country">
-          {flag(cfTrace.loc)} {cfTrace.loc}
-        </KV>
-      ) : null}
+      <KVList>
+        {cfTrace.tls ? (
+          <KV k="TLS version" tip="tls" mono>
+            {cfTrace.tls}
+          </KV>
+        ) : null}
+        {cfTrace.http ? (
+          <KV k="HTTP version" mono>
+            {cfTrace.http}
+          </KV>
+        ) : null}
+        {cfTrace.kex ? (
+          <KV k="Key exchange" tip="keyExchange" mono>
+            {cfTrace.kex}
+          </KV>
+        ) : null}
+        {cfTrace.colo ? (
+          <KV k="Nearest CF datacenter" mono>
+            {cfTrace.colo}
+          </KV>
+        ) : null}
+        {cfTrace.loc ? (
+          <KV k="CF sees country">
+            {flag(cfTrace.loc)} {cfTrace.loc}
+          </KV>
+        ) : null}
+      </KVList>
     </>
   );
 }
@@ -94,16 +104,18 @@ export function IPv6({
 
   return (
     <>
-      {exits.http ? (
-        <KV k="HTTP exit IP" tip="exitIp">
-          <Mono>{exits.http}</Mono>
-        </KV>
-      ) : null}
-      {exits.v4 ? (
-        <KV k="IPv4 exit">
-          <Mono>{exits.v4}</Mono>
-        </KV>
-      ) : null}
+      <KVList>
+        {exits.http ? (
+          <KV k="HTTP exit IP" tip="exitIp">
+            <Mono>{exits.http}</Mono>
+          </KV>
+        ) : null}
+        {exits.v4 ? (
+          <KV k="IPv4 exit">
+            <Mono>{exits.v4}</Mono>
+          </KV>
+        ) : null}
+      </KVList>
       {exits.v4 && exits.http && exits.v4 !== exits.http ? (
         <Note
           severity="warn"
@@ -124,16 +136,18 @@ export function IPv6({
                 : "IPv6 is reachable. Normal unless it bypasses the network you expected."
             }
           />
-          <KV k="IPv6 exit">
-            <Mono>{exits.v6}</Mono>
-          </KV>
-          {ipv6Info?.status === "success" ? (
-            <>
-              <KV k="IPv6 location">{formatPlace(ipv6Info)}</KV>
-              <KV k="IPv6 network">{networkLabel(ipv6Info)}</KV>
-            </>
-          ) : null}
-          {httpInfo?.query ? <KV k="IPv4 network">{networkLabel(httpInfo)}</KV> : null}
+          <KVList>
+            <KV k="IPv6 exit">
+              <Mono>{exits.v6}</Mono>
+            </KV>
+            {ipv6Info?.status === "success" ? (
+              <>
+                <KV k="IPv6 location">{formatPlace(ipv6Info)}</KV>
+                <KV k="IPv6 network">{networkLabel(ipv6Info)}</KV>
+              </>
+            ) : null}
+            {httpInfo?.query ? <KV k="IPv4 network">{networkLabel(httpInfo)}</KV> : null}
+          </KVList>
         </>
       ) : (
         <Note
@@ -143,7 +157,13 @@ export function IPv6({
         />
       )}
 
-      {nav?.nextHopProtocol ? <KV k="This page negotiated">{nav.nextHopProtocol}</KV> : null}
+      {nav?.nextHopProtocol ? (
+        <KVList>
+          <KV k="This page negotiated" mono>
+            {nav.nextHopProtocol}
+          </KV>
+        </KVList>
+      ) : null}
 
       <CloudflareTrace cfTrace={cfTrace} />
     </>

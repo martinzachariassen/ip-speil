@@ -2,6 +2,7 @@ import {
   Button as DsButton,
   type ButtonProps as DsButtonProps,
   Callout,
+  DataList,
   DataRow,
   Separator,
   Skeleton,
@@ -43,18 +44,38 @@ export function severityVariant(severity: Severity): SignalVariant {
   return SEVERITY_VARIANT[severity];
 }
 
-// A status dot — thin wrapper over the design system's <StatusDot>.
+// A status dot — thin wrapper over the design system's <StatusDot>. Pass `label`
+// wherever the dot is the *only* carrier of state (e.g. the Exposure ledger) so
+// the severity is announced to assistive tech instead of relying on colour alone
+// — StatusDot exposes it via role="img"; without a label it stays aria-hidden.
 export function Dot({
   severity,
   pulse,
+  label,
   className,
 }: {
   severity: Severity;
   pulse?: boolean;
+  label?: string;
   className?: string;
 }) {
-  return <StatusDot variant={severityVariant(severity)} pulse={pulse} className={className} />;
+  return (
+    <StatusDot
+      variant={severityVariant(severity)}
+      pulse={pulse}
+      label={label}
+      className={className}
+    />
+  );
 }
+
+// A word for each severity, for the sr-only status carried alongside a Dot.
+export const SEVERITY_LABEL: Record<Severity, string> = {
+  ok: "OK",
+  warn: "Warning",
+  bad: "Alert",
+  off: "Not applicable",
+};
 
 // A titled note with a leading status dot and an optional description — the
 // design system's <Callout>, kept under ip-speil's old name/props.
@@ -79,7 +100,9 @@ export function Note({
   );
 }
 
-// A key/value row with a dashed separator — the design system's <DataRow>.
+// A key/value row with a dashed separator — the design system's <DataRow>. It
+// renders a <dt>/<dd> pair, so a run of KVs must sit inside a <KVList> (a real
+// <dl>) for the description-list relationship to be programmatically conveyed.
 export function KV({
   k,
   mono,
@@ -96,6 +119,12 @@ export function KV({
       {children}
     </DataRow>
   );
+}
+
+// The <dl> wrapper for a contiguous run of <KV> rows. Gives the dt/dd pairs a
+// valid, programmatically-determinable description-list container (WCAG 1.3.1).
+export function KVList({ children }: { children: ReactNode }) {
+  return <DataList>{children}</DataList>;
 }
 
 // Small inline type roles, mapped onto the design system's <Text> primitive.
@@ -116,14 +145,15 @@ export function MonoSm({ children }: { children: ReactNode }) {
 }
 
 export function Muted({ children }: { children: ReactNode }) {
-  // ip-speil's "muted" is the faintest ink; keep that tone over the Text role.
-  return <Text className="text-ink-faint">{children}</Text>;
+  // "Muted" carries real content (values, short notes), so it uses the soft ink
+  // rather than the faintest tone — readable while still visibly de-emphasised.
+  return <Text className="text-ink-soft">{children}</Text>;
 }
 
 // Uppercase mono sub-heading inside a reveal body (the eyebrow role).
 export function SubLabel({ children, tip }: { children: ReactNode; tip?: GlossaryKey }) {
   return (
-    <Text variant="eyebrow" as="div" className="mt-[18px] mb-[6px] text-ink-faint">
+    <Text variant="eyebrow" as="div" className="mt-[18px] mb-[6px] text-ink-soft">
       {tip ? (
         <span className="inline-flex items-center gap-1.5">
           {children}
@@ -137,9 +167,10 @@ export function SubLabel({ children, tip }: { children: ReactNode; tip?: Glossar
 }
 
 export function BodyIntro({ children }: { children: ReactNode }) {
-  // Longer prose reads better in Space Grotesk than the mono default.
+  // Longer prose reads better in Space Grotesk than the mono default. Uses the
+  // soft ink (not the faintest) since it carries explanatory copy and warnings.
   return (
-    <Text as="p" className="mb-[14px] font-grotesk text-[13px] leading-[1.55] text-ink-faint">
+    <Text as="p" className="mb-[14px] font-grotesk text-[13px] leading-[1.55] text-ink-soft">
       {children}
     </Text>
   );
@@ -163,8 +194,19 @@ export function Button({
   mini?: boolean;
 }) {
   const dsVariant: DsButtonProps["variant"] = variant === "ghost" ? "ghost" : "default";
+  // The design system's ghost variant clears the outline without a replacement,
+  // so add an explicit focus-visible ring here to guarantee a visible keyboard
+  // focus indicator across every ip-speil button (WCAG 2.4.7).
   return (
-    <DsButton variant={dsVariant} size="sm" className={className} {...props}>
+    <DsButton
+      variant={dsVariant}
+      size="sm"
+      className={cx(
+        "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+        className,
+      )}
+      {...props}
+    >
       {children}
     </DsButton>
   );

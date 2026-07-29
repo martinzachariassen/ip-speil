@@ -1,6 +1,6 @@
 import { isSuccessfulLookup } from "../../lib/format.ts";
 import type { IpInfo, RpkiInfo } from "../../types.ts";
-import { KV, Mono, MonoSm, Note, SubLabel } from "../primitives.tsx";
+import { KV, KVList, Mono, MonoSm, Note, SubLabel } from "../primitives.tsx";
 
 function RpkiNote({ rpki }: { rpki: RpkiInfo }) {
   if (rpki.state === "valid") {
@@ -60,47 +60,53 @@ export function Routing({ d }: { d: IpInfo }) {
   return (
     <>
       {r.rpki ? <RpkiNote rpki={r.rpki} /> : null}
-      {r.prefix ? (
-        <KV k="Announced prefix" tip="bgpPrefix">
-          <Mono>{r.prefix}</Mono>
-        </KV>
-      ) : null}
-      {r.originAsn ? (
-        <KV k="Origin ASN" tip="originAsn">
-          {r.originAsn}
-        </KV>
-      ) : null}
-      {r.rpki ? (
-        <KV k="RPKI state" tip="rpki">
-          {r.rpki.state}
-        </KV>
-      ) : null}
+      <KVList>
+        {r.prefix ? (
+          <KV k="Announced prefix" tip="bgpPrefix">
+            <Mono>{r.prefix}</Mono>
+          </KV>
+        ) : null}
+        {r.originAsn ? (
+          <KV k="Origin ASN" tip="originAsn" mono>
+            {r.originAsn}
+          </KV>
+        ) : null}
+        {r.rpki ? (
+          <KV k="RPKI state" tip="rpki">
+            {r.rpki.state}
+          </KV>
+        ) : null}
+      </KVList>
 
       {roas.length ? (
         <>
           <SubLabel tip="roa">Route Origin Authorisations</SubLabel>
-          {roas.map((roa, i) => {
-            const detail = [
-              roa.origin,
-              roa.prefix,
-              roa.maxLength != null ? `≤/${roa.maxLength}` : "",
-            ]
-              .filter(Boolean)
-              .join(" · ");
-            return (
-              // biome-ignore lint/suspicious/noArrayIndexKey: static, non-reordered list
-              <KV key={i} k={roa.validity ? roa.validity : "ROA"}>
-                <MonoSm>{detail}</MonoSm>
-              </KV>
-            );
-          })}
+          <KVList>
+            {roas.map((roa, i) => {
+              const detail = [
+                roa.origin,
+                roa.prefix,
+                roa.maxLength != null ? `≤/${roa.maxLength}` : "",
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: static, non-reordered list
+                <KV key={i} k={roa.validity ? roa.validity : "ROA"}>
+                  <MonoSm>{detail}</MonoSm>
+                </KV>
+              );
+            })}
+          </KVList>
         </>
       ) : null}
 
       {r.abuseContacts?.length ? (
-        <KV k="Abuse contact" tip="abuseContact">
-          <MonoSm>{r.abuseContacts.join(", ")}</MonoSm>
-        </KV>
+        <KVList>
+          <KV k="Abuse contact" tip="abuseContact">
+            <MonoSm>{r.abuseContacts.join(", ")}</MonoSm>
+          </KV>
+        </KVList>
       ) : null}
 
       {r.queried ? (
