@@ -42,8 +42,11 @@ provides the security-header posture and rate limiting. The web front-end is a
 `App.tsx` root, `components/`, `hooks/`, plus the pure `lib/`/`probes/` logic) and
 **built by Vite** (`@vitejs/plugin-react` + `@tailwindcss/vite` +
 `@cloudflare/vite-plugin`) into `apps/web/dist/`. Styling is **Tailwind CSS v4**,
-configured CSS-first in `apps/web/src/index.css` (`@theme` tokens that key off a
-`data-theme` attribute — no `dark:` variants for colour). The Worker
+configured CSS-first: `apps/web/src/index.css` imports the design system
+(`@martinzachariassen/design`), which provides the semantic `@theme` tokens, the
+self-hosted fonts, and a base layer, and keys dark mode off a `data-theme`
+attribute — so colour needs no `dark:` variants. `index.css` itself adds only a thin
+token bridge (local `paper`/`ink`/`line` aliases over the system tokens). The Worker
 (`apps/web/src/worker/`) runs on Cloudflare's runtime; the Cloudflare Vite plugin
 runs it in workerd during `vite dev` and wires the built assets on `vite build`.
 Everything else — TypeScript typecheck, Biome — is dev tooling.
@@ -139,7 +142,7 @@ apps/
     src/
       main.tsx         Bundle entry: apply theme, createRoot(<App/>), import index.css
       App.tsx          Top-level layout: <Rail/> + <main> sections, wires the hooks
-      index.css        Tailwind v4 entry: @theme tokens, @font-face, keyframes
+      index.css        Tailwind v4 entry: imports the DS (tokens + self-hosted fonts + base) + thin token bridge
       vite-env.d.ts    Vite client types + ambient non-standard browser API augments
       worker/
         index.ts       Front door: routes dynamic paths, falls through to ASSETS.fetch
@@ -156,7 +159,7 @@ apps/
         Rail.tsx         Sticky identity rail: hero, verdict, actions
         Reveal.tsx       Numbered accordion ("Deeper look" sections)
         primitives.tsx   Dot, Note, KV, Mono, SubLabel, Button, Skel, …
-        FinePrint.tsx    Static fine-print + footer
+        Footer.tsx       Site footer + required DB-IP attribution
         sections/        Exposure, Facts, Privacy, Browser, IPv6, Fingerprint,
                          Headers, WebRTC, Routing, Diff/Shared
       probes/          network (IPv4/IPv6/DoH/CF trace), webrtc, fingerprint, dns-leak
@@ -251,12 +254,15 @@ static asset (`env.ASSETS.fetch`).
 - **Client-only fingerprinting.** Fingerprint signals are computed in the browser and
   never sent to the server; only a coarse entropy estimate reaches the copyable report.
 - **Styling is Tailwind v4, no CSS file to edit.** Author with utility classes;
-  colours use the `@theme` tokens in `src/index.css` (`bg-paper`, `text-ink`,
-  `border-line`, `text-accent`, …) which re-colour automatically when `[data-theme]`
-  flips — don't add `dark:` variants for colour. New design tokens go in `index.css`
-  (`:root` + `[data-theme="dark"]` + the `@theme inline` map). Keep to `script-src
-  'self'` / `style-src 'self'`: no inline `<script>`/`<style>` or `style=""`
-  attributes (React's `style={{}}` prop is fine — it's CSSOM, not an HTML attribute).
+  colours use the `@theme` tokens (`bg-paper`, `text-ink`, `border-line`,
+  `text-accent`, …) which re-colour automatically when `[data-theme]` flips — don't
+  add `dark:` variants for colour. The base tokens (`:root` + `[data-theme="dark"]`),
+  fonts, and keyframes all live in the design system now; `src/index.css` only
+  re-exposes the ip-speil-local names (`paper`/`ink`/`line` → the system's semantic
+  tokens) through a thin `@theme inline` bridge. New app-level aliases go in that
+  bridge; a genuinely new *design* token belongs in the design system, not here. Keep
+  to `script-src 'self'` / `style-src 'self'`: no inline `<script>`/`<style>` or
+  `style=""` attributes (React's `style={{}}` prop is fine — it's CSSOM, not an HTML attribute).
 - New browser code is just imported by a component/hook/probe — Vite bundles it, so
   there's no per-file allowlist. Fonts (Space Mono + Space Grotesk) come from the
   design system's `index-self-hosted.css` — don't re-add local webfonts.

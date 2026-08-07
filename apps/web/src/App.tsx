@@ -2,8 +2,8 @@ import { Accordion } from "@martinzachariassen/design";
 import { useMemo } from "react";
 import { Rail } from "./components/Rail.tsx";
 import { Reveal } from "./components/Reveal.tsx";
-import { FinePrint, Footer } from "./components/FinePrint.tsx";
-import { Button, Skel } from "./components/primitives.tsx";
+import { Footer } from "./components/Footer.tsx";
+import { Eyebrow, Skel } from "./components/primitives.tsx";
 import { Browser } from "./components/sections/Browser.tsx";
 import { Diff, Shared } from "./components/sections/Diff.tsx";
 import { Exposure } from "./components/sections/Exposure.tsx";
@@ -26,12 +26,10 @@ function readSharedReport() {
   return location.hash.startsWith("#r=") ? decodeShare(location.hash.slice(3)) : null;
 }
 
+// The section eyebrow used above every top-level section — the shared <Eyebrow>
+// primitive (design system <Text variant="eyebrow">) with the section spacing.
 function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <div className="mb-2 font-mono text-[10.5px] tracking-[0.14em] text-ink-faint uppercase [&_span]:text-[12px] [&_span]:tracking-normal [&_span]:normal-case">
-      {children}
-    </div>
-  );
+  return <Eyebrow className="mb-2">{children}</Eyebrow>;
 }
 
 function SkelBlock() {
@@ -84,7 +82,7 @@ export function App() {
 
   return (
     <div className="min-h-dvh">
-      <div className="mx-auto max-w-[1240px] bg-paper min-[900px]:grid min-[900px]:grid-cols-[350px_1fr] min-[1140px]:grid-cols-[385px_1fr] min-[1280px]:border-x min-[1280px]:border-line">
+      <div className="mx-auto flex min-h-dvh max-w-[1240px] flex-col bg-paper min-[900px]:grid min-[900px]:grid-cols-[350px_1fr] min-[1140px]:grid-cols-[385px_1fr] min-[1280px]:border-x min-[1280px]:border-line">
         <Rail
           scan={scan}
           verdict={exposure?.verdict ?? null}
@@ -97,7 +95,7 @@ export function App() {
           onToggleTheme={toggle}
         />
 
-        <main className="px-5 pt-1.5 pb-[max(34px,env(safe-area-inset-bottom))] min-[900px]:px-[38px] min-[900px]:pt-[30px] min-[900px]:pl-[34px] min-[1140px]:px-[44px] min-[1140px]:pt-[34px] min-[1140px]:pl-10">
+        <main className="flex flex-1 flex-col px-5 pt-1.5 min-[900px]:px-[38px] min-[900px]:pt-[30px] min-[900px]:pl-[34px] min-[1140px]:px-[44px] min-[1140px]:pt-[34px] min-[1140px]:pl-10">
           {shared ? (
             <section className="mt-6 min-[900px]:mt-0" aria-label="Shared snapshot">
               <SectionLabel>Shared snapshot</SectionLabel>
@@ -107,17 +105,8 @@ export function App() {
 
           {diff ? (
             <section className="mt-6 min-[900px]:mt-0" aria-label="Changes since your snapshot">
-              <div className="rounded-xl border border-line bg-panel p-4 min-[900px]:p-5">
-                <div className="mb-3.5 flex items-center justify-between gap-3 border-b border-line-soft pb-3">
-                  <span className="font-mono text-[10.5px] tracking-[0.14em] text-ink-faint uppercase">
-                    Since your snapshot
-                  </span>
-                  <Button mini onClick={clearSnapshot} aria-label="Clear the saved snapshot">
-                    Clear snapshot
-                  </Button>
-                </div>
-                <Diff diff={diff} />
-              </div>
+              <SectionLabel>Since your snapshot</SectionLabel>
+              <Diff diff={diff} onClear={clearSnapshot} />
             </section>
           ) : null}
 
@@ -225,7 +214,6 @@ export function App() {
             </Accordion>
           </section>
 
-          <FinePrint />
           <Footer />
         </main>
       </div>

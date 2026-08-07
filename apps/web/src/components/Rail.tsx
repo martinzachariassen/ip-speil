@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { flag, isSuccessfulLookup } from "../lib/format.ts";
+import { isSuccessfulLookup } from "../lib/format.ts";
 import { cx } from "../lib/cx.ts";
 import type { Verdict } from "../lib/exposure.ts";
 import type { Scan } from "../hooks/useScan.ts";
@@ -74,9 +74,6 @@ export function Rail({
   const ip = hasLookup ? (d?.query ?? "") : "";
   const v6 = scan?.exits.v6 ?? null;
   const family = ip.includes(":") ? "IPv6" : "IPv4";
-
-  const place = d ? [d.city, d.country].filter(Boolean).join(", ") : "";
-  const f = d ? flag(d.countryCode) : "";
 
   function copyIp() {
     if (!ip) return;
@@ -171,24 +168,6 @@ export function Rail({
             </button>
           </div>
         ) : null}
-
-        <div className="mt-3.5 break-words border-t border-line-soft pt-3 text-[14px] leading-[1.5] text-ink-soft">
-          {loading ? (
-            <Skel className="h-[1em] w-60 max-w-[80%]" />
-          ) : hasLookup ? (
-            <>
-              {d?.isp ? <div className="text-ink">{d.isp}</div> : null}
-              {place ? (
-                <div>
-                  {f ? <span aria-hidden>{`${f} `}</span> : ""}
-                  {place}
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div>IP lookup failed or returned no usable result</div>
-          )}
-        </div>
       </div>
 
       {/* verdict card */}
@@ -209,7 +188,9 @@ export function Rail({
       </div>
 
       {/* actions — a fixed 2-col grid so a label swap on click (e.g. "Share" →
-          "Link copied") can never change a button's width and reshuffle the row */}
+          "Link copied") can never change a button's width and reshuffle the row.
+          The pair stays legible down to 320px, so there's no narrow-screen
+          single-column fallback to reshuffle the layout. */}
       <div role="group" aria-label="Scan actions" className="mt-4 grid grid-cols-2 gap-2">
         <Button
           onClick={onRefresh}
@@ -276,13 +257,6 @@ export function Rail({
           <Icon name={theme === "dark" ? "sun" : "moon"} size="sm" aria-hidden />
           <span>{theme === "dark" ? "Light" : "Dark"}</span>
         </Button>
-      </div>
-
-      <div className="mt-[26px] flex justify-between gap-3 pt-5 font-mono text-[10.5px] text-ink-faint min-[900px]:mt-auto">
-        <span>nothing stored</span>
-        <span className="tracking-[0.05em]">
-          {d?.lat != null && d?.lon != null ? `${d.lat.toFixed(2)}, ${d.lon.toFixed(2)}` : ""}
-        </span>
       </div>
     </aside>
   );
