@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ip-speil-web",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-07-01",
+
+  // Keep both *.workers.dev URLs off so ip.mlz.no is the only public origin —
+  // otherwise ip-speil-web.workers.dev would serve the app too, bypassing the
+  // domain (and its _headers CSP). These must live here, not in the dashboard:
+  // a `wrangler deploy` re-enables anything toggled off in the UI. The first
+  // covers the production URL, the second the per-branch preview URLs.
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // With @cloudflare/vite-plugin the assets `directory` is managed for us — the
+  // build points it at the Vite client output. The Worker only runs first for the
+  // dynamic routes below; every other path is served as a static asset. "/" runs
+  // the Worker so it can content-negotiate (curl → plain IP, browser → HTML page);
+  // "/ip" and "/json" are the explicit CLI endpoints.
+  "assets": {
+    "binding": "ASSETS",
+    "run_worker_first": ["/", "/ip", "/json", "/api/*", "/script.js"]
+  },
+
+  "observability": { "enabled": true },
+
+  // Bind the subdomain in version control so it survives a rebuild from scratch.
+  // Wrangler reconciles this list on deploy — any custom domain not listed here
+  // gets removed. The Railway API lives at api.ip.mlz.no (see API_ORIGIN below);
+  // this Worker owns the front-door ip.mlz.no.
+  "routes": [{ "pattern": "ip.mlz.no", "custom_domain": true }],
+
+  // Non-secret config. PROXY_SECRET is set out-of-band with:
+  //   wrangler secret put PROXY_SECRET
+  "vars": {
+    "API_ORIGIN": "https://api.ip.mlz.no",
+    "UMAMI_SCRIPT_URL": "https://cloud.umami.is/script.js",
+    "UMAMI_SEND_URL": "https://api.umami.is/api/send"
+  }
+}

@@ -1,8 +1,15 @@
 # Dependencies
 node_modules/
 
-# Build output (client bundle produced by `bun run build`)
-/public/assets/js/
+# Build output (Vite build → dist/, produced by `bun run build`)
+apps/web/dist/
+
+# Wrangler local state (dev cache, redirected deploy config)
+apps/web/.wrangler/
+
+# Local Worker dev overrides (secrets/vars for `vite dev`); commit .dev.vars.example
+apps/web/.dev.vars
+apps/web/.dev.vars.local
 
 # Environment
 .env
@@ -18,7 +25,7 @@ npm-debug.log*
 Thumbs.db
 # Re-include the favicon dir — a global `Icon?` rule (macOS) matches `icons`
 # case-insensitively and would otherwise exclude it.
-!public/assets/icons/
+!apps/web/public/assets/icons/
 
 # Editor
 .vscode/

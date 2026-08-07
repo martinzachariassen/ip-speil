@@ -6,11 +6,15 @@
 # Docs + tooling not needed in the image
 *.md
 biome.json
-tsconfig.json
+tsconfig.base.json
 railway.json
 mise.toml
-Dockerfile
 .dockerignore
+
+# The web app (frontend) is deployed to Cloudflare, not baked into the API image.
+# The manifest is still needed so `bun install` can resolve the workspace graph.
+apps/web
+!apps/web/package.json
 
 # Agent / editor internals
 .claude
@@ -19,8 +23,12 @@ Dockerfile
 .idea
 
 # Tests
-test
+apps/api/test
+
+# Local geoip datasets — the image fetches fresh ones at build time
+# (apps/api/scripts/fetch-datasets.ts), so don't copy a dev-local copy in.
+apps/api/data
 
 # Dependencies + build output (installed / rebuilt inside the image)
 node_modules
-public/assets/js
+**/node_modules
