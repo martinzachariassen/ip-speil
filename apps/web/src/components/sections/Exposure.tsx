@@ -19,7 +19,7 @@ export function Exposure({ items }: { items: ExposureItem[] }) {
       {items.map((i) => (
         <li
           key={i.label}
-          className="flex min-w-0 items-center gap-2.5 border-b border-line-soft py-[11px] text-[13.5px]"
+          className="flex min-w-0 items-center gap-2.5 border-b border-line-soft py-[11px] text-[14.5px]"
         >
           <Dot severity={i.severity} label={SEVERITY_LABEL[i.severity]} />
           <span className="min-w-0 font-medium text-ink">{i.label}</span>
@@ -27,7 +27,7 @@ export function Exposure({ items }: { items: ExposureItem[] }) {
           {i.detail ? (
             <span
               className={cx(
-                "ml-auto break-words text-right font-mono text-[11.5px]",
+                "ml-auto break-words text-right font-mono text-[12.5px]",
                 DETAIL_COLOR[i.severity],
               )}
             >

@@ -1,6 +1,6 @@
 export function Footer() {
   return (
-    <footer className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-line pt-5 pb-[max(20px,env(safe-area-inset-bottom))] font-mono text-[10.5px] tracking-[0.16em] text-ink-faint uppercase max-[560px]:tracking-[0.1em]">
+    <footer className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-line pt-5 pb-[max(20px,env(safe-area-inset-bottom))] font-mono text-[11px] tracking-[0.16em] text-ink-faint uppercase max-[560px]:tracking-[0.1em]">
       <span>© 2026 · Martin Zachariassen</span>
       {/* Required CC BY 4.0 attribution for the DB-IP City Lite dataset. */}
       <a

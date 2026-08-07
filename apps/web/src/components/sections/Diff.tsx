@@ -22,13 +22,13 @@ function DiffRow({ label, before, after }: DiffField) {
   return (
     <KV k={label}>
       <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 break-words [&>*]:min-w-0">
-        <span className="font-mono text-[13px] text-ink-faint line-through decoration-line-2">
+        <span className="font-mono text-[14px] text-ink-faint line-through decoration-line-2">
           {before}
         </span>
         {/* sr-only phrasing gives the before→after pair a spoken relationship. */}
         <span className="sr-only"> changed to </span>
         <Icon name="arrow-right" size="xs" className="flex-none text-ink-faint" aria-hidden />
-        <span className="font-mono text-[13px] font-medium text-ink">{after}</span>
+        <span className="font-mono text-[14px] font-medium text-ink">{after}</span>
       </span>
     </KV>
   );
@@ -49,11 +49,11 @@ export function Diff({ diff, onClear }: { diff: SnapshotDiff; onClear: () => voi
   return (
     <div className="border-t border-line">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line-soft py-3">
-        <span className="flex items-center gap-2 text-[14px] font-medium text-ink">
+        <span className="flex items-center gap-2 text-[15px] font-medium text-ink">
           <Dot severity={severity} label={SEVERITY_LABEL[severity]} />
           {summary}
         </span>
-        <span className="font-mono text-[11px] text-ink-faint">saved {when(diff.savedAt)}</span>
+        <span className="font-mono text-[12px] text-ink-faint">saved {when(diff.savedAt)}</span>
         <Button
           variant="ghost"
           mini
@@ -74,7 +74,7 @@ export function Diff({ diff, onClear }: { diff: SnapshotDiff; onClear: () => voi
         <KV k="Browser fingerprint">
           <span
             className={cx(
-              "font-mono text-[13px]",
+              "font-mono text-[14px]",
               diff.fingerprintChanged ? "font-medium text-ink" : "text-ink-soft",
             )}
           >

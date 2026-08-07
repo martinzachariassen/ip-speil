@@ -94,7 +94,7 @@ export function Rail({
 
   return (
     <aside className="flex min-w-0 flex-col px-5 pt-[clamp(20px,4.5vw,34px)] pb-1 max-[899px]:pb-1 min-[900px]:sticky min-[900px]:top-0 min-[900px]:h-dvh min-[900px]:overflow-y-auto min-[900px]:border-r min-[900px]:border-line min-[900px]:px-[30px] min-[900px]:pt-[30px] min-[900px]:pb-6 min-[1140px]:px-[34px] min-[1140px]:pt-[34px]">
-      <header className="flex min-w-0 flex-wrap items-baseline gap-x-[9px] gap-y-1 font-mono text-[13px] tracking-[0.01em]">
+      <header className="flex min-w-0 flex-wrap items-baseline gap-x-[9px] gap-y-1 font-mono text-[14px] tracking-[0.01em]">
         <b className="font-semibold text-ink">ip-speil</b>
         <em className="text-ink-faint not-italic max-[380px]:hidden">— your internet mirror</em>
       </header>
@@ -107,11 +107,11 @@ export function Rail({
       {/* hero — the identity card */}
       <div className="mt-[clamp(24px,4vh,40px)] rounded-xl border border-line bg-panel p-4 min-[900px]:p-[18px]">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-[10.5px] tracking-[0.16em] text-ink-faint uppercase">
+          <span className="font-mono text-[11px] tracking-[0.16em] text-ink-faint uppercase">
             Your public IP
           </span>
           <span
-            className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.1em] text-ink-soft uppercase"
+            className="inline-flex items-center gap-1.5 font-mono text-[10.5px] tracking-[0.1em] text-ink-soft uppercase"
             title={loading ? "Scan in progress" : hasLookup ? "Live result" : "No result"}
           >
             <Dot severity={loading ? "off" : hasLookup ? "ok" : "bad"} pulse={loading} />
@@ -136,7 +136,7 @@ export function Rail({
           disabled={!hasLookup}
           aria-label={hasLookup ? `Copy your ${family} address` : "No IP to copy"}
           className={cx(
-            "mt-4 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[9px] border-0 px-4 py-3 font-mono text-[11.5px] font-semibold uppercase tracking-[0.06em] transition-colors duration-150 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-50",
+            "mt-4 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[9px] border-0 px-4 py-3 font-mono text-[12.5px] font-semibold uppercase tracking-[0.06em] transition-colors duration-150 focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:opacity-50",
             ipCopied
               ? "bg-ok text-paper"
               : "bg-ink text-paper hover:bg-accent hover:text-accent-foreground",
@@ -150,9 +150,9 @@ export function Rail({
           <div className="mt-2.5 flex items-stretch overflow-hidden rounded-[9px] border border-dashed border-line-2">
             <span
               title={v6}
-              className="flex min-w-0 flex-1 items-center gap-2 py-2 pl-2.5 font-mono text-[11px] text-ink-soft"
+              className="flex min-w-0 flex-1 items-center gap-2 py-2 pl-2.5 font-mono text-[12px] text-ink-soft"
             >
-              <span className="shrink-0 text-[9px] tracking-[0.08em] text-ink-faint uppercase">
+              <span className="shrink-0 text-[9.5px] tracking-[0.08em] text-ink-faint uppercase">
                 v6
               </span>
               <span className="min-w-0 flex-1 truncate">{shortV6(v6)}</span>
@@ -161,7 +161,7 @@ export function Rail({
               type="button"
               onClick={copyV6}
               aria-label="Copy your IPv6 address"
-              className="flex shrink-0 items-center gap-1.5 self-stretch border-l border-dashed border-line-2 px-3 font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-ink-soft transition-colors duration-150 hover:bg-ink hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+              className="flex shrink-0 items-center gap-1.5 self-stretch border-l border-dashed border-line-2 px-3 font-mono text-[10.5px] font-medium uppercase tracking-[0.06em] text-ink-soft transition-colors duration-150 hover:bg-ink hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
             >
               <Icon name={v6Flash ? "check" : "copy"} size="xs" className="flex-none" aria-hidden />
               <span>{v6Flash ?? "Copy"}</span>
@@ -180,10 +180,10 @@ export function Rail({
       >
         <Dot severity={verdict?.severity ?? "off"} pulse className="mt-[5px]" />
         <div className="min-w-0">
-          <div className="text-[15.5px] font-semibold tracking-[-0.01em] text-ink">
+          <div className="text-[16.5px] font-semibold tracking-[-0.01em] text-ink">
             {loading || !verdict ? <Skel className="h-[1em] w-60 max-w-[80%]" /> : verdict.title}
           </div>
-          <div className="mt-0.5 text-[13px] leading-[1.5] text-ink-soft">{verdict?.sub ?? ""}</div>
+          <div className="mt-0.5 text-[14px] leading-[1.5] text-ink-soft">{verdict?.sub ?? ""}</div>
         </div>
       </div>
 

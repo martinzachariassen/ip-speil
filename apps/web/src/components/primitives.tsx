@@ -126,7 +126,7 @@ export function Chip({
     <Badge
       variant="outline"
       className={cx(
-        "gap-1.5 whitespace-normal break-words px-2 py-1 text-[12px] tracking-normal normal-case",
+        "gap-1.5 whitespace-normal break-words px-2 py-1 text-[13px] tracking-normal normal-case",
         CHIP_TONE[tone],
         className,
       )}
@@ -193,7 +193,7 @@ export function Mono({ children, className }: { children: ReactNode; className?:
 
 export function MonoSm({ children }: { children: ReactNode }) {
   return (
-    <Text variant="mono" className="text-[13px]">
+    <Text variant="mono" className="text-[14px]">
       {children}
     </Text>
   );
@@ -223,7 +223,7 @@ export function Eyebrow({
       variant="eyebrow"
       as={as}
       className={cx(
-        "[&_span]:text-[12px] [&_span]:normal-case [&_span]:tracking-normal [&_span]:text-ink-soft",
+        "[&_span]:text-[13px] [&_span]:normal-case [&_span]:tracking-normal [&_span]:text-ink-soft",
         className,
       )}
     >
@@ -252,7 +252,7 @@ export function BodyIntro({ children }: { children: ReactNode }) {
   // Longer prose reads better in Space Grotesk than the mono default. Uses the
   // soft ink (not the faintest) since it carries explanatory copy and warnings.
   return (
-    <Text as="p" className="mb-[14px] font-grotesk text-[13px] leading-[1.55] text-ink-soft">
+    <Text as="p" className="mb-[14px] font-grotesk text-[14px] leading-[1.55] text-ink-soft">
       {children}
     </Text>
   );

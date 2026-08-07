@@ -47,6 +47,15 @@
 }
 
 @layer base {
+  /* Nudge the base type scale up a notch for comfortable reading on a desktop at
+     100% zoom. A percentage (not a px value) keeps honouring the user's chosen
+     browser default, and everything sized in rem (the design system's text and
+     Tailwind's spacing) scales with it. The sheet's max-width and grid columns
+     are fixed px, so text just reflows inside them — no horizontal overflow. */
+  :root {
+    font-size: 108%;
+  }
+
   /* Super-wide viewports read the pane as a centred sheet on a darker ground.
      (The rest of the body posture — colour, font, smoothing — comes from the
      design system's base.css.) */

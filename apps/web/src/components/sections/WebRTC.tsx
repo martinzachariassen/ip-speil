@@ -123,7 +123,7 @@ export function WebRTC({
         <>
           <SubLabel tip="iceCandidate">All candidates</SubLabel>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[280px] border-collapse text-[12px]">
+            <table className="w-full min-w-[280px] border-collapse text-[13px]">
               <thead className="sr-only">
                 <tr>
                   <th scope="col">Candidate type</th>
