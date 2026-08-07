@@ -22,7 +22,10 @@ COPY apps/api ./apps/api
 
 # Bake the local geoip datasets into the image so /api/info resolves geo/ASN
 # without sending the visitor IP to a third party at request time. Fails the
-# build on a total download failure (a data-less image would be broken).
+# build only if the DB-IP city/country dataset can't be fetched (a geo-less
+# image would be broken); the iptoasn.com ASN dataset is best-effort — it
+# blocks automated downloads often enough that ASN data alone isn't worth
+# failing the whole build over (see fetch-datasets.ts).
 RUN bun apps/api/scripts/fetch-datasets.ts
 
 # oven/bun ships a non-root `bun` user.

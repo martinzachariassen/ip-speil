@@ -1,14 +1,23 @@
-// I/O + lifecycle for the local geoip datasets. Reads the prebuilt (gzipped) raw
-// dataset files at startup and builds the in-memory search structures. Missing
-// files → null (dev/test/CI boot without datasets), never a throw.
+// I/O + lifecycle for the local geoip datasets. Reads the pre-built binary
+// tables (see binary.ts, produced at Docker build time by fetch-datasets.ts) at
+// startup — no text parsing happens here, just typed-array views over the
+// file's own read buffer. No city file → null (dev/test/CI boot without
+// datasets), never a throw. Missing ASN data degrades to empty ranges rather
+// than failing the whole load — iptoasn.com blocks automated downloads often
+// enough (see fetch-datasets.ts) that a build can ship city data without ASN
+// data rather than losing the whole dataset over one flaky upstream.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { gunzipSync } from "node:zlib";
-
 import { log } from "../lib/log.ts";
-import { parseDbIpCityCsv, parseIp2AsnV4, parseIp2AsnV6 } from "./parse.ts";
-import { type AsnPayload, buildRangesV4, buildRangesV6, type CityPayload, GeoDb } from "./store.ts";
+import { readTable } from "./binary.ts";
+import {
+  columnsToAsnTables,
+  columnsToCityTables,
+  EMPTY_ASN_V4,
+  EMPTY_ASN_V6,
+  GeoDb,
+} from "./store.ts";
 
 export interface DatasetMeta {
   builtAt?: string;
@@ -20,9 +29,8 @@ export interface DatasetMeta {
 export const DEFAULT_DATA_DIR = join(import.meta.dir, "..", "..", "data");
 
 const FILES = {
-  asnV4: "ip2asn-v4.tsv.gz",
-  asnV6: "ip2asn-v6.tsv.gz",
-  city: "dbip-city-lite.csv.gz",
+  asn: "asn.geobin",
+  city: "city.geobin",
   meta: "dataset-meta.json",
 } as const;
 
@@ -33,54 +41,26 @@ export function datasetMeta(): DatasetMeta | undefined {
   return meta;
 }
 
-function readGz(path: string): string {
-  return gunzipSync(readFileSync(path)).toString("utf8");
-}
-
 export function loadGeoDb(dataDir: string = DEFAULT_DATA_DIR): GeoDb | null {
-  const asnV4Path = join(dataDir, FILES.asnV4);
-  const asnV6Path = join(dataDir, FILES.asnV6);
+  const asnPath = join(dataDir, FILES.asn);
   const cityPath = join(dataDir, FILES.city);
 
-  if (!existsSync(asnV4Path) || !existsSync(asnV6Path) || !existsSync(cityPath)) {
+  if (!existsSync(cityPath)) {
     return null;
   }
 
   try {
-    const asn4 = parseIp2AsnV4(readGz(asnV4Path));
-    const asn6 = parseIp2AsnV6(readGz(asnV6Path));
-    const city = parseDbIpCityCsv(readGz(cityPath));
+    const city = readTable(cityPath);
+    const { v4: cityV4, v6: cityV6 } = columnsToCityTables(city.columns, city.pools);
 
-    const db = new GeoDb(
-      buildRangesV4<AsnPayload>(
-        asn4.map((e) => ({
-          start: e.start,
-          end: e.end,
-          payload: { asn: e.asn, country: e.country, org: e.org },
-        })),
-      ),
-      buildRangesV6<AsnPayload>(
-        asn6.map((e) => ({
-          start: e.start,
-          end: e.end,
-          payload: { asn: e.asn, country: e.country, org: e.org },
-        })),
-      ),
-      buildRangesV4<CityPayload>(
-        city.v4.map((e) => ({
-          start: e.start,
-          end: e.end,
-          payload: { country: e.country, region: e.region, city: e.city, lat: e.lat, lon: e.lon },
-        })),
-      ),
-      buildRangesV6<CityPayload>(
-        city.v6.map((e) => ({
-          start: e.start,
-          end: e.end,
-          payload: { country: e.country, region: e.region, city: e.city, lat: e.lat, lon: e.lon },
-        })),
-      ),
-    );
+    let asnV4 = EMPTY_ASN_V4;
+    let asnV6 = EMPTY_ASN_V6;
+    if (existsSync(asnPath)) {
+      const asn = readTable(asnPath);
+      ({ v4: asnV4, v6: asnV6 } = columnsToAsnTables(asn.columns, asn.pools));
+    }
+
+    const db = new GeoDb(asnV4, asnV6, cityV4, cityV6);
 
     const metaPath = join(dataDir, FILES.meta);
     if (existsSync(metaPath)) {

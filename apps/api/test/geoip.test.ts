@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { gzipSync } from "node:zlib";
 
+import { writeTable } from "../src/geoip/binary.ts";
 import { getGeoDb, loadGeoDb } from "../src/geoip/load.ts";
 import {
   ipv4ToUint32,
@@ -13,7 +13,20 @@ import {
   parseIp2AsnV4,
   parseIp2AsnV6,
 } from "../src/geoip/parse.ts";
-import { buildRangesV4, buildRangesV6, GeoDb, lookupV4, lookupV6 } from "../src/geoip/store.ts";
+import {
+  _internal,
+  asnTablesToColumns,
+  buildAsnV4,
+  buildAsnV6,
+  buildCityV4,
+  buildCityV6,
+  cityTablesToColumns,
+  EMPTY_ASN_V6,
+  EMPTY_CITY_V6,
+  GeoDb,
+} from "../src/geoip/store.ts";
+
+const { lookupIndexV4, lookupIndexV6 } = _internal;
 
 // --- numeric helpers ---------------------------------------------------------
 
@@ -48,7 +61,7 @@ test("ipv6ToBigInt rejects malformed input", () => {
   expect(() => ipv6ToBigInt("gggg::1")).toThrow();
 });
 
-// --- TSV / CSV parsing -------------------------------------------------------
+// --- TSV / CSV parsing (columnar + interned) ---------------------------------
 
 test("parseIp2AsnV4 keeps country, drops AS0 asn/org", () => {
   const tsv = [
@@ -56,29 +69,42 @@ test("parseIp2AsnV4 keeps country, drops AS0 asn/org", () => {
     "2.0.0.0\t2.0.0.255\t0\tNone\tNot routed",
     "3.0.0.0\t3.0.0.255\t0\tNO\tReserved but located",
   ].join("\n");
-  const rows = parseIp2AsnV4(tsv);
-  expect(rows).toHaveLength(3);
-  expect(rows[0]).toEqual({
-    start: ipv4ToUint32("1.0.0.0"),
-    end: ipv4ToUint32("1.0.0.255"),
-    asn: 13335,
-    country: "US",
-    org: "CLOUDFLARENET",
-  });
+  const cols = parseIp2AsnV4(tsv);
+  expect(cols.starts.length).toBe(3);
+  expect(cols.starts[0]).toBe(ipv4ToUint32("1.0.0.0"));
+  expect(cols.ends[0]).toBe(ipv4ToUint32("1.0.0.255"));
+  expect(cols.asn[0]).toBe(13335);
+  expect(cols.countryPool[cols.countryIdx[0] ?? -1]).toBe("US");
+  expect(cols.orgPool[cols.orgIdx[0] ?? -1]).toBe("CLOUDFLARENET");
+
   // AS0 + "None" → no asn/org/country retained
-  expect(rows[1]?.asn).toBeUndefined();
-  expect(rows[1]?.org).toBeUndefined();
-  expect(rows[1]?.country).toBeUndefined();
+  expect(cols.asn[1]).toBe(0);
+  expect(cols.orgIdx[1]).toBe(-1);
+  expect(cols.countryIdx[1]).toBe(-1);
+
   // AS0 but a real country → keep the country only
-  expect(rows[2]?.asn).toBeUndefined();
-  expect(rows[2]?.country).toBe("NO");
+  expect(cols.asn[2]).toBe(0);
+  expect(cols.countryPool[cols.countryIdx[2] ?? -1]).toBe("NO");
+});
+
+test("parseIp2AsnV4 interns repeated countries/orgs into one pool slot", () => {
+  const tsv = [
+    "1.0.0.0\t1.0.0.255\t13335\tUS\tCLOUDFLARENET",
+    "1.0.1.0\t1.0.1.255\t13335\tUS\tCLOUDFLARENET",
+  ].join("\n");
+  const cols = parseIp2AsnV4(tsv);
+  expect(cols.countryIdx[0]).toBe(cols.countryIdx[1]);
+  expect(cols.orgIdx[0]).toBe(cols.orgIdx[1]);
+  expect(cols.countryPool).toHaveLength(1);
+  expect(cols.orgPool).toHaveLength(1);
 });
 
 test("parseIp2AsnV6 parses bigint ranges", () => {
-  const rows = parseIp2AsnV6("2001:db8::\t2001:db8::ffff\t64500\tEX\tEXAMPLE");
-  expect(rows[0]?.start).toBe(ipv6ToBigInt("2001:db8::"));
-  expect(rows[0]?.end).toBe(ipv6ToBigInt("2001:db8::ffff"));
-  expect(rows[0]?.asn).toBe(64500);
+  const cols = parseIp2AsnV6("2001:db8::\t2001:db8::ffff\t64500\tEX\tEXAMPLE");
+  expect(cols.starts[0]).toBe(ipv6ToBigInt("2001:db8::"));
+  expect(cols.ends[0]).toBe(ipv6ToBigInt("2001:db8::ffff"));
+  expect(cols.asn[0]).toBe(64500);
+  expect(cols.countryPool[cols.countryIdx[0] ?? -1]).toBe("EX");
 });
 
 test("parseCsvLine handles quotes and embedded commas", () => {
@@ -87,79 +113,74 @@ test("parseCsvLine handles quotes and embedded commas", () => {
   expect(parseCsvLine('"say ""hi""",x')).toEqual(['say "hi"', "x"]);
 });
 
-test("parseDbIpCityCsv splits v4 and v6 rows", () => {
+test("parseDbIpCityCsv splits v4 and v6 rows and interns names", () => {
   const csv = [
     '1.0.0.0,1.0.0.255,AS,"AU",Victoria,Melbourne,-37.8,144.9',
     "2001:db8::,2001:db8::ffff,EU,NO,Oslo,Oslo,59.9,10.7",
   ].join("\n");
   const { v4, v6 } = parseDbIpCityCsv(csv);
-  expect(v4).toHaveLength(1);
-  expect(v6).toHaveLength(1);
-  expect(v4[0]).toEqual({
-    start: ipv4ToUint32("1.0.0.0"),
-    end: ipv4ToUint32("1.0.0.255"),
-    country: "AU",
-    region: "Victoria",
-    city: "Melbourne",
-    lat: -37.8,
-    lon: 144.9,
-  });
-  expect(v6[0]?.country).toBe("NO");
-  expect(v6[0]?.city).toBe("Oslo");
+  expect(v4.starts).toHaveLength(1);
+  expect(v6.starts).toHaveLength(1);
+
+  expect(v4.starts[0]).toBe(ipv4ToUint32("1.0.0.0"));
+  expect(v4.ends[0]).toBe(ipv4ToUint32("1.0.0.255"));
+  expect(v4.countryPool[v4.countryIdx[0] ?? -1]).toBe("AU");
+  expect(v4.regionPool[v4.regionIdx[0] ?? -1]).toBe("Victoria");
+  expect(v4.cityPool[v4.cityIdx[0] ?? -1]).toBe("Melbourne");
+  expect(v4.lat[0]).toBeCloseTo(-37.8);
+  expect(v4.lon[0]).toBeCloseTo(144.9);
+
+  expect(v6.countryPool[v6.countryIdx[0] ?? -1]).toBe("NO");
+  expect(v6.cityPool[v6.cityIdx[0] ?? -1]).toBe("Oslo");
 });
 
-// --- store binary search -----------------------------------------------------
+// --- store: sort + binary search ----------------------------------------------
 
-test("lookupV4 finds hits, boundaries, and misses", () => {
-  const ranges = buildRangesV4<string>([
-    { start: 30, end: 39, payload: "c" },
-    { start: 10, end: 19, payload: "a" },
-    { start: 20, end: 29, payload: "b" },
-  ]);
-  expect(lookupV4(ranges, 10)).toBe("a"); // lower boundary
-  expect(lookupV4(ranges, 19)).toBe("a"); // upper boundary
-  expect(lookupV4(ranges, 25)).toBe("b"); // interior
-  expect(lookupV4(ranges, 39)).toBe("c");
-  expect(lookupV4(ranges, 9)).toBeNull(); // below all
-  expect(lookupV4(ranges, 100)).toBeNull(); // above all
-  // in a gap between ranges (no range covers it)
-  const gap = buildRangesV4<string>([
-    { start: 10, end: 19, payload: "a" },
-    { start: 30, end: 39, payload: "c" },
-  ]);
-  expect(lookupV4(gap, 25)).toBeNull();
+test("buildCityV4 sorts by start; lookupIndexV4 finds hits, boundaries, misses", () => {
+  const csv = [
+    "10.0.0.0,10.0.0.9,AS,US,,,0,0",
+    "30.0.0.0,30.0.0.9,AS,US,,,0,0",
+    "20.0.0.0,20.0.0.9,AS,US,,,0,0",
+  ].join("\n");
+  const table = buildCityV4(parseDbIpCityCsv(csv).v4);
+
+  // sorted ascending by start despite input order
+  expect(Array.from(table.starts)).toEqual([...table.starts].sort((a, b) => a - b));
+
+  const lo = ipv4ToUint32("10.0.0.0");
+  const hi = ipv4ToUint32("10.0.0.9");
+  expect(lookupIndexV4(table.starts, table.ends, lo)).toBeGreaterThanOrEqual(0); // lower boundary
+  expect(lookupIndexV4(table.starts, table.ends, hi)).toBeGreaterThanOrEqual(0); // upper boundary
+  expect(lookupIndexV4(table.starts, table.ends, ipv4ToUint32("20.0.0.5"))).toBeGreaterThanOrEqual(
+    0,
+  ); // interior
+  expect(lookupIndexV4(table.starts, table.ends, ipv4ToUint32("9.255.255.255"))).toBe(-1); // below all
+  expect(lookupIndexV4(table.starts, table.ends, ipv4ToUint32("40.0.0.0"))).toBe(-1); // above all
+  expect(lookupIndexV4(table.starts, table.ends, ipv4ToUint32("15.0.0.0"))).toBe(-1); // gap
 });
 
-test("lookupV6 finds hits and misses over bigint ranges", () => {
-  const ranges = buildRangesV6<string>([
-    { start: 100n, end: 199n, payload: "x" },
-    { start: 0n, end: 99n, payload: "y" },
-  ]);
-  expect(lookupV6(ranges, 0n)).toBe("y");
-  expect(lookupV6(ranges, 99n)).toBe("y");
-  expect(lookupV6(ranges, 150n)).toBe("x");
-  expect(lookupV6(ranges, 200n)).toBeNull();
+test("lookupIndexV6 finds hits and misses over bigint ranges", () => {
+  const cols = parseIp2AsnV6(
+    ["2001:db8:100::\t2001:db8:100::ffff\t1\tUS\tA", "2001:db8::\t2001:db8::ffff\t2\tUS\tB"].join(
+      "\n",
+    ),
+  );
+  const table = buildAsnV6(cols);
+  expect(
+    lookupIndexV6(table.starts, table.ends, ipv6ToBigInt("2001:db8::")),
+  ).toBeGreaterThanOrEqual(0);
+  expect(
+    lookupIndexV6(table.starts, table.ends, ipv6ToBigInt("2001:db8::ffff")),
+  ).toBeGreaterThanOrEqual(0);
+  expect(lookupIndexV6(table.starts, table.ends, ipv6ToBigInt("2001:db8:200::"))).toBe(-1);
 });
 
 test("GeoDb.lookup merges asn + city and separates the two country sources", () => {
-  const db = new GeoDb(
-    buildRangesV4([
-      {
-        start: ipv4ToUint32("1.0.0.0"),
-        end: ipv4ToUint32("1.255.255.255"),
-        payload: { asn: 13335, country: "US", org: "CLOUDFLARENET" },
-      },
-    ]),
-    buildRangesV6([]),
-    buildRangesV4([
-      {
-        start: ipv4ToUint32("1.0.0.0"),
-        end: ipv4ToUint32("1.0.0.255"),
-        payload: { country: "AU", region: "Victoria", city: "Melbourne", lat: -37.8, lon: 144.9 },
-      },
-    ]),
-    buildRangesV6([]),
+  const asnV4 = buildAsnV4(parseIp2AsnV4("1.0.0.0\t1.255.255.255\t13335\tUS\tCLOUDFLARENET"));
+  const cityV4 = buildCityV4(
+    parseDbIpCityCsv("1.0.0.0,1.0.0.255,OC,AU,Victoria,Melbourne,-37.8,144.9").v4,
   );
+  const db = new GeoDb(asnV4, EMPTY_ASN_V6, cityV4, EMPTY_CITY_V6);
 
   const hit = db.lookup("1.0.0.5");
   expect(hit?.countryCode).toBe("AU"); // DB-IP city country
@@ -189,27 +210,40 @@ test("loadGeoDb returns null when datasets are absent", () => {
   }
 });
 
-test("loadGeoDb reads gzipped fixtures end-to-end", () => {
+test("loadGeoDb reads binary fixtures end-to-end", () => {
   const dir = mkdtempSync(join(tmpdir(), "geoip-fixture-"));
   try {
-    writeFileSync(
-      join(dir, "ip2asn-v4.tsv.gz"),
-      gzipSync("1.0.0.0\t1.255.255.255\t13335\tUS\tCLOUDFLARENET\n"),
-    );
-    writeFileSync(
-      join(dir, "ip2asn-v6.tsv.gz"),
-      gzipSync("2001:db8::\t2001:db8::ffff\t64500\tEX\tEXAMPLE\n"),
-    );
-    writeFileSync(
-      join(dir, "dbip-city-lite.csv.gz"),
-      gzipSync("1.0.0.0,1.0.0.255,OC,AU,Victoria,Melbourne,-37.8,144.9\n"),
-    );
+    const asnV4 = buildAsnV4(parseIp2AsnV4("1.0.0.0\t1.255.255.255\t13335\tUS\tCLOUDFLARENET\n"));
+    const asnV6 = buildAsnV6(parseIp2AsnV6("2001:db8::\t2001:db8::ffff\t64500\tEX\tEXAMPLE\n"));
+    const asnSer = asnTablesToColumns(asnV4, asnV6);
+    writeTable(join(dir, "asn.geobin"), asnSer.columns, asnSer.pools);
+
+    const cityParsed = parseDbIpCityCsv("1.0.0.0,1.0.0.255,OC,AU,Victoria,Melbourne,-37.8,144.9\n");
+    const citySer = cityTablesToColumns(buildCityV4(cityParsed.v4), buildCityV6(cityParsed.v6));
+    writeTable(join(dir, "city.geobin"), citySer.columns, citySer.pools);
 
     const db = loadGeoDb(dir);
     expect(db).not.toBeNull();
     const hit = db?.lookup("1.0.0.10");
     expect(hit?.countryCode).toBe("AU");
     expect(hit?.asn).toBe(13335);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("loadGeoDb loads city data when the ASN table is absent", () => {
+  const dir = mkdtempSync(join(tmpdir(), "geoip-no-asn-"));
+  try {
+    const cityParsed = parseDbIpCityCsv("1.0.0.0,1.0.0.255,OC,AU,Victoria,Melbourne,-37.8,144.9\n");
+    const citySer = cityTablesToColumns(buildCityV4(cityParsed.v4), buildCityV6(cityParsed.v6));
+    writeTable(join(dir, "city.geobin"), citySer.columns, citySer.pools);
+
+    const db = loadGeoDb(dir);
+    expect(db).not.toBeNull();
+    const hit = db?.lookup("1.0.0.10");
+    expect(hit?.countryCode).toBe("AU");
+    expect(hit?.asn).toBeUndefined();
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
