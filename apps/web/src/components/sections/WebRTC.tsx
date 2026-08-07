@@ -1,26 +1,15 @@
 import { Icon } from "@martinzachariassen/design";
-import { cx } from "../../lib/cx.ts";
 import { Tip } from "../../lib/glossary.tsx";
 import { isForeignPublicIp, webrtcLeak } from "../../lib/heuristics.ts";
 import type { WebRTCResult } from "../../types.ts";
 import type { ReactNode } from "react";
-import { BodyIntro, Note, SubLabel } from "../primitives.tsx";
+import { BodyIntro, Chip, type ChipTone, Note, SubLabel } from "../primitives.tsx";
 
-const TAG_BASE =
-  "rounded-[7px] border border-line-2 px-2 py-1 font-mono text-[12px] break-words text-ink";
-
+// A WebRTC IP token — the shared <Chip> (design system <Badge>) with the leak/
+// local tone mapping this section uses.
 function Tag({ children, variant }: { children: ReactNode; variant?: "leak" | "local" }) {
-  return (
-    <span
-      className={cx(
-        TAG_BASE,
-        variant === "leak" && "border-destructive text-destructive",
-        variant === "local" && "border-dashed",
-      )}
-    >
-      {children}
-    </span>
-  );
+  const tone: ChipTone = variant === "leak" ? "alert" : variant === "local" ? "local" : "default";
+  return <Chip tone={tone}>{children}</Chip>;
 }
 
 // An IP tag with an optional trailing annotation, introduced by a left-pointing
@@ -33,15 +22,13 @@ function PublicTag({ ip, httpIp }: { ip: string; httpIp: string | undefined }) {
       : null;
   return (
     <Tag variant={note === "differs" ? "leak" : undefined}>
-      <span className="inline-flex items-center gap-1.5">
-        {ip}
-        {note ? (
-          <>
-            <Icon name="arrow-left" size="xs" className="flex-none" />
-            {note}
-          </>
-        ) : null}
-      </span>
+      {ip}
+      {note ? (
+        <>
+          <Icon name="arrow-left" size="xs" className="flex-none" />
+          {note}
+        </>
+      ) : null}
     </Tag>
   );
 }
@@ -135,32 +122,34 @@ export function WebRTC({
       {candidates.length > 0 ? (
         <>
           <SubLabel tip="iceCandidate">All candidates</SubLabel>
-          <table className="w-full border-collapse text-[12px]">
-            <thead className="sr-only">
-              <tr>
-                <th scope="col">Candidate type</th>
-                <th scope="col">Address</th>
-                <th scope="col">Scope</th>
-              </tr>
-            </thead>
-            <tbody>
-              {candidates.map((c, i) => (
-                <tr
-                  // biome-ignore lint/suspicious/noArrayIndexKey: candidate order is stable within a scan
-                  key={i}
-                  className="border-b border-dashed border-line last:border-b-0"
-                >
-                  <td className="w-[22%] break-words py-[7px] pr-2.5 align-top font-mono text-ink-soft">
-                    {c.type}
-                  </td>
-                  <td className="break-words py-[7px] pr-2.5 align-top font-mono">{c.address}</td>
-                  <td className="w-[26%] break-words py-[7px] align-top font-mono text-ink-soft">
-                    {c.scope}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[280px] border-collapse text-[12px]">
+              <thead className="sr-only">
+                <tr>
+                  <th scope="col">Candidate type</th>
+                  <th scope="col">Address</th>
+                  <th scope="col">Scope</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {candidates.map((c, i) => (
+                  <tr
+                    // biome-ignore lint/suspicious/noArrayIndexKey: candidate order is stable within a scan
+                    key={i}
+                    className="border-b border-dashed border-line last:border-b-0"
+                  >
+                    <td className="w-[22%] break-words py-[7px] pr-2.5 align-top font-mono text-ink-soft">
+                      {c.type}
+                    </td>
+                    <td className="break-words py-[7px] pr-2.5 align-top font-mono">{c.address}</td>
+                    <td className="w-[26%] break-words py-[7px] align-top font-mono text-ink-soft">
+                      {c.scope}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       ) : null}
 

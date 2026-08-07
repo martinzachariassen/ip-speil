@@ -1,24 +1,23 @@
 import { flag, formatPlace, isSuccessfulLookup } from "../../lib/format.ts";
-import { type GlossaryKey, Tip } from "../../lib/glossary.tsx";
+import type { GlossaryKey } from "../../lib/glossary.tsx";
 import { timezoneCheck } from "../../lib/heuristics.ts";
 import type { Exits, IpInfo } from "../../types.ts";
 import type { ReactNode } from "react";
 import { Icon } from "@martinzachariassen/design";
-import { MonoSm, Muted } from "../primitives.tsx";
+import { KV, KVList, MonoSm, Muted } from "../primitives.tsx";
 
-// One label/value row in the "Connection details" grid. Collapses to a single
-// column on narrow screens.
+// One label/value row in the "Connection details" grid — the design system's
+// grid <DataRow> (via <KV>), with a flex-wrap value cell so multi-part values
+// (a mono figure + a muted aside) keep their spacing and wrap cleanly.
 function Fact({ label, tip, children }: { label: string; tip?: GlossaryKey; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[124px_1fr] items-baseline gap-[18px] border-b border-line-soft py-3 max-[560px]:grid-cols-1 max-[560px]:gap-1">
-      <div className="flex items-center gap-1.5 font-mono text-[10.5px] tracking-[0.13em] text-ink-faint uppercase">
-        {label}
-        {tip ? <Tip k={tip} /> : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2.5 break-words text-[14.5px] text-ink">
+    <KV k={label} tip={tip}>
+      {/* [&>*]:min-w-0 lets a long unbroken value (e.g. a full IPv6) break inside
+          the flex row instead of forcing horizontal overflow on narrow screens. */}
+      <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 break-words [&>*]:min-w-0">
         {children}
-      </div>
-    </div>
+      </span>
+    </KV>
   );
 }
 
@@ -27,14 +26,14 @@ export function Facts({ d, exits }: { d: IpInfo; exits: Exits }) {
 
   if (!isSuccessfulLookup(d)) {
     return (
-      <div className="border-t border-line">
+      <KVList layout="grid" className="border-t border-line">
         <Fact label="Status">
           <Muted>IP lookup unavailable — try Refresh</Muted>
         </Fact>
         <Fact label="IPv6" tip="ipv6">
-        {ipv6Fact}
-      </Fact>
-      </div>
+          {ipv6Fact}
+        </Fact>
+      </KVList>
     );
   }
 
@@ -44,7 +43,7 @@ export function Facts({ d, exits }: { d: IpInfo; exits: Exits }) {
   const f = flag(d.countryCode);
 
   return (
-    <div className="border-t border-line">
+    <KVList layout="grid" className="border-t border-line">
       <Fact label="Location">
         {place ? (
           <span>
@@ -101,6 +100,6 @@ export function Facts({ d, exits }: { d: IpInfo; exits: Exits }) {
       <Fact label="IPv6" tip="ipv6">
         {ipv6Fact}
       </Fact>
-    </div>
+    </KVList>
   );
 }

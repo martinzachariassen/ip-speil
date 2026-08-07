@@ -15,14 +15,14 @@ const DETAIL_COLOR: Record<ExposureItem["severity"], string> = {
 // (not colour alone), so the ok/warn/alert state is announced to screen readers.
 export function Exposure({ items }: { items: ExposureItem[] }) {
   return (
-    <ul className="grid list-none grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-x-7 border-t border-line pl-0">
+    <ul className="grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,240px),1fr))] gap-x-7 border-t border-line pl-0">
       {items.map((i) => (
         <li
           key={i.label}
-          className="flex items-center gap-2.5 border-b border-line-soft py-[11px] text-[13.5px]"
+          className="flex min-w-0 items-center gap-2.5 border-b border-line-soft py-[11px] text-[13.5px]"
         >
           <Dot severity={i.severity} label={SEVERITY_LABEL[i.severity]} />
-          <span className="font-medium text-ink">{i.label}</span>
+          <span className="min-w-0 font-medium text-ink">{i.label}</span>
           {i.tip ? <Tip k={i.tip} /> : null}
           {i.detail ? (
             <span

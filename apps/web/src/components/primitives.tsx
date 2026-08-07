@@ -1,7 +1,9 @@
 import {
+  Badge,
   Button as DsButton,
   type ButtonProps as DsButtonProps,
   Callout,
+  type DataLayout,
   DataList,
   DataRow,
   Separator,
@@ -100,22 +102,61 @@ export function Note({
   );
 }
 
-// A key/value row with a dashed separator — the design system's <DataRow>. It
-// renders a <dt>/<dd> pair, so a run of KVs must sit inside a <KVList> (a real
-// <dl>) for the description-list relationship to be programmatically conveyed.
+// A small inline chip/token — the design system's <Badge>, tuned for ip-speil's
+// data-bearing tags (IP addresses, trust labels): a readable 12px mono in normal
+// case that wraps long values, rather than the Badge's default uppercase micro-
+// label. `tone` maps onto the app's status cues without ever relying on colour
+// alone (the surrounding copy always names the state).
+export type ChipTone = "default" | "alert" | "local" | "muted";
+
+const CHIP_TONE: Record<ChipTone, string> = {
+  default: "",
+  alert: "border-destructive text-destructive",
+  local: "border-dashed",
+  muted: "text-ink-soft",
+};
+
+export function Chip({
+  tone = "default",
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLSpanElement> & { tone?: ChipTone }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cx(
+        "gap-1.5 whitespace-normal break-words px-2 py-1 text-[12px] tracking-normal normal-case",
+        CHIP_TONE[tone],
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </Badge>
+  );
+}
+
+// A key/value row — the design system's <DataRow>. It renders a <dt>/<dd> pair,
+// so a run of KVs must sit inside a <KVList> (a real <dl>) for the description-
+// list relationship to be programmatically conveyed. The layout (`"justify"`
+// dashed rows vs `"grid"` fixed label column) is inherited from the parent
+// <KVList>, but a single row may override it.
 export function KV({
   k,
   mono,
   tip,
+  layout,
   children,
 }: {
   k: string;
   mono?: boolean;
   tip?: GlossaryKey;
+  layout?: DataLayout;
   children: ReactNode;
 }) {
   return (
-    <DataRow label={withTip(k, tip)} mono={mono}>
+    <DataRow label={withTip(k, tip)} mono={mono} layout={layout}>
       {children}
     </DataRow>
   );
@@ -123,8 +164,22 @@ export function KV({
 
 // The <dl> wrapper for a contiguous run of <KV> rows. Gives the dt/dd pairs a
 // valid, programmatically-determinable description-list container (WCAG 1.3.1).
-export function KVList({ children }: { children: ReactNode }) {
-  return <DataList>{children}</DataList>;
+// `layout="grid"` cascades a fixed eyebrow-label column to every row — used by
+// the "Connection details" and snapshot-diff field lists.
+export function KVList({
+  layout,
+  className,
+  children,
+}: {
+  layout?: DataLayout;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <DataList layout={layout} className={className}>
+      {children}
+    </DataList>
+  );
 }
 
 // Small inline type roles, mapped onto the design system's <Text> primitive.
@@ -148,6 +203,33 @@ export function Muted({ children }: { children: ReactNode }) {
   // "Muted" carries real content (values, short notes), so it uses the soft ink
   // rather than the faintest tone — readable while still visibly de-emphasised.
   return <Text className="text-ink-soft">{children}</Text>;
+}
+
+// The section eyebrow — the single uppercase mono label role used above every
+// section (and, with `as="h4"`, as a sub-heading). Built on the design system's
+// <Text variant="eyebrow">. An inline <span> child renders as a normal-case,
+// slightly larger subtitle, so a label can carry a short aside on one line.
+export function Eyebrow({
+  as = "div",
+  className,
+  children,
+}: {
+  as?: React.ElementType;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Text
+      variant="eyebrow"
+      as={as}
+      className={cx(
+        "[&_span]:text-[12px] [&_span]:normal-case [&_span]:tracking-normal [&_span]:text-ink-soft",
+        className,
+      )}
+    >
+      {children}
+    </Text>
+  );
 }
 
 // Uppercase mono sub-heading inside a reveal body (the eyebrow role).
