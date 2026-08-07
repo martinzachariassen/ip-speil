@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@ip-speil/shared": "workspace:*",
-    "@martinzachariassen/design": "file:../../../mlz-design",
+    "@martinzachariassen/design": "github:martinzachariassen/mlz-design#v0.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

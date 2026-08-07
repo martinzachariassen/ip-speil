@@ -11,8 +11,10 @@ railway.json
 mise.toml
 .dockerignore
 
-# The web app (frontend) is deployed to Cloudflare, not baked into the API image
+# The web app (frontend) is deployed to Cloudflare, not baked into the API image.
+# The manifest is still needed so `bun install` can resolve the workspace graph.
 apps/web
+!apps/web/package.json
 
 # Agent / editor internals
 .claude
