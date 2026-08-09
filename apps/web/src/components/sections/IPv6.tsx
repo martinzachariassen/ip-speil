@@ -1,6 +1,6 @@
 import { flag, formatPlace, networkLabel } from "../../lib/format.ts";
 import type { CFTrace, Exits, IpInfo } from "../../types.ts";
-import { Divider, KV, KVList, Mono, Note, SubLabel } from "../primitives.tsx";
+import { Absent, Divider, KV, KVList, Mono, Note, SubLabel } from "../primitives.tsx";
 
 function CloudflareTrace({ cfTrace }: { cfTrace: CFTrace | null }) {
   if (!cfTrace) {
@@ -8,11 +8,7 @@ function CloudflareTrace({ cfTrace }: { cfTrace: CFTrace | null }) {
       <>
         <Divider />
         <SubLabel tip="cloudflareTrace">Connection security &amp; Cloudflare trace</SubLabel>
-        <Note
-          severity="off"
-          title="Cloudflare trace unavailable"
-          desc="Routing cross-check could not be reached."
-        />
+        <Absent>The routing cross-check couldn&rsquo;t be reached. Nothing to show.</Absent>
       </>
     );
   }

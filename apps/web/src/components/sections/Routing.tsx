@@ -1,6 +1,6 @@
 import { isSuccessfulLookup } from "../../lib/format.ts";
 import type { IpInfo, RpkiInfo } from "../../types.ts";
-import { KV, KVList, Mono, MonoSm, Note, SubLabel } from "../primitives.tsx";
+import { Absent, KV, KVList, Mono, MonoSm, Note, SubLabel } from "../primitives.tsx";
 
 function RpkiNote({ rpki }: { rpki: RpkiInfo }) {
   if (rpki.state === "valid") {
@@ -34,24 +34,18 @@ function RpkiNote({ rpki }: { rpki: RpkiInfo }) {
 }
 
 export function Routing({ d }: { d: IpInfo }) {
+  // A whole section with nothing in it is one muted line, not a bordered note
+  // saying so at the same weight as a real finding.
   if (!isSuccessfulLookup(d)) {
-    return (
-      <Note
-        severity="off"
-        title="Routing context limited"
-        desc="BGP prefix, origin ASN and RPKI status need a successful IP lookup."
-      />
-    );
+    return <Absent>BGP prefix, origin ASN and RPKI status all need a successful IP lookup.</Absent>;
   }
 
   const r = d.routing;
   if (!r || (!r.prefix && !r.originAsn && !r.rpki)) {
     return (
-      <Note
-        severity="off"
-        title="Routing context unavailable"
-        desc="The routing registry (RIPEstat) could not be reached for this network."
-      />
+      <Absent>
+        The routing registry (RIPEstat) didn&rsquo;t answer for this network. Nothing to show.
+      </Absent>
     );
   }
 

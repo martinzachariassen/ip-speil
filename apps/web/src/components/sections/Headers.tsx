@@ -1,6 +1,6 @@
 import { clientHintsStatus, isClientHintHeader } from "../../lib/client-hints.ts";
 import type { HeaderMap } from "../../types.ts";
-import { BodyIntro, KV, KVList, Mono, Muted, Note, SubLabel } from "../primitives.tsx";
+import { Absent, BodyIntro, KV, KVList, Mono, Muted, Note, SubLabel } from "../primitives.tsx";
 
 const PRIORITY = [
   "user-agent",
@@ -75,11 +75,7 @@ export function Headers({ headers }: { headers: HeaderMap }) {
           ))}
         </KVList>
       ) : (
-        <Note
-          severity="off"
-          title="Headers unavailable"
-          desc="The headers endpoint returned no visible headers."
-        />
+        <Absent>The headers endpoint returned no visible headers.</Absent>
       )}
       <ClientHintsBlock headers={headers} />
     </>

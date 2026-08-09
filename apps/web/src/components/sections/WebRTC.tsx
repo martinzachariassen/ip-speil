@@ -11,7 +11,7 @@ import { Tip } from "../../lib/glossary.tsx";
 import { isForeignPublicIp, webrtcLeak } from "../../lib/heuristics.ts";
 import type { WebRTCResult } from "../../types.ts";
 import type { ReactNode } from "react";
-import { BodyIntro, Chip, type ChipTone, Note, SubLabel } from "../primitives.tsx";
+import { Absent, BodyIntro, Chip, type ChipTone, Note, SubLabel } from "../primitives.tsx";
 
 // A WebRTC IP token — the shared <Chip> (design system <Badge>) with the leak/
 // local tone mapping this section uses.
@@ -56,12 +56,10 @@ export function WebRTC({
 
   if (pub.length === 0 && lan.length === 0 && relay.length === 0 && mdns === 0) {
     return (
-      <Note
-        severity="off"
-        tip="iceCandidate"
-        title="No IP candidates exposed"
-        desc="WebRTC may be blocked or unavailable in this browser."
-      />
+      <Absent>
+        No IP candidates exposed <Tip k="iceCandidate" /> — WebRTC may be blocked or unavailable in
+        this browser.
+      </Absent>
     );
   }
 
