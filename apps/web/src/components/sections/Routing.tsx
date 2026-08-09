@@ -1,35 +1,30 @@
+import { FindingList } from "@martinzachariassen/design";
 import { isSuccessfulLookup } from "../../lib/format.ts";
 import type { IpInfo, RpkiInfo } from "../../types.ts";
-import { Absent, KV, KVList, Mono, MonoSm, Note, SubLabel } from "../primitives.tsx";
+import { Absent, Finding, Footnote, KV, KVList, Mono, MonoSm, SubLabel } from "../primitives.tsx";
 
-function RpkiNote({ rpki }: { rpki: RpkiInfo }) {
+function RpkiFinding({ rpki }: { rpki: RpkiInfo }) {
   if (rpki.state === "valid") {
     return (
-      <Note
-        severity="ok"
-        tip="rpki"
-        title="RPKI valid"
-        desc="The BGP route for your network is cryptographically authorised — a signed ROA matches the announcing ASN and prefix."
-      />
+      <Finding severity="ok" tip="rpki" title="RPKI valid">
+        The BGP route for your network is cryptographically authorised — a signed ROA matches the
+        announcing ASN and prefix.
+      </Finding>
     );
   }
   if (rpki.state === "invalid") {
     return (
-      <Note
-        severity="bad"
-        tip="rpki"
-        title="RPKI invalid"
-        desc="The route announcement does not match any signed ROA. This can indicate a misconfiguration or a route hijack."
-      />
+      <Finding severity="bad" tip="rpki" title="RPKI invalid">
+        The route announcement does not match any signed ROA. This can indicate a misconfiguration
+        or a route hijack.
+      </Finding>
     );
   }
   return (
-    <Note
-      severity="off"
-      tip="rpki"
-      title="RPKI unknown"
-      desc="No ROA covers this prefix, so origin validation is inconclusive. This is common and not a problem in itself."
-    />
+    <Finding severity="off" tip="rpki" title="RPKI unknown">
+      No ROA covers this prefix, so origin validation is inconclusive. This is common and not a
+      problem in itself.
+    </Finding>
   );
 }
 
@@ -53,7 +48,11 @@ export function Routing({ d }: { d: IpInfo }) {
 
   return (
     <>
-      {r.rpki ? <RpkiNote rpki={r.rpki} /> : null}
+      {r.rpki ? (
+        <FindingList className="mb-4">
+          <RpkiFinding rpki={r.rpki} />
+        </FindingList>
+      ) : null}
       <KVList>
         {r.prefix ? (
           <KV k="Announced prefix" tip="bgpPrefix">
@@ -103,12 +102,13 @@ export function Routing({ d }: { d: IpInfo }) {
         </KVList>
       ) : null}
 
+      {/* A reassurance, not a reading: it costs a line, not a bordered note with
+          a status dot claiming something was found. */}
       {r.queried ? (
-        <Note
-          severity="off"
-          title="Privacy note"
-          desc={`Only the network block ${r.queried} was sent to the routing registry — your exact address never left the server.`}
-        />
+        <Footnote>
+          Only the network block {r.queried} was sent to the routing registry — your exact address
+          never left the server.
+        </Footnote>
       ) : null}
     </>
   );

@@ -2,10 +2,10 @@ import {
   Badge,
   Button as DsButton,
   type ButtonProps as DsButtonProps,
-  Callout,
   type DataLayout,
   DataList,
   DataRow,
+  FindingItem,
   Separator,
   Skeleton,
   StatusDot,
@@ -79,26 +79,33 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
   off: "Not applicable",
 };
 
-// A titled note with a leading status dot and an optional description — the
-// design system's <Callout>, kept under ip-speil's old name/props.
-export function Note({
+// One check and how it came back — the design system's <FindingItem>, taking
+// ip-speil's severity and an optional glossary tip on the title. It must sit
+// inside a <FindingList>, which is what draws the rule the findings hang on.
+//
+// This replaced a local <Callout> wrapper. A callout is a block that demands
+// attention: right once, wrong the eight times in a row this page needs, and
+// floating free of the rule that every other row on the sheet is measured
+// against. The one statement still allowed to stand on its own is the verdict.
+export function Finding({
   severity,
   title,
-  desc,
   tip,
+  children,
 }: {
   severity: Severity;
   title: ReactNode;
-  desc?: ReactNode;
   tip?: GlossaryKey;
+  children?: ReactNode;
 }) {
   return (
-    <Callout
+    <FindingItem
       variant={severityVariant(severity)}
+      statusLabel={SEVERITY_LABEL[severity]}
       title={withTip(title, tip)}
-      description={desc}
-      className="mb-3"
-    />
+    >
+      {children}
+    </FindingItem>
   );
 }
 
@@ -184,6 +191,23 @@ export function KVList({
       {children}
     </DataList>
   );
+}
+
+// Two ledgers side by side from `lg`. A twenty-row fact list set full width
+// leaves the value column three-quarters empty and makes the reader travel the
+// height of the screen twice; split down the middle it reads in one pass.
+//
+// Two <dl>s, not one in CSS columns: each keeps its own rule down the left, and
+// a column break can't land between a <dt> and its <dd>.
+export function LedgerColumns({ children }: { children: ReactNode }) {
+  return <div className="grid gap-x-12 gap-y-0 lg:grid-cols-2">{children}</div>;
+}
+
+// A closing aside — smaller than body copy, hanging off nothing. For the line
+// that reassures rather than reports (what we sent upstream, what we didn't
+// keep); it belongs on the page but not at the weight of a reading.
+export function Footnote({ children }: { children: ReactNode }) {
+  return <p className="mt-3.5 mb-0 max-w-[68ch] text-[12px] text-ink-faint leading-relaxed">{children}</p>;
 }
 
 // A whole section with nothing to show — one muted line hanging off the same

@@ -7,7 +7,7 @@ import {
   ToggleGroupItem,
   useCopyToClipboard,
 } from "@martinzachariassen/design";
-import { type CSSProperties, useRef } from "react";
+import { type CSSProperties, type ReactNode, useRef } from "react";
 import type { Scan } from "../hooks/useScan.ts";
 import { cx } from "../lib/cx.ts";
 import { isSuccessfulLookup } from "../lib/format.ts";
@@ -22,6 +22,8 @@ interface HeroProps {
   onFamilyChange: (family: Family) => void;
   /** Announced politely when the address reaches the clipboard. */
   onAnnounce: (message: string) => void;
+  /** The page's conclusion, set opposite the note in the annotation row. */
+  verdict: ReactNode;
 }
 
 /**
@@ -38,7 +40,14 @@ interface HeroProps {
  *
  * Copying fires one glitch burst: feedback, not atmosphere.
  */
-export function Hero({ scan, loading, family, onFamilyChange, onAnnounce }: HeroProps) {
+export function Hero({
+  scan,
+  loading,
+  family,
+  onFamilyChange,
+  onAnnounce,
+  verdict,
+}: HeroProps) {
   const glitch = useRef<GlitchTextHandle>(null);
   const { copied, copy } = useCopyToClipboard(2600);
 
@@ -106,36 +115,47 @@ export function Hero({ scan, loading, family, onFamilyChange, onAnnounce }: Hero
         </span>
       </button>
 
-      {/* Left-aligned under the address, with the arrowhead reaching back up into
-          it. Centring the note (as the sketch did) leaves it floating between two
-          columns of nothing and breaks the line the eye follows down the page. */}
-      <MarginNote
-        arrow="up-left"
-        className="mt-2 items-start text-left"
-        // Wider than the system's 24ch default: this note sits in the main
-        // column under the address, not in a true margin.
-        style={{ "--mlz-note-measure": "46ch" } as CSSProperties}
-      >
-        this is the address every site you visit sees — including the ones you never asked to be
-        seen by
-      </MarginNote>
+      {/* The annotation row: the note on the left says what the address *is*,
+          the verdict on the right says whether it's a problem. They read as a
+          pair, and together they fill the half-page of empty paper the address
+          used to leave beside it. */}
+      <div className="mt-2 lg:flex lg:items-start lg:justify-between lg:gap-16">
+        <div className="min-w-0">
+          {/* Left-aligned under the address, with the arrowhead reaching back up
+              into it. Centring the note (as the sketch did) leaves it floating
+              between two columns of nothing and breaks the line the eye follows
+              down the page. */}
+          <MarginNote
+            arrow="up-left"
+            className="items-start text-left"
+            // Wider than the system's 24ch default: this note sits in the main
+            // column under the address, not in a true margin.
+            style={{ "--mlz-note-measure": "46ch" } as CSSProperties}
+          >
+            this is the address every site you visit sees — including the ones you never asked to
+            be seen by
+          </MarginNote>
 
-      {v6 && v4 ? (
-        <ToggleGroup
-          type="single"
-          value={family}
-          onValueChange={(next) => next && onFamilyChange(next as Family)}
-          aria-label="Which address family to show"
-          className="mt-6 justify-start gap-1.5"
-        >
-          <ToggleGroupItem value="v4" variant="outline" size="sm">
-            IPv4
-          </ToggleGroupItem>
-          <ToggleGroupItem value="v6" variant="outline" size="sm">
-            IPv6
-          </ToggleGroupItem>
-        </ToggleGroup>
-      ) : null}
+          {v6 && v4 ? (
+            <ToggleGroup
+              type="single"
+              value={family}
+              onValueChange={(next) => next && onFamilyChange(next as Family)}
+              aria-label="Which address family to show"
+              className="mt-6 justify-start gap-1.5"
+            >
+              <ToggleGroupItem value="v4" variant="outline" size="sm">
+                IPv4
+              </ToggleGroupItem>
+              <ToggleGroupItem value="v6" variant="outline" size="sm">
+                IPv6
+              </ToggleGroupItem>
+            </ToggleGroup>
+          ) : null}
+        </div>
+
+        <div className="mt-9 lg:mt-1.5 lg:w-[34ch] lg:shrink-0">{verdict}</div>
+      </div>
     </section>
   );
 }

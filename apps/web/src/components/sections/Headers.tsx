@@ -1,6 +1,16 @@
+import { FindingList } from "@martinzachariassen/design";
 import { clientHintsStatus, isClientHintHeader } from "../../lib/client-hints.ts";
 import type { HeaderMap } from "../../types.ts";
-import { Absent, BodyIntro, KV, KVList, Mono, Muted, Note, SubLabel } from "../primitives.tsx";
+import {
+  Absent,
+  BodyIntro,
+  Finding,
+  KV,
+  KVList,
+  Mono,
+  Muted,
+  SubLabel,
+} from "../primitives.tsx";
 
 const PRIORITY = [
   "user-agent",
@@ -25,16 +35,16 @@ function ClientHintsBlock({ headers }: { headers: HeaderMap }) {
     <>
       <SubLabel tip="clientHints">Client Hints this site requested</SubLabel>
       <BodyIntro>
-        Unlike the headers above, these were not sent automatically. This page opted in with an{" "}
-        <Mono>Accept-CH</Mono> response header, and a Chromium-based browser answers on its next
-        request — without prompting you. Firefox and Safari send nothing here.
+        These weren&rsquo;t sent automatically: this page asked with an <Mono>Accept-CH</Mono>{" "}
+        header, and a Chromium-based browser answers on its next request without prompting you.
       </BodyIntro>
       {answered.length === 0 ? (
-        <Note
-          severity="ok"
-          title="No high-entropy hints returned"
-          desc="Your browser did not answer the Accept-CH request — typical of Firefox and Safari, which don't support these hints."
-        />
+        <FindingList>
+          <Finding severity="ok" title="No high-entropy hints returned">
+            Your browser didn&rsquo;t answer the request — typical of Firefox and Safari, which
+            don&rsquo;t support these hints.
+          </Finding>
+        </FindingList>
       ) : (
         <KVList>
           {statuses.map((s) => (
@@ -63,8 +73,8 @@ export function Headers({ headers }: { headers: HeaderMap }) {
   return (
     <>
       <BodyIntro>
-        These headers were sent to this page unprompted. Other sites may receive a slightly different
-        set depending on browser policy, permissions, and server opt-ins.
+        Other sites may receive a slightly different set, depending on browser policy, permissions
+        and server opt-ins.
       </BodyIntro>
       {entries.length ? (
         <KVList>

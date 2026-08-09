@@ -1,8 +1,9 @@
+import { FindingList } from "@martinzachariassen/design";
 import { flattenReport, type DiffField, type SnapshotDiff } from "../../lib/diff.ts";
 import { cx } from "../../lib/cx.ts";
 import type { Report } from "../../report.ts";
 import { ArrowRight } from "../../lib/icons.tsx";
-import { Button, Dot, KV, KVList, Mono, Note, SEVERITY_LABEL } from "../primitives.tsx";
+import { Button, Dot, Finding, KV, KVList, Mono, SEVERITY_LABEL } from "../primitives.tsx";
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -90,11 +91,12 @@ export function Shared({ report }: { report: Report }) {
   const stamp = report.generatedAt ? ` Reported ${when(report.generatedAt)}.` : "";
   return (
     <>
-      <Note
-        severity="off"
-        title="Viewing a shared snapshot"
-        desc={`This read-only summary was shared with you via a link and contains only redacted values.${stamp}`}
-      />
+      <FindingList className="mb-4">
+        <Finding severity="off" title="Viewing a shared snapshot">
+          This read-only summary was shared with you via a link and contains only redacted values.
+          {stamp}
+        </Finding>
+      </FindingList>
       <KVList>
         {flattenReport(report)
           .filter((f) => f.value !== "—")

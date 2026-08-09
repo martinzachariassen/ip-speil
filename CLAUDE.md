@@ -164,15 +164,19 @@ apps/
       components/
         SiteHeader.tsx   Sticky bar: mark, scan actions (≥lg), <ThemeToggle iconOnly/>
         Hero.tsx         h1 + click-to-copy IP (target hugs the address, affordance
-                         on the rule) + left-aligned MarginNote + IPv4/IPv6 toggle
+                         on the rule) + the annotation row: MarginNote left,
+                         <Verdict> right + IPv4/IPv6 toggle
+        Verdict.tsx      The page's conclusion, set opposite the note in the hero
         ExposureBand.tsx The five headline readings as a <Readout>; snap-scrolls <720px
-        Section.tsx      <SectionHeading> + body, break-inside-avoid for the sheet
+        Section.tsx      <SectionHeading> + body, break-inside-avoid for the sheet;
+                         `collapsible` wraps it in <Collapsible> with a summary line
         MobileActions.tsx Sticky icon-only action bar (<lg)
-        primitives.tsx   Dot, Note, KV/KVList (ledger), Absent, Mono, Button, Skel, …
+        primitives.tsx   Dot, Finding, KV/KVList (ledger), LedgerColumns, Absent,
+                         Footnote, Mono, Button, Skel, …
         Footer.tsx       curl lines, colophon + required DB-IP attribution
         sections/        Facts (NetworkFacts/GeoFacts), Privacy (the FindingList of
-                         leak checks), Browser, IPv6, Fingerprint, Headers, WebRTC,
-                         Routing, Diff/Shared
+                         leak checks), Browser, Connection (+ConnectionSecurity),
+                         Fingerprint, Headers, WebRTC, Routing, Diff/Shared
       probes/          network (IPv4/IPv6/DoH/CF trace), webrtc, fingerprint, dns-leak
       lib/             cx, icons, format, hash, theme (pre-paint apply), heuristics
                        (leak verdict, entropy), exposure (+ bandItems), diff,
@@ -286,7 +290,7 @@ static asset (`env.ASSETS.fetch`).
   no equivalent gate here, so it's on you.
 - **Icons are local inline SVG** (`src/lib/icons.tsx`). The design system removed its
   `<Icon>` in v0.4 ("no icon library, deliberately") and tells consumers to bring
-  their own — we draw the eleven Lucide paths we use rather than adding
+  their own — we draw the eight Lucide paths we use rather than adding
   `lucide-react` to an app with three runtime dependencies.
 - New browser code is just imported by a component/hook/probe — Vite bundles it, so
   there's no per-file allowlist. All four fonts (Space Grotesk, Space Mono,
@@ -301,9 +305,27 @@ static asset (`env.ASSETS.fetch`).
   important and the borders say nothing. Sections sit straight on the paper:
   `SectionHeading` marks where one starts and measures its column, `DataList
   layout="ledger"` rules the rows, `FindingList` rules the checks, and `Absent` is
-  one muted line where a whole section has nothing. The one remaining box is the
-  verdict `Callout` — a single statement the reader is meant to act on, above a page
-  of readings that only report.
+  one muted line where a whole section has nothing.
+- **Every check is a `Finding`; only the verdict stands alone.** The local `Note`
+  (a `Callout`) is gone — a callout is a block that demands attention, right once
+  and wrong the eight times in a row this page needs, and it floated free of the
+  rule every other row is measured against. `primitives.tsx` exports `Finding`
+  (the system's `FindingItem` plus ip-speil's severity and a glossary tip); it must
+  sit inside a `FindingList`. Reassurances that report nothing — what we sent
+  upstream, what we didn't keep — are a `Footnote`, not a finding with a status dot.
+  The one statement still allowed to stand on its own is `<Verdict>`, and it lives
+  in the hero opposite the margin note, where the question is being asked.
+- **The long readouts fold.** WebRTC candidates, the fingerprint signals and the
+  header dump are reference material — everything in them has already been judged
+  in the band and the leak checks — so `Section collapsible` puts them behind a
+  disclosure. Two rules: the trigger *is* the heading text (constant label,
+  `aria-expanded` carries the state — a label flipping "Show"/"Hide" contradicts
+  it), and a folded section always states what it holds in `summary`, which then
+  steps aside when it opens rather than repeating the first finding underneath it.
+- **Long fact lists run in two columns, not full width.** `LedgerColumns` sets two
+  `KVList`s side by side from `lg`. Two `<dl>`s rather than one in CSS columns: each
+  keeps its own rule, and a column break can't land between a `<dt>` and its `<dd>`.
+  A twenty-row list set full width is three-quarters empty paper.
 - **`color-mix(… in oklch …, transparent)` drifts the hue.** Chrome doesn't treat
   transparent's hue as powerless, so a translucent paper mixed in `oklch` comes out
   visibly pink. Use Tailwind's alpha modifier (`bg-paper/90`), which mixes in

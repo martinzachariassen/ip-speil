@@ -1,6 +1,6 @@
-import { FindingItem, FindingList } from "@martinzachariassen/design";
+import { FindingList } from "@martinzachariassen/design";
 import { isSuccessfulLookup } from "../../lib/format.ts";
-import { type GlossaryKey, Tip } from "../../lib/glossary.tsx";
+import type { GlossaryKey } from "../../lib/glossary.tsx";
 import {
   foreignResolvers,
   ispSuggestsHosting,
@@ -14,7 +14,7 @@ import type {
   IpInfo,
   WebRTCResult,
 } from "../../types.ts";
-import { Absent, SEVERITY_LABEL, type Severity, severityVariant } from "../primitives.tsx";
+import { Absent, Finding as FindingRow, type Severity } from "../primitives.tsx";
 
 interface Finding {
   severity: Severity;
@@ -253,23 +253,9 @@ export function Privacy(props: {
   return (
     <FindingList>
       {collect(props).map((f) => (
-        <FindingItem
-          key={f.title}
-          variant={severityVariant(f.severity)}
-          statusLabel={SEVERITY_LABEL[f.severity]}
-          title={
-            f.tip ? (
-              <span className="inline-flex items-center gap-1.5">
-                {f.title}
-                <Tip k={f.tip} />
-              </span>
-            ) : (
-              f.title
-            )
-          }
-        >
+        <FindingRow key={f.title} severity={f.severity} title={f.title} tip={f.tip}>
           {f.why}
-        </FindingItem>
+        </FindingRow>
       ))}
     </FindingList>
   );
