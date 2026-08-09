@@ -1,166 +1,79 @@
-import { Fragment } from "react";
+import { FindingList } from "@martinzachariassen/design";
 import { isSuccessfulLookup } from "../../lib/format.ts";
+import type { GlossaryKey } from "../../lib/glossary.tsx";
 import {
   foreignResolvers,
   ispSuggestsHosting,
   ispSuggestsVpn,
   webrtcLeak,
 } from "../../lib/heuristics.ts";
-import type { DnsLeakResult, DnssecResult, IpInfo, WebRTCResult } from "../../types.ts";
-import { Note } from "../primitives.tsx";
+import type {
+  DnsLeakResult,
+  DnssecResult,
+  EntropyEstimate,
+  IpInfo,
+  WebRTCResult,
+} from "../../types.ts";
+import {
+  Absent,
+  Columns,
+  Finding as FindingRow,
+  halves,
+  type Severity,
+} from "../primitives.tsx";
 
-function DnssecNote({ dnssec }: { dnssec: DnssecResult }) {
-  if (dnssec.validates === true) {
-    return (
-      <Note
-        severity="ok"
-        tip="dnssec"
-        title="DNSSEC validated by your resolver"
-        desc="Your resolver refused a domain with a deliberately broken DNSSEC signature — forged DNS answers for signed zones would be rejected."
-      />
-    );
-  }
-  if (dnssec.validates === false) {
-    return (
-      <Note
-        severity="warn"
-        tip="dnssec"
-        title="No DNSSEC validation"
-        desc="Your resolver still answered for a domain with a broken DNSSEC signature, so it does not validate — signed zones aren't protected against DNS spoofing."
-      />
-    );
-  }
-  return (
-    <Note
-      severity="off"
-      tip="dnssec"
-      title="DNSSEC test inconclusive"
-      desc="The control domain could not be reached, so validation behaviour couldn't be determined."
-    />
-  );
+interface Finding {
+  severity: Severity;
+  title: string;
+  why?: string;
+  tip?: GlossaryKey;
 }
 
-function DnsNote({
-  dnsLeak,
-  doh,
-  d,
-}: {
-  dnsLeak: DnsLeakResult;
-  doh: boolean | null;
-  d: IpInfo;
-}) {
-  const via = dnsLeak.source ? ` (via ${dnsLeak.source})` : "";
-  if (dnsLeak.available) {
-    const foreign = foreignResolvers(dnsLeak.resolvers, d.country);
-    if (foreign.length) {
-      const where = [...new Set(foreign.map((r) => r.country))].join(", ");
-      return (
-        <Note
-          severity="warn"
-          tip="dnsLeak"
-          title="Possible DNS leak"
-          desc={`${foreign.length} resolver(s) in ${where} differ from your IP's country (${d.country ?? ""})${via}.`}
-        />
-      );
-    }
-    return (
-      <Note
-        severity="ok"
-        tip="dnsLeak"
-        title="No DNS leak detected"
-        desc={dnsLeak.conclusion || `${dnsLeak.resolvers.length} resolver(s) in your IP's country${via}.`}
-      />
-    );
-  }
-  if (doh === true) {
-    return (
-      <Note
-        severity="ok"
-        tip="doh"
-        title="DNS-over-HTTPS reachable"
-        desc="Cloudflare's DoH endpoint responds — no DPI middlebox is blocking it."
-      />
-    );
-  }
-  if (doh === false) {
-    return (
-      <Note
-        severity="warn"
-        tip="doh"
-        title="DNS-over-HTTPS unreachable"
-        desc="A captive portal, VPN or corporate DPI may be intercepting DNS."
-      />
-    );
-  }
-  return (
-    <Note
-      severity="off"
-      title="DNS-leak test unavailable"
-      desc="The dedicated DNS-leak provider could not be reached, so this falls back to the DoH-reachability signal above."
-    />
-  );
-}
-
-export function Privacy({
+function collect({
   d,
   webrtc,
   dnsLeak,
   doh,
   dnssec,
+  entropy,
 }: {
   d: IpInfo;
   webrtc: WebRTCResult;
   dnsLeak: DnsLeakResult;
   doh: boolean | null;
   dnssec: DnssecResult;
-}) {
-  if (!isSuccessfulLookup(d)) {
-    return (
-      <Note
-        severity="off"
-        title="Privacy checks limited"
-        desc="Proxy, hosting and mobile signals need a successful IP lookup."
-      />
-    );
-  }
-
-  const notes: React.ReactNode[] = [];
+  entropy: EntropyEstimate;
+}): Finding[] {
+  const findings: Finding[] = [];
 
   if (d.tor === true) {
-    notes.push(
-      <Note
-        severity="bad"
-        tip="vpnProxyTor"
-        title="Tor exit node"
-        desc="A known Tor exit relay. Sites may apply extra friction or block requests."
-      />,
-    );
+    findings.push({
+      severity: "bad",
+      tip: "vpnProxyTor",
+      title: "Tor exit node",
+      why: "A known Tor exit relay. Sites may apply extra friction or block requests outright.",
+    });
   }
 
   if (d.proxy === true || d.vpn === true || ispSuggestsVpn(d)) {
-    notes.push(
-      <Note
-        severity="bad"
-        tip="vpnProxyTor"
-        title="VPN / proxy detected"
-        desc={
-          d.vpn === true
-            ? "This IP belongs to a known VPN service."
-            : d.proxy === true
-              ? "This IP is a known proxy or anonymizer."
-              : "ISP name matches a known VPN provider."
-        }
-      />,
-    );
+    findings.push({
+      severity: "bad",
+      tip: "vpnProxyTor",
+      title: "VPN or proxy detected",
+      why:
+        d.vpn === true
+          ? "This IP belongs to a known VPN service."
+          : d.proxy === true
+            ? "This IP is a known proxy or anonymizer."
+            : "The ISP name matches a known VPN provider.",
+    });
   } else if (d.tor !== true) {
-    notes.push(
-      <Note
-        severity="ok"
-        tip="vpnProxyTor"
-        title="No known VPN / proxy"
-        desc="Not flagged as a proxy, VPN or anonymizer."
-      />,
-    );
+    findings.push({
+      severity: "ok",
+      tip: "vpnProxyTor",
+      title: "No known VPN or proxy",
+      why: "Not flagged as a proxy, VPN or anonymizer.",
+    });
   }
 
   const blocklists = d.blocklists?.length
@@ -169,81 +82,198 @@ export function Privacy({
       ? ["an abuse database"]
       : [];
   if (blocklists.length) {
-    notes.push(
-      <Note
-        severity="warn"
-        tip="reputationDb"
-        title="Listed in reputation databases"
-        desc={`Flagged by ${blocklists.join(", ")} — sites may treat this address with extra caution.`}
-      />,
-    );
+    findings.push({
+      severity: "warn",
+      tip: "reputationDb",
+      title: "Listed in reputation databases",
+      why: `Flagged by ${blocklists.join(", ")} — sites may treat this address with extra caution.`,
+    });
   }
 
   if (d.hosting === true || ispSuggestsHosting(d)) {
-    notes.push(
-      <Note
-        severity="warn"
-        tip="datacenterIp"
-        title="Datacenter / cloud IP"
-        desc="Traffic routes through a commercial hosting network — common with VPNs."
-      />,
-    );
+    findings.push({
+      severity: "warn",
+      tip: "datacenterIp",
+      title: "Datacenter or cloud IP",
+      why: "Traffic routes through a commercial hosting network — common with VPNs, and unusual for a home line.",
+    });
   } else {
-    notes.push(
-      <Note
-        severity="ok"
-        tip="datacenterIp"
-        title="Not flagged as hosting"
-        desc="Not identified as a datacenter or cloud network."
-      />,
-    );
+    findings.push({
+      severity: "ok",
+      tip: "datacenterIp",
+      title: "Not flagged as hosting",
+      why: "Not identified as a datacenter or cloud network.",
+    });
   }
 
   if (webrtcLeak(webrtc, d.query)) {
-    notes.push(
-      <Note
-        severity="warn"
-        tip="webrtcLeak"
-        title="WebRTC public IP differs"
-        desc="WebRTC exposed a public IP that does not match the HTTP IP — a possible VPN or routing leak."
-      />,
-    );
+    findings.push({
+      severity: "warn",
+      tip: "webrtcLeak",
+      title: "WebRTC exposes a different public IP",
+      why: "A site can read an address that doesn't match the one your requests come from — split routing or a proxy.",
+    });
   } else if (webrtc.pub.length === 0) {
-    notes.push(
-      <Note
-        severity="ok"
-        tip="webrtcLeak"
-        title="WebRTC blocked or no public leak"
-        desc={
-          webrtc.mdns
-            ? "Local candidates were masked with mDNS hostnames by the browser."
-            : "No public IPs were exposed via WebRTC."
-        }
-      />,
-    );
+    findings.push({
+      severity: "ok",
+      tip: "webrtcLeak",
+      title: "WebRTC blocked, or no public leak",
+      why: webrtc.mdns
+        ? "Local candidates were masked with mDNS hostnames by the browser."
+        : "No public IPs were exposed via WebRTC.",
+    });
   } else {
-    notes.push(
-      <Note
-        severity="ok"
-        tip="webrtcLeak"
-        title="No WebRTC leak"
-        desc="WebRTC IP matches your public IP."
-      />,
-    );
+    findings.push({
+      severity: "ok",
+      tip: "webrtcLeak",
+      title: "No WebRTC leak",
+      why: "The address WebRTC exposes is the one your requests already come from.",
+    });
   }
 
-  if (d.mobile) notes.push(<Note severity="off" title="Mobile / cellular network" />);
+  if (d.mobile) {
+    findings.push({
+      severity: "off",
+      title: "Mobile or cellular network",
+      why: "Addresses on a carrier network are usually shared by many subscribers and move as you do.",
+    });
+  }
 
-  notes.push(<DnsNote dnsLeak={dnsLeak} doh={doh} d={d} />);
-  notes.push(<DnssecNote dnssec={dnssec} />);
+  findings.push(dnsFinding({ dnsLeak, doh, d }));
+  findings.push(dnssecFinding(dnssec));
 
-  return (
-    <>
-      {notes.map((node, i) => (
-        // Order is stable within a scan; index keys are fine here.
-        // biome-ignore lint/suspicious/noArrayIndexKey: static, non-reordered list
-        <Fragment key={i}>{node}</Fragment>
+  const bits = entropy.bits;
+  findings.push({
+    severity: bits >= 26 ? "bad" : bits >= 18 ? "warn" : "ok",
+    tip: "fingerprint",
+    title:
+      bits >= 26
+        ? "Fingerprint is very distinctive"
+        : bits >= 18
+          ? "Fingerprint is fairly distinctive"
+          : "Fingerprint is unremarkable",
+    why: `Roughly ${bits} bits of identifying information — ${entropy.rarity.toLowerCase()} among the browsers this measures.`,
+  });
+
+  return findings;
+}
+
+function dnsFinding({
+  dnsLeak,
+  doh,
+  d,
+}: {
+  dnsLeak: DnsLeakResult;
+  doh: boolean | null;
+  d: IpInfo;
+}): Finding {
+  const via = dnsLeak.source ? ` (via ${dnsLeak.source})` : "";
+  if (dnsLeak.available) {
+    const foreign = foreignResolvers(dnsLeak.resolvers, d.country);
+    if (foreign.length) {
+      const where = [...new Set(foreign.map((r) => r.country))].join(", ");
+      return {
+        severity: "warn",
+        tip: "dnsLeak",
+        title: "Possible DNS leak",
+        why: `${foreign.length} resolver(s) in ${where} differ from your IP's country (${d.country ?? "unknown"})${via}.`,
+      };
+    }
+    return {
+      severity: "ok",
+      tip: "dnsLeak",
+      title: "No DNS leak",
+      why:
+        dnsLeak.conclusion ||
+        `${dnsLeak.resolvers.length} resolver(s) answered, all in your IP's country${via}.`,
+    };
+  }
+  if (doh === true) {
+    return {
+      severity: "ok",
+      tip: "doh",
+      title: "DNS-over-HTTPS reachable",
+      why: "Cloudflare's DoH endpoint responds — no middlebox is blocking encrypted DNS.",
+    };
+  }
+  if (doh === false) {
+    return {
+      severity: "warn",
+      tip: "doh",
+      title: "DNS-over-HTTPS unreachable",
+      why: "A captive portal, VPN or corporate DPI may be intercepting DNS.",
+    };
+  }
+  return {
+    severity: "off",
+    title: "DNS-leak test unavailable",
+    why: "The dedicated provider couldn't be reached, so this falls back to the DoH-reachability signal.",
+  };
+}
+
+function dnssecFinding(dnssec: DnssecResult): Finding {
+  if (dnssec.validates === true) {
+    return {
+      severity: "ok",
+      tip: "dnssec",
+      title: "DNSSEC validated",
+      why: "Your resolver refused a domain with a deliberately broken signature, so forged answers for signed zones would be rejected.",
+    };
+  }
+  if (dnssec.validates === false) {
+    return {
+      severity: "warn",
+      tip: "dnssec",
+      title: "No DNSSEC validation",
+      why: "Your resolver still answered for a domain with a broken signature — signed zones aren't protected against spoofing.",
+    };
+  }
+  return {
+    severity: "off",
+    tip: "dnssec",
+    title: "DNSSEC test inconclusive",
+    why: "The control domain couldn't be reached, so validation behaviour couldn't be determined.",
+  };
+}
+
+/**
+ * Every check that was run and how it came back — the section people scroll to
+ * when the band up top says something is wrong.
+ *
+ * It's a `FindingList`, not a stack of `Callout`s: a callout is a block that
+ * demands attention, which is right once and wrong nine times in a row. Each
+ * finding names its own state in the title, and the dot only agrees with it.
+ */
+export function Privacy(props: {
+  d: IpInfo;
+  webrtc: WebRTCResult;
+  dnsLeak: DnsLeakResult;
+  doh: boolean | null;
+  dnssec: DnssecResult;
+  entropy: EntropyEstimate;
+}) {
+  if (!isSuccessfulLookup(props.d)) {
+    return <Absent>Proxy, hosting and reputation checks all need a successful IP lookup.</Absent>;
+  }
+
+  const [left, right] = halves(collect(props));
+  const list = (findings: Finding[]) => (
+    <FindingList>
+      {findings.map((f) => (
+        <FindingRow key={f.title} severity={f.severity} title={f.title} tip={f.tip}>
+          {f.why}
+        </FindingRow>
       ))}
-    </>
+    </FindingList>
+  );
+
+  // Two columns, worst first down the left. The checks are independent of each
+  // other, so nothing is lost by reading them in two passes — and full width
+  // gave each finding a 130-character measure, which is unreadable.
+  return (
+    <Columns>
+      {list(left)}
+      {right.length ? list(right) : null}
+    </Columns>
   );
 }

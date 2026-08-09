@@ -1,8 +1,9 @@
+import { FindingList } from "@martinzachariassen/design";
 import { flattenReport, type DiffField, type SnapshotDiff } from "../../lib/diff.ts";
 import { cx } from "../../lib/cx.ts";
 import type { Report } from "../../report.ts";
-import { Icon } from "@martinzachariassen/design";
-import { Button, Dot, KV, KVList, Mono, Note, SEVERITY_LABEL } from "../primitives.tsx";
+import { ArrowRight } from "../../lib/icons.tsx";
+import { Button, Dot, Finding, KV, KVList, Mono, SEVERITY_LABEL } from "../primitives.tsx";
 
 function when(iso: string): string {
   const d = new Date(iso);
@@ -27,7 +28,7 @@ function DiffRow({ label, before, after }: DiffField) {
         </span>
         {/* sr-only phrasing gives the before→after pair a spoken relationship. */}
         <span className="sr-only"> changed to </span>
-        <Icon name="arrow-right" size="xs" className="flex-none text-ink-faint" aria-hidden />
+        <ArrowRight className="text-ink-faint" />
         <span className="font-mono text-[14px] font-medium text-ink">{after}</span>
       </span>
     </KV>
@@ -47,8 +48,8 @@ export function Diff({ diff, onClear }: { diff: SnapshotDiff; onClear: () => voi
   const severity = changed ? "warn" : "ok";
 
   return (
-    <div className="border-t border-line">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line-soft py-3">
+    <div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line-soft pb-3">
         <span className="flex items-center gap-2 text-[15px] font-medium text-ink">
           <Dot severity={severity} label={SEVERITY_LABEL[severity]} />
           {summary}
@@ -56,7 +57,6 @@ export function Diff({ diff, onClear }: { diff: SnapshotDiff; onClear: () => voi
         <span className="font-mono text-[12px] text-ink-faint">saved {when(diff.savedAt)}</span>
         <Button
           variant="ghost"
-          mini
           onClick={onClear}
           className="ml-auto"
           aria-label="Clear the saved snapshot"
@@ -65,7 +65,7 @@ export function Diff({ diff, onClear }: { diff: SnapshotDiff; onClear: () => voi
         </Button>
       </div>
 
-      <KVList layout="grid">
+      <KVList>
         {diff.fields.map((f) => (
           <DiffRow key={f.label} {...f} />
         ))}
@@ -91,11 +91,12 @@ export function Shared({ report }: { report: Report }) {
   const stamp = report.generatedAt ? ` Reported ${when(report.generatedAt)}.` : "";
   return (
     <>
-      <Note
-        severity="off"
-        title="Viewing a shared snapshot"
-        desc={`This read-only summary was shared with you via a link and contains only redacted values.${stamp}`}
-      />
+      <FindingList className="mb-4">
+        <Finding severity="off" title="Viewing a shared snapshot">
+          This read-only summary was shared with you via a link and contains only redacted values.
+          {stamp}
+        </Finding>
+      </FindingList>
       <KVList>
         {flattenReport(report)
           .filter((f) => f.value !== "—")

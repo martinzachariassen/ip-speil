@@ -1,7 +1,8 @@
 @import "tailwindcss";
-/* The whole design system — semantic tokens, self-hosted fonts (Space Mono +
-   Space Grotesk, bundled same-origin so it holds under `font-src 'self'`), and a
-   thin base layer (resets, body colour/font, focus ring, reduced-motion). Its
+/* The whole design system — semantic tokens, self-hosted fonts (Space Grotesk,
+   Space Mono, Architects Daughter and Instrument Serif, all bundled same-origin
+   so they hold under `font-src 'self'`), and a thin base layer (resets, body
+   colour/font, focus ring, reduced-motion). Its
    theme.css keys dark mode off `[data-theme="dark"]`, which main.tsx sets on
    <html> pre-paint — so ip-speil's existing theme toggle keeps working. */
 @import "@martinzachariassen/design/styles/index-self-hosted.css";
@@ -23,8 +24,14 @@
    (foreground / muted-foreground / muted-foreground-2), so `ink-faint` maps
    straight onto the system's AA-safe faint tone. The finer hairlines are still
    derived from the system tokens with color-mix, so they track the active theme.
-   Signal roles (ok/warn/bad) map onto the system's success/warning/destructive
-   +accent and are applied at the call sites via StatusDot / signal utilities. */
+
+   There are deliberately **no local signal aliases** here any more. `ok`/`warn`
+   pointed at the *fill* rung (`--success`, `--warning`), which invited using
+   them as text — and a fill measures about 1.8:1 on paper, well under the 4.5:1
+   body-text bar. Severity now travels through the system's own components
+   (StatusChip, StatusDot, Callout) and, where a call site needs a colour by
+   hand, the system's own `-deep` / `-subtle` names, so the ladder's rules apply
+   as written instead of being re-spelled here. */
 @theme inline {
   --color-paper: var(--background);
   --color-paper-2: var(--secondary);
@@ -38,12 +45,9 @@
   --color-line-soft: color-mix(in oklab, var(--foreground) 8%, transparent);
   --color-panel: color-mix(in oklab, var(--foreground) 3%, transparent);
 
-  /* Signals & brand accent → the design system's semantic roles. `accent` is the
-     house accent (cyan) used for interactive/active states; the "bad" severity
-     maps to `destructive` at the call sites, so accent never carries danger. */
+  /* The house accent, for the hero rule and other surfaces. Text and focus rings
+     take `accent-deep` / `ring` from the system directly. */
   --color-accent: var(--accent);
-  --color-ok: var(--success);
-  --color-warn: var(--warning);
 }
 
 @layer base {
@@ -56,12 +60,4 @@
     font-size: 108%;
   }
 
-  /* Super-wide viewports read the pane as a centred sheet on a darker ground.
-     (The rest of the body posture — colour, font, smoothing — comes from the
-     design system's base.css.) */
-  @media (min-width: 1280px) {
-    body {
-      background: var(--secondary);
-    }
-  }
 }

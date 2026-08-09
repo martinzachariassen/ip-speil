@@ -2,10 +2,10 @@ import {
   Badge,
   Button as DsButton,
   type ButtonProps as DsButtonProps,
-  Callout,
   type DataLayout,
   DataList,
   DataRow,
+  FindingItem,
   Separator,
   Skeleton,
   StatusDot,
@@ -79,26 +79,33 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
   off: "Not applicable",
 };
 
-// A titled note with a leading status dot and an optional description — the
-// design system's <Callout>, kept under ip-speil's old name/props.
-export function Note({
+// One check and how it came back — the design system's <FindingItem>, taking
+// ip-speil's severity and an optional glossary tip on the title. It must sit
+// inside a <FindingList>, which is what draws the rule the findings hang on.
+//
+// This replaced a local <Callout> wrapper. A callout is a block that demands
+// attention: right once, wrong the eight times in a row this page needs, and
+// floating free of the rule that every other row on the sheet is measured
+// against. The one statement still allowed to stand on its own is the verdict.
+export function Finding({
   severity,
   title,
-  desc,
   tip,
+  children,
 }: {
   severity: Severity;
   title: ReactNode;
-  desc?: ReactNode;
   tip?: GlossaryKey;
+  children?: ReactNode;
 }) {
   return (
-    <Callout
+    <FindingItem
       variant={severityVariant(severity)}
+      statusLabel={SEVERITY_LABEL[severity]}
       title={withTip(title, tip)}
-      description={desc}
-      className="mb-3"
-    />
+    >
+      {children}
+    </FindingItem>
   );
 }
 
@@ -111,7 +118,9 @@ export type ChipTone = "default" | "alert" | "local" | "muted";
 
 const CHIP_TONE: Record<ChipTone, string> = {
   default: "",
-  alert: "border-destructive text-destructive",
+  // `-deep`, not the fill: a chromatic fill measures ~1.8:1 on paper, so using
+  // it as text is the one colour bug the design system's ladder exists to stop.
+  alert: "border-destructive text-destructive-deep",
   local: "border-dashed",
   muted: "text-ink-soft",
 };
@@ -139,9 +148,8 @@ export function Chip({
 
 // A key/value row — the design system's <DataRow>. It renders a <dt>/<dd> pair,
 // so a run of KVs must sit inside a <KVList> (a real <dl>) for the description-
-// list relationship to be programmatically conveyed. The layout (`"justify"`
-// dashed rows vs `"grid"` fixed label column) is inherited from the parent
-// <KVList>, but a single row may override it.
+// list relationship to be programmatically conveyed. The layout is inherited
+// from the parent <KVList>, but a single row may override it.
 export function KV({
   k,
   mono,
@@ -164,10 +172,13 @@ export function KV({
 
 // The <dl> wrapper for a contiguous run of <KV> rows. Gives the dt/dd pairs a
 // valid, programmatically-determinable description-list container (WCAG 1.3.1).
-// `layout="grid"` cascades a fixed eyebrow-label column to every row — used by
-// the "Connection details" and snapshot-diff field lists.
+//
+// `ledger` is the page's row system: the design system's grid layout plus the
+// ruled margin. The rules are what let a dozen fact lists sit straight on the
+// page without a card around each one — they mark the block and measure the
+// column, which is the job the card borders used to do.
 export function KVList({
-  layout,
+  layout = "ledger",
   className,
   children,
 }: {
@@ -179,6 +190,40 @@ export function KVList({
     <DataList layout={layout} className={className}>
       {children}
     </DataList>
+  );
+}
+
+// Two ruled lists side by side from `lg` — a pair of <KVList>s or a pair of
+// <FindingList>s. A twenty-row list set full width leaves three-quarters of the
+// line empty and makes the reader travel the height of the screen twice; split
+// down the middle it reads in one pass.
+//
+// Two lists, not one in CSS columns: each keeps its own rule down the left, and
+// a column break can't land between a <dt> and its <dd>.
+export function Columns({ children }: { children: ReactNode }) {
+  return <div className="grid gap-x-12 gap-y-0 lg:grid-cols-2">{children}</div>;
+}
+
+/** Split a run of rows down the middle, so the two columns end level. */
+export function halves<T>(rows: T[]): [T[], T[]] {
+  const cut = Math.ceil(rows.length / 2);
+  return [rows.slice(0, cut), rows.slice(cut)];
+}
+
+// A closing aside — smaller than body copy, hanging off nothing. For the line
+// that reassures rather than reports (what we sent upstream, what we didn't
+// keep); it belongs on the page but not at the weight of a reading.
+export function Footnote({ children }: { children: ReactNode }) {
+  return <p className="mt-3.5 mb-0 max-w-[68ch] text-[12px] text-ink-faint leading-relaxed">{children}</p>;
+}
+
+// A whole section with nothing to show — one muted line hanging off the same
+// rule the fact lists use, rather than an empty box. The design system's
+// <EmptyState> is the right thing when the emptiness is the subject and there's
+// an action to offer; here it is a footnote about an upstream that didn't answer.
+export function Absent({ children }: { children: ReactNode }) {
+  return (
+    <p className="m-0 border-line border-l py-1.5 pl-3.5 text-[13px] text-ink-faint">{children}</p>
   );
 }
 
@@ -205,34 +250,9 @@ export function Muted({ children }: { children: ReactNode }) {
   return <Text className="text-ink-soft">{children}</Text>;
 }
 
-// The section eyebrow — the single uppercase mono label role used above every
-// section (and, with `as="h4"`, as a sub-heading). Built on the design system's
-// <Text variant="eyebrow">. An inline <span> child renders as a normal-case,
-// slightly larger subtitle, so a label can carry a short aside on one line.
-export function Eyebrow({
-  as = "div",
-  className,
-  children,
-}: {
-  as?: React.ElementType;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <Text
-      variant="eyebrow"
-      as={as}
-      className={cx(
-        "[&_span]:text-[13px] [&_span]:normal-case [&_span]:tracking-normal [&_span]:text-ink-soft",
-        className,
-      )}
-    >
-      {children}
-    </Text>
-  );
-}
-
-// Uppercase mono sub-heading inside a reveal body (the eyebrow role).
+// Uppercase mono sub-heading inside a section body (the eyebrow role). The
+// section's own heading is the design system's <SectionHeading>; this is the
+// level below it, for a block within one section.
 export function SubLabel({ children, tip }: { children: ReactNode; tip?: GlossaryKey }) {
   return (
     <Text variant="eyebrow" as="div" className="mt-[18px] mb-[6px] text-ink-soft">
@@ -263,28 +283,28 @@ export function Divider() {
   return <Separator className="my-4" />;
 }
 
-// Button — the design system's <Button>. ip-speil's "ghost"/"mini" map to the
-// system's ghost variant / small size; the default is the signature outline.
+// Button — the design system's <Button>. ip-speil's "ghost" maps to the system's
+// ghost variant; the default is the signature outline.
 export function Button({
   variant,
-  mini,
   className,
   children,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "ghost";
-  mini?: boolean;
 }) {
   const dsVariant: DsButtonProps["variant"] = variant === "ghost" ? "ghost" : "default";
   // The design system's ghost variant clears the outline without a replacement,
   // so add an explicit focus-visible ring here to guarantee a visible keyboard
-  // focus indicator across every ip-speil button (WCAG 2.4.7).
+  // focus indicator (WCAG 2.4.7). `ring-ring` — not `ring-accent`: the plain
+  // accent is a fill and measures 1.83:1 on paper, under the 3:1 a focus
+  // indicator has to clear. `--ring` sits on the `-deep` rung for exactly this.
   return (
     <DsButton
       variant={dsVariant}
       size="sm"
       className={cx(
-        "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
         className,
       )}
       {...props}

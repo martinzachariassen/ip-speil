@@ -1,57 +1,86 @@
+import { FindingList } from "@martinzachariassen/design";
 import { isSuccessfulLookup } from "../../lib/format.ts";
 import type { IpInfo, RpkiInfo } from "../../types.ts";
-import { KV, KVList, Mono, MonoSm, Note, SubLabel } from "../primitives.tsx";
+import {
+  Absent,
+  Finding,
+  Footnote,
+  KV,
+  KVList,
+  Mono,
+  MonoSm,
+  type Severity,
+  SubLabel,
+} from "../primitives.tsx";
 
-function RpkiNote({ rpki }: { rpki: RpkiInfo }) {
+function RpkiFinding({ rpki }: { rpki: RpkiInfo }) {
   if (rpki.state === "valid") {
     return (
-      <Note
-        severity="ok"
-        tip="rpki"
-        title="RPKI valid"
-        desc="The BGP route for your network is cryptographically authorised — a signed ROA matches the announcing ASN and prefix."
-      />
+      <Finding severity="ok" tip="rpki" title="RPKI valid">
+        The BGP route for your network is cryptographically authorised — a signed ROA matches the
+        announcing ASN and prefix.
+      </Finding>
     );
   }
   if (rpki.state === "invalid") {
     return (
-      <Note
-        severity="bad"
-        tip="rpki"
-        title="RPKI invalid"
-        desc="The route announcement does not match any signed ROA. This can indicate a misconfiguration or a route hijack."
-      />
+      <Finding severity="bad" tip="rpki" title="RPKI invalid">
+        The route announcement does not match any signed ROA. This can indicate a misconfiguration
+        or a route hijack.
+      </Finding>
     );
   }
   return (
-    <Note
-      severity="off"
-      tip="rpki"
-      title="RPKI unknown"
-      desc="No ROA covers this prefix, so origin validation is inconclusive. This is common and not a problem in itself."
-    />
+    <Finding severity="off" tip="rpki" title="RPKI unknown">
+      No ROA covers this prefix, so origin validation is inconclusive. This is common and not a
+      problem in itself.
+    </Finding>
   );
 }
 
-export function Routing({ d }: { d: IpInfo }) {
+/**
+ * What the row that opens this readout says about it.
+ *
+ * This section is why the sheet used to have a hole in it: with a live registry
+ * it is a full ledger — prefix, origin ASN, RPKI state, ROAs, abuse contact —
+ * and when RIPEstat is quiet it is a single muted line. Behind a disclosure its
+ * height stops mattering, and the one thing worth a glance (whether the route is
+ * authorised) is on the row itself.
+ */
+export function routingSummary(d: IpInfo): { severity: Severity; text: string } {
   if (!isSuccessfulLookup(d)) {
-    return (
-      <Note
-        severity="off"
-        title="Routing context limited"
-        desc="BGP prefix, origin ASN and RPKI status need a successful IP lookup."
-      />
-    );
+    return { severity: "off", text: "Needs a successful IP lookup" };
+  }
+  const r = d.routing;
+  if (!r || (!r.prefix && !r.originAsn && !r.rpki)) {
+    return { severity: "off", text: "The routing registry didn't answer for this network" };
+  }
+  const state = r.rpki?.state;
+  return {
+    severity: state === "valid" ? "ok" : state === "invalid" ? "bad" : "off",
+    text: [
+      state ? `RPKI ${state}` : null,
+      r.originAsn,
+      r.prefix,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  };
+}
+
+export function Routing({ d }: { d: IpInfo }) {
+  // A whole section with nothing in it is one muted line, not a bordered note
+  // saying so at the same weight as a real finding.
+  if (!isSuccessfulLookup(d)) {
+    return <Absent>BGP prefix, origin ASN and RPKI status all need a successful IP lookup.</Absent>;
   }
 
   const r = d.routing;
   if (!r || (!r.prefix && !r.originAsn && !r.rpki)) {
     return (
-      <Note
-        severity="off"
-        title="Routing context unavailable"
-        desc="The routing registry (RIPEstat) could not be reached for this network."
-      />
+      <Absent>
+        The routing registry (RIPEstat) didn&rsquo;t answer for this network. Nothing to show.
+      </Absent>
     );
   }
 
@@ -59,7 +88,11 @@ export function Routing({ d }: { d: IpInfo }) {
 
   return (
     <>
-      {r.rpki ? <RpkiNote rpki={r.rpki} /> : null}
+      {r.rpki ? (
+        <FindingList className="mb-4">
+          <RpkiFinding rpki={r.rpki} />
+        </FindingList>
+      ) : null}
       <KVList>
         {r.prefix ? (
           <KV k="Announced prefix" tip="bgpPrefix">
@@ -109,12 +142,13 @@ export function Routing({ d }: { d: IpInfo }) {
         </KVList>
       ) : null}
 
+      {/* A reassurance, not a reading: it costs a line, not a bordered note with
+          a status dot claiming something was found. */}
       {r.queried ? (
-        <Note
-          severity="off"
-          title="Privacy note"
-          desc={`Only the network block ${r.queried} was sent to the routing registry — your exact address never left the server.`}
-        />
+        <Footnote>
+          Only the network block {r.queried} was sent to the routing registry — your exact address
+          never left the server.
+        </Footnote>
       ) : null}
     </>
   );

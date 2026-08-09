@@ -43,10 +43,16 @@ provides the security-header posture and rate limiting. The web front-end is a
 **built by Vite** (`@vitejs/plugin-react` + `@tailwindcss/vite` +
 `@cloudflare/vite-plugin`) into `apps/web/dist/`. Styling is **Tailwind CSS v4**,
 configured CSS-first: `apps/web/src/index.css` imports the design system
-(`@martinzachariassen/design`), which provides the semantic `@theme` tokens, the
-self-hosted fonts, and a base layer, and keys dark mode off a `data-theme`
-attribute — so colour needs no `dark:` variants. `index.css` itself adds only a thin
-token bridge (local `paper`/`ink`/`line` aliases over the system tokens). The Worker
+(**`@martinzachariassen/design` v0.7.0**, pinned to a GitHub tag and installed from
+its committed `dist/`), which provides the semantic `@theme` tokens, the self-hosted
+fonts, and a base layer, and keys dark mode off a `data-theme` attribute — so colour
+needs no `dark:` variants. `index.css` itself adds only a thin token bridge (local
+`paper`/`ink`/`line` aliases over the system tokens). The page is built almost
+entirely from that system: `Container`, `Readout`, `SectionHeading`, `DataList`
+(`layout="ledger"`), `FindingList`, `Table`, `Callout`, `CopyButton`, `MarginNote`,
+`GlitchText`, `ThemeProvider`/`ThemeToggle`, `InfoTip`, `ToggleGroup`. **A gap in the
+system is fixed in the system** — new components land in `mlz-design` behind a
+changeset and a release before ip-speil uses them, never as a local one-off. The Worker
 (`apps/web/src/worker/`) runs on Cloudflare's runtime; the Cloudflare Vite plugin
 runs it in workerd during `vite dev` and wires the built assets on `vite build`.
 Everything else — TypeScript typecheck, Biome — is dev tooling.
@@ -140,8 +146,8 @@ apps/
     index.html         Vite entry (root); mounts #root, loads /src/main.tsx as module
     vite.config.ts     react + tailwindcss + cloudflare plugins; assetsDir "bundle"
     src/
-      main.tsx         Bundle entry: apply theme, createRoot(<App/>), import index.css
-      App.tsx          Top-level layout: <Rail/> + <main> sections, wires the hooks
+      main.tsx         Bundle entry: pre-paint theme, <ThemeProvider>, createRoot(<App/>)
+      App.tsx          Page shape: header · hero · readout band · ruled sheet · footer
       index.css        Tailwind v4 entry: imports the DS (tokens + self-hosted fonts + base) + thin token bridge
       vite-env.d.ts    Vite client types + ambient non-standard browser API augments
       worker/
@@ -154,17 +160,31 @@ apps/
       api.ts           Wrappers over the site's /api/* endpoints
       report.ts        Redacted, copyable diagnostics report
       types.ts         Client data shapes; re-exports wire types from @ip-speil/shared
-      hooks/           useScan (collect + render one scan), useTheme, useFlash
+      hooks/           useScan (collect + render one scan), useFlash
       components/
-        Rail.tsx         Sticky identity rail: hero, verdict, actions
-        Reveal.tsx       Numbered accordion ("Deeper look" sections)
-        primitives.tsx   Dot, Note, KV, Mono, SubLabel, Button, Skel, …
-        Footer.tsx       Site footer + required DB-IP attribution
-        sections/        Exposure, Facts, Privacy, Browser, IPv6, Fingerprint,
-                         Headers, WebRTC, Routing, Diff/Shared
+        SiteHeader.tsx   Sticky bar: mark, scan actions (≥lg), <ThemeToggle iconOnly/>
+        Hero.tsx         h1 + click-to-copy IP (target hugs the address, affordance
+                         on the rule) + the annotation row: MarginNote left,
+                         <Verdict> right + IPv4/IPv6 toggle
+        Verdict.tsx      The page's conclusion, set opposite the note in the hero
+        ExposureBand.tsx The five headline readings as a <Readout>; snap-scrolls <720px
+        Section.tsx      <SectionHeading> + body — one section of the sheet
+        Readouts.tsx     "The full readout": the four reference readouts (routing,
+                         WebRTC, fingerprint, headers) in one <Accordion>
+                         (title · what it found · chevron)
+        MobileActions.tsx Sticky icon-only action bar (<lg)
+        primitives.tsx   Dot, Finding, KV/KVList (ledger), Columns/halves, Absent,
+                         Footnote, Mono, Button, Skel, …
+        Footer.tsx       One-line colophon + required DB-IP attribution
+        sections/        Facts (NetworkFacts — exits + operator; GeoFacts), Privacy
+                         (the FindingList of leak checks), Browser,
+                         ConnectionSecurity, Fingerprint, Headers, WebRTC,
+                         Routing, Diff/Shared
       probes/          network (IPv4/IPv6/DoH/CF trace), webrtc, fingerprint, dns-leak
-      lib/             cx, format, hash, heuristics (leak verdict, entropy), exposure,
-                       diff, snapshot, client-hints  (+ *.test.ts, run by `bun test`)
+      lib/             cx, icons, format, hash, theme (pre-paint apply), heuristics
+                       (leak verdict, entropy), exposure (+ bandItems), diff,
+                       snapshot, client-hints
+                       (+ *.test.ts, run by `bun test`)
     scripts/
       gen-brand-assets.ts  Renders the brand-asset set (favicons, app icons, OG/
                            Twitter cards) from the "mirror mark" via headless
@@ -254,18 +274,86 @@ static asset (`env.ASSETS.fetch`).
 - **Client-only fingerprinting.** Fingerprint signals are computed in the browser and
   never sent to the server; only a coarse entropy estimate reaches the copyable report.
 - **Styling is Tailwind v4, no CSS file to edit.** Author with utility classes;
-  colours use the `@theme` tokens (`bg-paper`, `text-ink`, `border-line`,
-  `text-accent`, …) which re-colour automatically when `[data-theme]` flips — don't
-  add `dark:` variants for colour. The base tokens (`:root` + `[data-theme="dark"]`),
-  fonts, and keyframes all live in the design system now; `src/index.css` only
-  re-exposes the ip-speil-local names (`paper`/`ink`/`line` → the system's semantic
-  tokens) through a thin `@theme inline` bridge. New app-level aliases go in that
-  bridge; a genuinely new *design* token belongs in the design system, not here. Keep
-  to `script-src 'self'` / `style-src 'self'`: no inline `<script>`/`<style>` or
-  `style=""` attributes (React's `style={{}}` prop is fine — it's CSSOM, not an HTML attribute).
+  colours use the `@theme` tokens (`bg-paper`, `text-ink`, `border-line`, …) which
+  re-colour automatically when `[data-theme]` flips — don't add `dark:` variants for
+  colour. The base tokens (`:root` + `[data-theme="dark"]`), fonts, and keyframes all
+  live in the design system; `src/index.css` only re-exposes the ip-speil-local
+  neutrals (`paper`/`ink`/`line`) through a thin `@theme inline` bridge. New app-level
+  aliases go in that bridge; a genuinely new *design* token belongs in the design
+  system, not here. Keep to `script-src 'self'` / `style-src 'self'`: no inline
+  `<script>`/`<style>` or `style=""` attributes (React's `style={{}}` prop is fine —
+  it's CSSOM, not an HTML attribute).
+- **Severity colours come from the system, not from local aliases.** The bridge used
+  to carry `ok`/`warn`, which pointed at the *fill* rung and invited `text-warn` — a
+  fill measures ~1.8:1 on paper, well under the 4.5:1 body-text bar. Severity now
+  travels through the system's components (`StatusChip`, `StatusDot`, `Callout`) and,
+  where a call site needs a colour by hand, the system's own names: **`-deep` for
+  text, icons and focus rings, `-subtle` for tinted surfaces, the bare fill only as a
+  background.** `mlz-design`'s `colour-usage.test.ts` enforces this upstream; there's
+  no equivalent gate here, so it's on you.
+- **Icons are local inline SVG** (`src/lib/icons.tsx`). The design system removed its
+  `<Icon>` in v0.4 ("no icon library, deliberately") and tells consumers to bring
+  their own — we draw the eight Lucide paths we use rather than adding
+  `lucide-react` to an app with three runtime dependencies.
 - New browser code is just imported by a component/hook/probe — Vite bundles it, so
-  there's no per-file allowlist. Fonts (Space Mono + Space Grotesk) come from the
-  design system's `index-self-hosted.css` — don't re-add local webfonts.
+  there's no per-file allowlist. All four fonts (Space Grotesk, Space Mono,
+  Architects Daughter for `font-hand`, Instrument Serif for `font-serif`) come from
+  the design system's `index-self-hosted.css` — don't re-add local webfonts.
+- **`sr-only` is `position: absolute`.** Inside a horizontally-scrolling strip it
+  needs a positioned ancestor within the scroller, or its containing block becomes
+  the page root, it escapes the clip, and the document grows a phone-width horizontal
+  scrollbar. The design system's `ReadoutCell` carries `relative` for exactly that
+  reason; keep it in mind for any scroller built here.
+- **The page is rules, not boxes.** Ten `Card`s make every reading look equally
+  important and the borders say nothing. Sections sit straight on the paper:
+  `SectionHeading` marks where one starts and measures its column, `DataList
+  layout="ledger"` rules the rows, `FindingList` rules the checks, and `Absent` is
+  one muted line where a whole section has nothing.
+- **Every check is a `Finding`; only the verdict stands alone.** The local `Note`
+  (a `Callout`) is gone — a callout is a block that demands attention, right once
+  and wrong the eight times in a row this page needs, and it floated free of the
+  rule every other row is measured against. `primitives.tsx` exports `Finding`
+  (the system's `FindingItem` plus ip-speil's severity and a glossary tip); it must
+  sit inside a `FindingList`. Reassurances that report nothing — what we sent
+  upstream, what we didn't keep — are a `Footnote`, not a finding with a status dot.
+  The one statement still allowed to stand on its own is `<Verdict>`, and it lives
+  in the hero opposite the margin note, where the question is being asked.
+- **The long readouts fold, together.** WebRTC candidates, the fingerprint signals
+  and the header dump are reference material — everything in them has already been
+  judged in the band and the leak checks — so they sit in `Readouts.tsx` as one
+  `Accordion` under one heading, each row *title · what it found · chevron*. Three
+  separately-folding `Section`s read as three things left over at the bottom of the
+  sheet; and the system is explicit that "a row of independent `Collapsible`s is an
+  accordion with the keyboard support left out". Because the row states the verdict,
+  the readout inside must not restate it — that's why `Fingerprint` has no
+  distinctiveness line and `WebRTC` only shows a finding when there *is* a leak.
+- **The sheet is a grid of pairs, not a column flow.** `lg:columns-2` balances the
+  whole run, so one unbreakable section landing badly leaves a screen-tall hole at
+  the foot of a column — which is what put the reference readouts level with the
+  middle of the other column. An explicit `lg:grid-cols-2` bounds the slack to the
+  height difference inside one row. **A section that can't hold a column doesn't
+  get one**: "The connection" was folded into `NetworkFacts` (both reported the
+  same IPv6 exit), and `Routing` moved into the readout accordion because it's
+  either a full registry ledger or a single muted line depending on whether
+  RIPEstat answers, and nothing in a fixed grid survives that swing.
+- **Long lists run in two columns, not full width.** `Columns` sets two `KVList`s —
+  or two `FindingList`s — side by side from `lg`, with `halves()` splitting the rows.
+  Two lists rather than one in CSS columns: each keeps its own rule, and a column
+  break can't land between a `<dt>` and its `<dd>`. A twenty-row list set full width
+  is three-quarters empty paper, and a finding set full width has a 130-character
+  measure.
+- **The band is always the same five readings.** `bandItems` fills any the scan
+  couldn't supply with an honest "unknown" rather than dropping the cell. A failed
+  lookup produces no location and no anonymity finding, and three readings stretched
+  across five columns of paper looked broken.
+- **`color-mix(… in oklch …, transparent)` drifts the hue.** Chrome doesn't treat
+  transparent's hue as powerless, so a translucent paper mixed in `oklch` comes out
+  visibly pink. Use Tailwind's alpha modifier (`bg-paper/90`), which mixes in
+  `oklab` — see `SiteHeader` and `MobileActions`.
+- **Theme is the design system's.** `ThemeProvider` (attribute `data-theme`, key
+  `ipspeil-theme`) owns light/dark/**system**, and `ThemeToggle iconOnly` is the
+  control. `lib/theme.ts` only applies the stored choice pre-paint — the system's
+  `themeInitScript()` is an inline `<script>` and would be refused by our CSP.
 - **The brand is the mirror mark.** ip-speil's identity is a monochrome mark built
   the same way as the MLZ mark in `@martinzachariassen/design` (solid polygon glyph
   on an ink tile, accent never in the mark): two triangles mirroring across a central

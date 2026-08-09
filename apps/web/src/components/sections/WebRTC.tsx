@@ -1,9 +1,18 @@
-import { Icon } from "@martinzachariassen/design";
+import {
+  FindingList,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@martinzachariassen/design";
 import { Tip } from "../../lib/glossary.tsx";
 import { isForeignPublicIp, webrtcLeak } from "../../lib/heuristics.ts";
+import { ArrowLeft } from "../../lib/icons.tsx";
 import type { WebRTCResult } from "../../types.ts";
 import type { ReactNode } from "react";
-import { BodyIntro, Chip, type ChipTone, Note, SubLabel } from "../primitives.tsx";
+import { Absent, Chip, type ChipTone, Finding, Footnote, SubLabel } from "../primitives.tsx";
 
 // A WebRTC IP token — the shared <Chip> (design system <Badge>) with the leak/
 // local tone mapping this section uses.
@@ -25,7 +34,7 @@ function PublicTag({ ip, httpIp }: { ip: string; httpIp: string | undefined }) {
       {ip}
       {note ? (
         <>
-          <Icon name="arrow-left" size="xs" className="flex-none" />
+          <ArrowLeft />
           {note}
         </>
       ) : null}
@@ -35,6 +44,28 @@ function PublicTag({ ip, httpIp }: { ip: string; httpIp: string | undefined }) {
 
 function TagGroup({ children }: { children: ReactNode }) {
   return <div className="my-2 flex flex-wrap gap-[7px]">{children}</div>;
+}
+
+/** What the section heading says about itself while it's folded shut. */
+export function webrtcSummary(webrtc: WebRTCResult, httpIp: string | undefined) {
+  const { pub, lan, relay, mdns, candidates } = webrtc;
+  if (pub.length === 0 && lan.length === 0 && relay.length === 0 && mdns === 0) {
+    return { severity: "off" as const, text: "No candidates — WebRTC blocked or unavailable" };
+  }
+  const leak = webrtcLeak(webrtc, httpIp);
+  const n = candidates.length;
+  const counted = [
+    `${n} candidate${n === 1 ? "" : "s"}`,
+    pub.length ? `${pub.length} public` : null,
+    lan.length ? `${lan.length} local` : null,
+    mdns ? `${mdns} masked` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    severity: leak ? ("warn" as const) : ("ok" as const),
+    text: leak ? `${counted} — one of them isn't your HTTP address` : counted,
+  };
 }
 
 export function WebRTC({
@@ -48,12 +79,10 @@ export function WebRTC({
 
   if (pub.length === 0 && lan.length === 0 && relay.length === 0 && mdns === 0) {
     return (
-      <Note
-        severity="off"
-        tip="iceCandidate"
-        title="No IP candidates exposed"
-        desc="WebRTC may be blocked or unavailable in this browser."
-      />
+      <Absent>
+        No IP candidates exposed <Tip k="iceCandidate" /> — WebRTC may be blocked or unavailable in
+        this browser.
+      </Absent>
     );
   }
 
@@ -61,21 +90,17 @@ export function WebRTC({
 
   return (
     <>
+      {/* Only when there's something to say. The row that opens this readout
+          already reports the clean case, and so does `Leak checks`. */}
       {leak ? (
-        <Note
-          severity="warn"
-          tip="webrtcLeak"
-          title="Different public IP exposed"
-          desc="WebRTC revealed a public address that differs from the one seen by normal HTTP requests."
-        />
-      ) : (
-        <Note
-          severity="ok"
-          tip="webrtcLeak"
-          title="No different public IP exposed"
-          desc="WebRTC did not reveal a public IP different from your HTTP IP."
-        />
-      )}
+        <FindingList className="mb-4">
+          <Finding severity="warn" tip="webrtcLeak" title="Different public IP exposed">
+            WebRTC revealed a public address that differs from the one normal requests come from.
+            If you expected all traffic to use one VPN exit, check your browser or VPN&rsquo;s
+            WebRTC leak protection.
+          </Finding>
+        </FindingList>
+      ) : null}
 
       {pub.length > 0 ? (
         <>
@@ -112,52 +137,47 @@ export function WebRTC({
         </>
       ) : null}
 
-      {mdns > 0 ? (
-        <BodyIntro>
-          {mdns} local candidate{mdns === 1 ? " was" : "s were"} hidden behind browser mDNS privacy
-          masking <Tip k="mdns" />.
-        </BodyIntro>
-      ) : null}
-
       {candidates.length > 0 ? (
         <>
           <SubLabel tip="iceCandidate">All candidates</SubLabel>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[280px] border-collapse text-[13px]">
-              <thead className="sr-only">
-                <tr>
-                  <th scope="col">Candidate type</th>
-                  <th scope="col">Address</th>
-                  <th scope="col">Scope</th>
-                </tr>
-              </thead>
-              <tbody>
-                {candidates.map((c, i) => (
-                  <tr
-                    // biome-ignore lint/suspicious/noArrayIndexKey: candidate order is stable within a scan
-                    key={i}
-                    className="border-b border-dashed border-line last:border-b-0"
-                  >
-                    <td className="w-[22%] break-words py-[7px] pr-2.5 align-top font-mono text-ink-soft">
-                      {c.type}
-                    </td>
-                    <td className="break-words py-[7px] pr-2.5 align-top font-mono">{c.address}</td>
-                    <td className="w-[26%] break-words py-[7px] align-top font-mono text-ink-soft">
-                      {c.scope}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* The design system's Table, which brings the focusable horizontal
+              scroll container this needs (WCAG 2.1.1) — the hand-rolled version
+              scrolled but couldn't be reached from the keyboard. The header row
+              stays sr-only: three mono columns of addresses read fine without
+              visible headings, but the relationship still has to be conveyed. */}
+          <Table className="text-[13px]">
+            <TableHeader className="sr-only">
+              <TableRow>
+                <TableHead>Candidate type</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Scope</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {candidates.map((c, i) => (
+                <TableRow
+                  // biome-ignore lint/suspicious/noArrayIndexKey: candidate order is stable within a scan
+                  key={i}
+                >
+                  <TableCell className="w-[22%] break-words align-top font-mono text-ink-soft">
+                    {c.type}
+                  </TableCell>
+                  <TableCell className="break-words align-top font-mono">{c.address}</TableCell>
+                  <TableCell className="w-[26%] break-words align-top font-mono text-ink-soft">
+                    {c.scope}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </>
       ) : null}
 
-      {leak ? (
-        <BodyIntro>
-          If you expected all traffic to use one VPN exit, check your browser or VPN WebRTC leak
-          protection.
-        </BodyIntro>
+      {mdns > 0 ? (
+        <Footnote>
+          {mdns} local candidate{mdns === 1 ? " was" : "s were"} hidden behind browser mDNS privacy
+          masking <Tip k="mdns" />.
+        </Footnote>
       ) : null}
     </>
   );
