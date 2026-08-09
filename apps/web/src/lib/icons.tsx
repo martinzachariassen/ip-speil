@@ -1,5 +1,5 @@
 /**
- * The eight glyphs this app draws, as inline SVG.
+ * The seven glyphs this app draws, as inline SVG.
  *
  * The design system removed its `<Icon>` component in v0.4 ("no icon library,
  * deliberately") and tells consumers to bring their own. Rather than add
@@ -104,14 +104,6 @@ export function ArrowRight({ className }: IconProps) {
   return (
     <Glyph className={className}>
       <path d="M5 12h14M12 5l7 7-7 7" />
-    </Glyph>
-  );
-}
-
-export function ChevronDown({ className }: IconProps) {
-  return (
-    <Glyph className={className}>
-      <path d="m6 9 6 6 6-6" />
     </Glyph>
   );
 }

@@ -193,14 +193,21 @@ export function KVList({
   );
 }
 
-// Two ledgers side by side from `lg`. A twenty-row fact list set full width
-// leaves the value column three-quarters empty and makes the reader travel the
-// height of the screen twice; split down the middle it reads in one pass.
+// Two ruled lists side by side from `lg` — a pair of <KVList>s or a pair of
+// <FindingList>s. A twenty-row list set full width leaves three-quarters of the
+// line empty and makes the reader travel the height of the screen twice; split
+// down the middle it reads in one pass.
 //
-// Two <dl>s, not one in CSS columns: each keeps its own rule down the left, and
+// Two lists, not one in CSS columns: each keeps its own rule down the left, and
 // a column break can't land between a <dt> and its <dd>.
-export function LedgerColumns({ children }: { children: ReactNode }) {
+export function Columns({ children }: { children: ReactNode }) {
   return <div className="grid gap-x-12 gap-y-0 lg:grid-cols-2">{children}</div>;
+}
+
+/** Split a run of rows down the middle, so the two columns end level. */
+export function halves<T>(rows: T[]): [T[], T[]] {
+  const cut = Math.ceil(rows.length / 2);
+  return [rows.slice(0, cut), rows.slice(cut)];
 }
 
 // A closing aside — smaller than body copy, hanging off nothing. For the line

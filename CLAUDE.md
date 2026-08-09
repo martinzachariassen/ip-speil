@@ -168,10 +168,11 @@ apps/
                          <Verdict> right + IPv4/IPv6 toggle
         Verdict.tsx      The page's conclusion, set opposite the note in the hero
         ExposureBand.tsx The five headline readings as a <Readout>; snap-scrolls <720px
-        Section.tsx      <SectionHeading> + body, break-inside-avoid for the sheet;
-                         `collapsible` wraps it in <Collapsible> with a summary line
+        Section.tsx      <SectionHeading> + body — one section of the sheet
+        Readouts.tsx     "The full readout": the three long reference readouts in
+                         one <Accordion> (title · what it found · chevron)
         MobileActions.tsx Sticky icon-only action bar (<lg)
-        primitives.tsx   Dot, Finding, KV/KVList (ledger), LedgerColumns, Absent,
+        primitives.tsx   Dot, Finding, KV/KVList (ledger), Columns/halves, Absent,
                          Footnote, Mono, Button, Skel, …
         Footer.tsx       curl lines, colophon + required DB-IP attribution
         sections/        Facts (NetworkFacts/GeoFacts), Privacy (the FindingList of
@@ -315,17 +316,30 @@ static asset (`env.ASSETS.fetch`).
   upstream, what we didn't keep — are a `Footnote`, not a finding with a status dot.
   The one statement still allowed to stand on its own is `<Verdict>`, and it lives
   in the hero opposite the margin note, where the question is being asked.
-- **The long readouts fold.** WebRTC candidates, the fingerprint signals and the
-  header dump are reference material — everything in them has already been judged
-  in the band and the leak checks — so `Section collapsible` puts them behind a
-  disclosure. Two rules: the trigger *is* the heading text (constant label,
-  `aria-expanded` carries the state — a label flipping "Show"/"Hide" contradicts
-  it), and a folded section always states what it holds in `summary`, which then
-  steps aside when it opens rather than repeating the first finding underneath it.
-- **Long fact lists run in two columns, not full width.** `LedgerColumns` sets two
-  `KVList`s side by side from `lg`. Two `<dl>`s rather than one in CSS columns: each
-  keeps its own rule, and a column break can't land between a `<dt>` and its `<dd>`.
-  A twenty-row list set full width is three-quarters empty paper.
+- **The long readouts fold, together.** WebRTC candidates, the fingerprint signals
+  and the header dump are reference material — everything in them has already been
+  judged in the band and the leak checks — so they sit in `Readouts.tsx` as one
+  `Accordion` under one heading, each row *title · what it found · chevron*. Three
+  separately-folding `Section`s read as three things left over at the bottom of the
+  sheet; and the system is explicit that "a row of independent `Collapsible`s is an
+  accordion with the keyboard support left out". Because the row states the verdict,
+  the readout inside must not restate it — that's why `Fingerprint` has no
+  distinctiveness line and `WebRTC` only shows a finding when there *is* a leak.
+- **The sheet is a grid of pairs, not a column flow.** `lg:columns-2` balances the
+  whole run, so one unbreakable section landing badly leaves a screen-tall hole at
+  the foot of a column — which is what put the reference readouts level with the
+  middle of the other column. An explicit `lg:grid-cols-2` bounds the slack to the
+  height difference inside one row.
+- **Long lists run in two columns, not full width.** `Columns` sets two `KVList`s —
+  or two `FindingList`s — side by side from `lg`, with `halves()` splitting the rows.
+  Two lists rather than one in CSS columns: each keeps its own rule, and a column
+  break can't land between a `<dt>` and its `<dd>`. A twenty-row list set full width
+  is three-quarters empty paper, and a finding set full width has a 130-character
+  measure.
+- **The band is always the same five readings.** `bandItems` fills any the scan
+  couldn't supply with an honest "unknown" rather than dropping the cell. A failed
+  lookup produces no location and no anonymity finding, and three readings stretched
+  across five columns of paper looked broken.
 - **`color-mix(… in oklch …, transparent)` drifts the hue.** Chrome doesn't treat
   transparent's hue as powerless, so a translucent paper mixed in `oklch` comes out
   visibly pink. Use Tailwind's alpha modifier (`bg-paper/90`), which mixes in

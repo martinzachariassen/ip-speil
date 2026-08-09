@@ -1,23 +1,21 @@
 import { Container } from "@martinzachariassen/design";
-import { type ReactNode, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ExposureBand } from "./components/ExposureBand.tsx";
 import { Footer } from "./components/Footer.tsx";
 import { type Family, Hero } from "./components/Hero.tsx";
 import { MobileActions } from "./components/MobileActions.tsx";
+import { Readouts } from "./components/Readouts.tsx";
 import { Section } from "./components/Section.tsx";
 import { SiteHeader } from "./components/SiteHeader.tsx";
 import { Verdict } from "./components/Verdict.tsx";
 import type { PageActions } from "./components/actions.ts";
-import { Dot, SEVERITY_LABEL, type Severity, Skel } from "./components/primitives.tsx";
+import { Skel } from "./components/primitives.tsx";
 import { Browser } from "./components/sections/Browser.tsx";
 import { Connection, ConnectionSecurity } from "./components/sections/Connection.tsx";
 import { Diff, Shared } from "./components/sections/Diff.tsx";
 import { GeoFacts, NetworkFacts } from "./components/sections/Facts.tsx";
-import { Fingerprint, fingerprintSummary } from "./components/sections/Fingerprint.tsx";
-import { Headers } from "./components/sections/Headers.tsx";
 import { Privacy } from "./components/sections/Privacy.tsx";
 import { Routing } from "./components/sections/Routing.tsx";
-import { WebRTC, webrtcSummary } from "./components/sections/WebRTC.tsx";
 import { useFlash } from "./hooks/useFlash.ts";
 import { useScan } from "./hooks/useScan.ts";
 import { bandItems, computeExposure } from "./lib/exposure.ts";
@@ -31,27 +29,6 @@ function readSharedReport() {
 
 function SkelBlock() {
   return <Skel className="block h-24 w-full rounded" />;
-}
-
-// The line a folded section shows instead of its contents: a dot, then what it
-// found. The dot never carries the meaning on its own — the words next to it say
-// the same thing — but it lets someone scanning the page spot the one section
-// worth opening.
-function Summary({
-  severity,
-  text,
-  children,
-}: {
-  severity: Severity;
-  text?: ReactNode;
-  children?: ReactNode;
-}) {
-  return (
-    <>
-      <Dot severity={severity} label={SEVERITY_LABEL[severity]} />
-      <span>{text ?? children}</span>
-    </>
-  );
 }
 
 export function App() {
@@ -74,12 +51,6 @@ export function App() {
         : null,
     [scan],
   );
-
-  const webrtc = useMemo(
-    () => (scan ? webrtcSummary(scan.webrtc, scan.data.query) : null),
-    [scan],
-  );
-  const fp = useMemo(() => (scan ? fingerprintSummary(scan.entropy) : null), [scan]);
 
   const reportJson = useMemo(() => (report ? JSON.stringify(report, null, 2) : null), [report]);
   const shareUrl = useMemo(
@@ -130,28 +101,30 @@ export function App() {
           </Section>
         ) : null}
 
-        {/* The sheet. Short fact lists flow in two columns from `lg`; the long
-            readouts below run full width, because a header dump or a fingerprint
-            table in a half-width column leaves a column-height void beside it.
-            Leak checks leads: it is both the section people came for and by far
-            the tallest, and a column flow balances around its biggest block —
-            put it later and the left column runs out halfway down the page. */}
-        <div className="pt-11 lg:columns-2 lg:gap-14">
-          <Section title="Leak checks">
-            {scan ? (
-              <Privacy
-                d={scan.data}
-                webrtc={scan.webrtc}
-                dnsLeak={scan.dnsLeak}
-                doh={scan.doh}
-                dnssec={scan.dnssec}
-                entropy={scan.entropy}
-              />
-            ) : (
-              <SkelBlock />
-            )}
-          </Section>
+        {/* The checks lead the sheet — it's the section people came for — at
+            full width, in two columns of findings. */}
+        <Section title="Leak checks" className="pt-11">
+          {scan ? (
+            <Privacy
+              d={scan.data}
+              webrtc={scan.webrtc}
+              dnsLeak={scan.dnsLeak}
+              doh={scan.doh}
+              dnssec={scan.dnssec}
+              entropy={scan.entropy}
+            />
+          ) : (
+            <SkelBlock />
+          )}
+        </Section>
 
+        {/* Six fact lists in explicit pairs, not a CSS column flow. A flow
+            balances the *whole* run, so one unbreakable section landing badly
+            leaves a screen-tall hole at the foot of a column; a grid bounds the
+            slack to the difference within one row, and the pairs are related
+            besides — the address and where it puts you, the exit and what the
+            path can see. */}
+        <div className="lg:grid lg:grid-cols-2 lg:gap-x-14">
           <Section title="Exit &amp; network">
             {scan ? <NetworkFacts d={scan.data} exits={scan.exits} /> : <SkelBlock />}
           </Section>
@@ -184,33 +157,9 @@ export function App() {
           </Section>
         </div>
 
-        {/* The three long readouts. They're the reference half of the page —
-            everything they contain has already been judged above, in the band and
-            the leak checks — so they open on request and say what they hold while
-            they're shut. */}
-        <Section title="WebRTC candidates" collapsible summary={webrtc && <Summary {...webrtc} />}>
-          {scan ? <WebRTC webrtc={scan.webrtc} httpIp={scan.data.query} /> : <SkelBlock />}
-        </Section>
+        <Readouts scan={scan} />
 
-        <Section title="Browser fingerprint" collapsible summary={fp && <Summary {...fp} />}>
-          {scan ? <Fingerprint fp={scan.fp} entropy={scan.entropy} /> : <SkelBlock />}
-        </Section>
-
-        <Section
-          title="What the server sees"
-          collapsible
-          summary={
-            scan ? (
-              <Summary severity="off">
-                {Object.keys(scan.headers).length} headers were sent to this page unprompted
-              </Summary>
-            ) : null
-          }
-        >
-          {scan ? <Headers headers={scan.headers} /> : <SkelBlock />}
-        </Section>
-
-        <Section title="Snapshot &amp; changes">
+        <Section title="Snapshot &amp; changes" className="mt-12">
           {diff ? (
             <Diff diff={diff} onClear={clearSnapshot} />
           ) : (

@@ -1,12 +1,11 @@
-import { FindingList } from "@martinzachariassen/design";
 import type { ReactNode } from "react";
 import type { EntropyEstimate, FingerprintData } from "../../types.ts";
 import {
-  Finding,
+  Columns,
   Footnote,
+  halves,
   KV,
   KVList,
-  LedgerColumns,
   Mono,
   MonoSm,
   type Severity,
@@ -15,13 +14,7 @@ import {
 
 const distinctiveness = (bits: number): Severity => (bits >= 26 ? "bad" : bits >= 18 ? "warn" : "ok");
 
-// Split a run of rows down the middle so the two ledgers end up the same height.
-function halves<T>(rows: T[]): [T[], T[]] {
-  const cut = Math.ceil(rows.length / 2);
-  return [rows.slice(0, cut), rows.slice(cut)];
-}
-
-/** What the section heading says about itself while it's folded shut. */
+/** What the row that opens this readout says about it. */
 export function fingerprintSummary(entropy: EntropyEstimate) {
   const top = entropy.contributions.slice(0, 3).map((c) => c.label.toLowerCase());
   return {
@@ -152,21 +145,14 @@ export function Fingerprint({
 
   return (
     <>
-      <FindingList className="mb-5">
-        <Finding
-          severity={distinctiveness(entropy.bits)}
-          tip="entropy"
-          title={`Fingerprint distinctiveness: ${entropy.rarity}`}
-        >
-          About {entropy.bits} bits of identifying information are exposed here — the more
-          distinctive the signals, the fewer browsers look like yours.
-        </Finding>
-      </FindingList>
-
+      {/* No verdict line here: the row that opens this section already carries
+          it ("~24 bits · high — mostly canvas rendering, webgl / gpu"), and
+          `Leak checks` states it a third time. What the reader opened this for
+          is the breakdown. */}
       {entropy.contributions.length ? (
         <>
           <SubLabel tip="entropy">What makes this browser identifiable</SubLabel>
-          <LedgerColumns>
+          <Columns>
             <KVList>
               {leftBits.map((contribution) => (
                 <KV key={contribution.label} k={contribution.label}>
@@ -183,15 +169,15 @@ export function Fingerprint({
                 ))}
               </KVList>
             ) : null}
-          </LedgerColumns>
+          </Columns>
         </>
       ) : null}
 
       <SubLabel>The signals behind it</SubLabel>
-      <LedgerColumns>
+      <Columns>
         <KVList>{leftSignals}</KVList>
         {rightSignals.length ? <KVList>{rightSignals}</KVList> : null}
-      </LedgerColumns>
+      </Columns>
 
       <Footnote>
         This is a local, order-of-magnitude estimate using the EFF Cover Your Tracks method — not a

@@ -14,7 +14,13 @@ import type {
   IpInfo,
   WebRTCResult,
 } from "../../types.ts";
-import { Absent, Finding as FindingRow, type Severity } from "../primitives.tsx";
+import {
+  Absent,
+  Columns,
+  Finding as FindingRow,
+  halves,
+  type Severity,
+} from "../primitives.tsx";
 
 interface Finding {
   severity: Severity;
@@ -250,13 +256,24 @@ export function Privacy(props: {
     return <Absent>Proxy, hosting and reputation checks all need a successful IP lookup.</Absent>;
   }
 
-  return (
+  const [left, right] = halves(collect(props));
+  const list = (findings: Finding[]) => (
     <FindingList>
-      {collect(props).map((f) => (
+      {findings.map((f) => (
         <FindingRow key={f.title} severity={f.severity} title={f.title} tip={f.tip}>
           {f.why}
         </FindingRow>
       ))}
     </FindingList>
+  );
+
+  // Two columns, worst first down the left. The checks are independent of each
+  // other, so nothing is lost by reading them in two passes — and full width
+  // gave each finding a 130-character measure, which is unreadable.
+  return (
+    <Columns>
+      {list(left)}
+      {right.length ? list(right) : null}
+    </Columns>
   );
 }

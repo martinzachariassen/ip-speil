@@ -66,7 +66,7 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
     severity: ok ? "off" : "warn",
     label: ok ? "Public IP" : "IP lookup",
     short: "Exit",
-    detail: ok ? d.query : "failed",
+    detail: ok ? d.query : "lookup failed",
     tip: ok ? "publicIp" : undefined,
   });
 
@@ -220,14 +220,28 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
  * there — the address, where it puts you, and the three checks that most often
  * come back with something.
  *
- * Anything missing (a failed lookup drops the location and anonymity readings)
- * is skipped rather than left as an empty cell, so the band always has content
- * in every column it shows.
+ * It is always these five. A failed lookup produces no location and no
+ * anonymity finding, and dropping the empty cells left three readings stretched
+ * across the full width of the page with a column of air after each one. An
+ * honest "unknown" holds the column and says why it's empty.
  */
-const BAND: ExposureKey[] = ["ip", "location", "anonymity", "webrtc", "fingerprint"];
+const BAND: { key: ExposureKey; label: string; short: string }[] = [
+  { key: "ip", label: "Public IP", short: "Exit" },
+  { key: "location", label: "Approximate location", short: "Location" },
+  { key: "anonymity", label: "VPN / proxy / Tor", short: "VPN / proxy" },
+  { key: "webrtc", label: "WebRTC leak", short: "WebRTC" },
+  { key: "fingerprint", label: "Fingerprint", short: "Fingerprint" },
+];
 
 export function bandItems(items: ExposureItem[]): ExposureItem[] {
-  return BAND.map((key) => items.find((item) => item.key === key)).filter(
-    (item): item is ExposureItem => item != null,
+  return BAND.map(
+    ({ key, label, short }) =>
+      items.find((item) => item.key === key) ?? {
+        key,
+        severity: "off" as const,
+        label,
+        short,
+        detail: "unknown",
+      },
   );
 }

@@ -90,20 +90,17 @@ export function WebRTC({
 
   return (
     <>
-      <FindingList className="mb-4">
-        {leak ? (
+      {/* Only when there's something to say. The row that opens this readout
+          already reports the clean case, and so does `Leak checks`. */}
+      {leak ? (
+        <FindingList className="mb-4">
           <Finding severity="warn" tip="webrtcLeak" title="Different public IP exposed">
             WebRTC revealed a public address that differs from the one normal requests come from.
             If you expected all traffic to use one VPN exit, check your browser or VPN&rsquo;s
             WebRTC leak protection.
           </Finding>
-        ) : (
-          <Finding severity="ok" tip="webrtcLeak" title="No different public IP exposed">
-            WebRTC did not reveal a public address other than the one this page was contacted
-            from.
-          </Finding>
-        )}
-      </FindingList>
+        </FindingList>
+      ) : null}
 
       {pub.length > 0 ? (
         <>
