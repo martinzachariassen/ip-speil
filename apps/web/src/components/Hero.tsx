@@ -101,13 +101,17 @@ export function Hero({
 
         <span className="mt-4 flex items-center gap-3.5">
           <span className="h-0.5 flex-1 bg-accent opacity-85" />
+          {/* `max-lg:opacity-100`: there is no hover on a touch screen, so a hint
+              that only appears on hover is a hint that never appears. Below `lg`
+              the word rides the rule permanently — it is the only thing telling
+              a thumb that the address is a button. */}
           <span
             aria-hidden="true"
             className={cx(
               "font-mono text-[11px] uppercase tracking-[0.16em] transition-opacity duration-[var(--dur-hover)] ease-[var(--ease-glide)]",
               copied
                 ? "text-success-deep opacity-100"
-                : "text-ink-soft opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
+                : "text-ink-soft opacity-0 max-lg:opacity-100 group-hover:opacity-100 group-focus-visible:opacity-100",
             )}
           >
             {copied ? "copied" : "copy"}
@@ -124,10 +128,18 @@ export function Hero({
           {/* Left-aligned under the address, with the arrowhead reaching back up
               into it. Centring the note (as the sketch did) leaves it floating
               between two columns of nothing and breaks the line the eye follows
-              down the page. */}
+              down the page.
+
+              `max-lg:hidden` — and hidden from the accessibility tree with it,
+              since the h1 above already names the thing. On a phone the note is
+              a margin note with no margin to sit in: the arrow and two lines of
+              hand cost about a third of the viewport, and they push the verdict
+              — the one reading people came for — below the fold. On the wide
+              layout it costs nothing, because it fills paper the address leaves
+              empty beside it. */}
           <MarginNote
             arrow="up-left"
-            className="items-start text-left"
+            className="max-lg:hidden items-start text-left"
             // Wider than the system's 24ch default: this note sits in the main
             // column under the address, not in a true margin.
             style={{ "--mlz-note-measure": "46ch" } as CSSProperties}
@@ -154,7 +166,10 @@ export function Hero({
           ) : null}
         </div>
 
-        <div className="mt-9 lg:mt-1.5 lg:w-[34ch] lg:shrink-0">{verdict}</div>
+        {/* Tighter below `lg` than the 36px the note used to need under it: with
+            the note gone the verdict hangs off the rule directly, and its own
+            separator supplies most of the gap. */}
+        <div className="mt-6 lg:mt-1.5 lg:w-[34ch] lg:shrink-0">{verdict}</div>
       </div>
     </section>
   );
