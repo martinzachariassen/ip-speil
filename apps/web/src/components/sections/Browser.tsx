@@ -1,6 +1,6 @@
 import { languageGeoCheck, timezoneCheck } from "../../lib/heuristics.ts";
 import type { IpInfo } from "../../types.ts";
-import { Icon } from "@martinzachariassen/design";
+import { Warning } from "../../lib/icons.tsx";
 import { BodyIntro, KV, KVList, Mono } from "../primitives.tsx";
 
 export function Browser({ d }: { d: IpInfo }) {
@@ -41,12 +41,10 @@ export function Browser({ d }: { d: IpInfo }) {
         <KV k="Timezone" mono>
           {tz.browserTz}
           {tzMismatch ? (
-            <Icon
-              name="triangle-alert"
-              size="xs"
-              label="timezone mismatch"
-              className="ml-1.5 inline-block align-[-2px] text-warn"
-            />
+            <>
+              <Warning className="ml-1.5 inline-block align-[-2px] text-warning-deep" />
+              <span className="sr-only">timezone mismatch</span>
+            </>
           ) : null}
         </KV>
         <KV k="Language" mono>

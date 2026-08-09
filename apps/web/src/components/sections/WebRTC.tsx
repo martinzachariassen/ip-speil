@@ -1,4 +1,12 @@
-import { Icon } from "@martinzachariassen/design";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@martinzachariassen/design";
+import { ArrowLeft } from "../../lib/icons.tsx";
 import { Tip } from "../../lib/glossary.tsx";
 import { isForeignPublicIp, webrtcLeak } from "../../lib/heuristics.ts";
 import type { WebRTCResult } from "../../types.ts";
@@ -25,7 +33,7 @@ function PublicTag({ ip, httpIp }: { ip: string; httpIp: string | undefined }) {
       {ip}
       {note ? (
         <>
-          <Icon name="arrow-left" size="xs" className="flex-none" />
+          <ArrowLeft />
           {note}
         </>
       ) : null}
@@ -122,34 +130,36 @@ export function WebRTC({
       {candidates.length > 0 ? (
         <>
           <SubLabel tip="iceCandidate">All candidates</SubLabel>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[280px] border-collapse text-[13px]">
-              <thead className="sr-only">
-                <tr>
-                  <th scope="col">Candidate type</th>
-                  <th scope="col">Address</th>
-                  <th scope="col">Scope</th>
-                </tr>
-              </thead>
-              <tbody>
-                {candidates.map((c, i) => (
-                  <tr
-                    // biome-ignore lint/suspicious/noArrayIndexKey: candidate order is stable within a scan
-                    key={i}
-                    className="border-b border-dashed border-line last:border-b-0"
-                  >
-                    <td className="w-[22%] break-words py-[7px] pr-2.5 align-top font-mono text-ink-soft">
-                      {c.type}
-                    </td>
-                    <td className="break-words py-[7px] pr-2.5 align-top font-mono">{c.address}</td>
-                    <td className="w-[26%] break-words py-[7px] align-top font-mono text-ink-soft">
-                      {c.scope}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* The design system's Table, which brings the focusable horizontal
+              scroll container this needs (WCAG 2.1.1) — the hand-rolled version
+              scrolled but couldn't be reached from the keyboard. The header row
+              stays sr-only: three mono columns of addresses read fine without
+              visible headings, but the relationship still has to be conveyed. */}
+          <Table className="text-[13px]">
+            <TableHeader className="sr-only">
+              <TableRow>
+                <TableHead>Candidate type</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Scope</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {candidates.map((c, i) => (
+                <TableRow
+                  // biome-ignore lint/suspicious/noArrayIndexKey: candidate order is stable within a scan
+                  key={i}
+                >
+                  <TableCell className="w-[22%] break-words align-top font-mono text-ink-soft">
+                    {c.type}
+                  </TableCell>
+                  <TableCell className="break-words align-top font-mono">{c.address}</TableCell>
+                  <TableCell className="w-[26%] break-words align-top font-mono text-ink-soft">
+                    {c.scope}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </>
       ) : null}
 

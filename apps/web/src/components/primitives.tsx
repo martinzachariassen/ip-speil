@@ -111,7 +111,9 @@ export type ChipTone = "default" | "alert" | "local" | "muted";
 
 const CHIP_TONE: Record<ChipTone, string> = {
   default: "",
-  alert: "border-destructive text-destructive",
+  // `-deep`, not the fill: a chromatic fill measures ~1.8:1 on paper, so using
+  // it as text is the one colour bug the design system's ladder exists to stop.
+  alert: "border-destructive text-destructive-deep",
   local: "border-dashed",
   muted: "text-ink-soft",
 };
@@ -263,28 +265,28 @@ export function Divider() {
   return <Separator className="my-4" />;
 }
 
-// Button — the design system's <Button>. ip-speil's "ghost"/"mini" map to the
-// system's ghost variant / small size; the default is the signature outline.
+// Button — the design system's <Button>. ip-speil's "ghost" maps to the system's
+// ghost variant; the default is the signature outline.
 export function Button({
   variant,
-  mini,
   className,
   children,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "ghost";
-  mini?: boolean;
 }) {
   const dsVariant: DsButtonProps["variant"] = variant === "ghost" ? "ghost" : "default";
   // The design system's ghost variant clears the outline without a replacement,
   // so add an explicit focus-visible ring here to guarantee a visible keyboard
-  // focus indicator across every ip-speil button (WCAG 2.4.7).
+  // focus indicator (WCAG 2.4.7). `ring-ring` — not `ring-accent`: the plain
+  // accent is a fill and measures 1.83:1 on paper, under the 3:1 a focus
+  // indicator has to clear. `--ring` sits on the `-deep` rung for exactly this.
   return (
     <DsButton
       variant={dsVariant}
       size="sm"
       className={cx(
-        "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
         className,
       )}
       {...props}

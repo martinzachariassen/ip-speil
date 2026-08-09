@@ -43,10 +43,16 @@ provides the security-header posture and rate limiting. The web front-end is a
 **built by Vite** (`@vitejs/plugin-react` + `@tailwindcss/vite` +
 `@cloudflare/vite-plugin`) into `apps/web/dist/`. Styling is **Tailwind CSS v4**,
 configured CSS-first: `apps/web/src/index.css` imports the design system
-(`@martinzachariassen/design`), which provides the semantic `@theme` tokens, the
-self-hosted fonts, and a base layer, and keys dark mode off a `data-theme`
-attribute — so colour needs no `dark:` variants. `index.css` itself adds only a thin
-token bridge (local `paper`/`ink`/`line` aliases over the system tokens). The Worker
+(**`@martinzachariassen/design` v0.6.0**, pinned to a GitHub tag and installed from
+its committed `dist/`), which provides the semantic `@theme` tokens, the self-hosted
+fonts, and a base layer, and keys dark mode off a `data-theme` attribute — so colour
+needs no `dark:` variants. `index.css` itself adds only a thin token bridge (local
+`paper`/`ink`/`line` aliases over the system tokens). The page is built almost
+entirely from that system: `Card`, `Collapsible`, `Grid`, `Container`, `DataList`,
+`Table`, `StatusChip`, `CopyButton`, `Callout`, `MarginNote`, `GlitchText`,
+`GridBackground`, `InfoTip`, `ToggleGroup`. **A gap in the system is fixed in the
+system** — new components land in `mlz-design` behind a changeset and a release
+before ip-speil uses them, never as a local one-off. The Worker
 (`apps/web/src/worker/`) runs on Cloudflare's runtime; the Cloudflare Vite plugin
 runs it in workerd during `vite dev` and wires the built assets on `vite build`.
 Everything else — TypeScript typecheck, Biome — is dev tooling.
@@ -154,17 +160,23 @@ apps/
       api.ts           Wrappers over the site's /api/* endpoints
       report.ts        Redacted, copyable diagnostics report
       types.ts         Client data shapes; re-exports wire types from @ip-speil/shared
-      hooks/           useScan (collect + render one scan), useTheme, useFlash
+      hooks/           useScan (collect + render one scan), useTheme, useFlash,
+                       useMediaQuery (bento open-by-default on desktop only)
       components/
-        Rail.tsx         Sticky identity rail: hero, verdict, actions
-        Reveal.tsx       Numbered accordion ("Deeper look" sections)
+        SiteHeader.tsx   Sticky bar: mark, scan actions, theme (≥lg)
+        Hero.tsx         Giant click-to-copy IP + margin note + IPv4/IPv6 toggle
+        StatusStripe.tsx Every exposure finding as a StatusChip; scrolls on phones
+        BentoCard.tsx    One bento panel (Card + Collapsible) + SectionLabel
+        MobileActions.tsx Sticky icon-only action bar (<lg)
+        GeoMap.tsx       Ruled box + pinging pin — a coordinate system, not a map
         primitives.tsx   Dot, Note, KV, Mono, SubLabel, Button, Skel, …
-        Footer.tsx       Site footer + required DB-IP attribution
-        sections/        Exposure, Facts, Privacy, Browser, IPv6, Fingerprint,
-                         Headers, WebRTC, Routing, Diff/Shared
+        Footer.tsx       curl lines, colophon + required DB-IP attribution
+        sections/        Facts (NetworkFacts/GeoFacts), Privacy, Browser, IPv6,
+                         Fingerprint, Headers, WebRTC, Routing, Diff/Shared
       probes/          network (IPv4/IPv6/DoH/CF trace), webrtc, fingerprint, dns-leak
-      lib/             cx, format, hash, heuristics (leak verdict, entropy), exposure,
-                       diff, snapshot, client-hints  (+ *.test.ts, run by `bun test`)
+      lib/             cx, icons, format, hash, heuristics (leak verdict, entropy),
+                       exposure, diff, snapshot, client-hints
+                       (+ *.test.ts, run by `bun test`)
     scripts/
       gen-brand-assets.ts  Renders the brand-asset set (favicons, app icons, OG/
                            Twitter cards) from the "mirror mark" via headless
@@ -254,18 +266,35 @@ static asset (`env.ASSETS.fetch`).
 - **Client-only fingerprinting.** Fingerprint signals are computed in the browser and
   never sent to the server; only a coarse entropy estimate reaches the copyable report.
 - **Styling is Tailwind v4, no CSS file to edit.** Author with utility classes;
-  colours use the `@theme` tokens (`bg-paper`, `text-ink`, `border-line`,
-  `text-accent`, …) which re-colour automatically when `[data-theme]` flips — don't
-  add `dark:` variants for colour. The base tokens (`:root` + `[data-theme="dark"]`),
-  fonts, and keyframes all live in the design system now; `src/index.css` only
-  re-exposes the ip-speil-local names (`paper`/`ink`/`line` → the system's semantic
-  tokens) through a thin `@theme inline` bridge. New app-level aliases go in that
-  bridge; a genuinely new *design* token belongs in the design system, not here. Keep
-  to `script-src 'self'` / `style-src 'self'`: no inline `<script>`/`<style>` or
-  `style=""` attributes (React's `style={{}}` prop is fine — it's CSSOM, not an HTML attribute).
+  colours use the `@theme` tokens (`bg-paper`, `text-ink`, `border-line`, …) which
+  re-colour automatically when `[data-theme]` flips — don't add `dark:` variants for
+  colour. The base tokens (`:root` + `[data-theme="dark"]`), fonts, and keyframes all
+  live in the design system; `src/index.css` only re-exposes the ip-speil-local
+  neutrals (`paper`/`ink`/`line`) through a thin `@theme inline` bridge. New app-level
+  aliases go in that bridge; a genuinely new *design* token belongs in the design
+  system, not here. Keep to `script-src 'self'` / `style-src 'self'`: no inline
+  `<script>`/`<style>` or `style=""` attributes (React's `style={{}}` prop is fine —
+  it's CSSOM, not an HTML attribute).
+- **Severity colours come from the system, not from local aliases.** The bridge used
+  to carry `ok`/`warn`, which pointed at the *fill* rung and invited `text-warn` — a
+  fill measures ~1.8:1 on paper, well under the 4.5:1 body-text bar. Severity now
+  travels through the system's components (`StatusChip`, `StatusDot`, `Callout`) and,
+  where a call site needs a colour by hand, the system's own names: **`-deep` for
+  text, icons and focus rings, `-subtle` for tinted surfaces, the bare fill only as a
+  background.** `mlz-design`'s `colour-usage.test.ts` enforces this upstream; there's
+  no equivalent gate here, so it's on you.
+- **Icons are local inline SVG** (`src/lib/icons.tsx`). The design system removed its
+  `<Icon>` in v0.4 ("no icon library, deliberately") and tells consumers to bring
+  their own — we draw the eleven Lucide paths we use rather than adding
+  `lucide-react` to an app with three runtime dependencies.
 - New browser code is just imported by a component/hook/probe — Vite bundles it, so
-  there's no per-file allowlist. Fonts (Space Mono + Space Grotesk) come from the
-  design system's `index-self-hosted.css` — don't re-add local webfonts.
+  there's no per-file allowlist. All four fonts (Space Grotesk, Space Mono,
+  Architects Daughter for `font-hand`, Instrument Serif for `font-serif`) come from
+  the design system's `index-self-hosted.css` — don't re-add local webfonts.
+- **`sr-only` is `position: absolute`.** Inside a horizontally-scrolling strip it
+  needs a positioned ancestor within the scroller, or its containing block becomes
+  the page root, it escapes the clip, and the document grows a phone-width horizontal
+  scrollbar. `StatusStripe`'s `relative` on each `<li>` is there for exactly that.
 - **The brand is the mirror mark.** ip-speil's identity is a monochrome mark built
   the same way as the MLZ mark in `@martinzachariassen/design` (solid polygon glyph
   on an ink tile, accent never in the mark): two triangles mirroring across a central
