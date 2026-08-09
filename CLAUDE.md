@@ -379,3 +379,20 @@ static asset (`env.ASSETS.fetch`).
   server-side would fingerprint our server rather than the visitor.
 - **DNS-leak (bash.ws) is best-effort** — it's wrapped in timeouts and degrades to the
   DoH-reachability note if the provider is unreachable.
+- **Most of the console noise on prod is the probes working, not bugs.** A cross-origin
+  `fetch` that fails is logged by the browser itself and cannot be caught away in JS,
+  so a healthy scan still prints `ERR_NAME_NOT_RESOLVED` for `ipv6.icanhazip.com` (no
+  IPv6 on this network), for `www.brokendnssec.net` (the resolver refused the
+  deliberately-broken signature — that *is* the "DNSSEC validated" result), and for the
+  four `N.<id>.bash.ws` labels (the DNS query is the signal; the connection is meant to
+  fail). Don't "fix" these by deleting the checks.
+- **Cloudflare injects two scripts the page CSP then blocks.** Both are zone features
+  applied *after* the Worker responds, so nothing in this repo can strip them — they
+  have to be turned off in the Cloudflare dashboard:
+  **Web Analytics** automatic setup injects `static.cloudflareinsights.com/beacon.min.js`
+  (blocked by `script-src 'self'`, and redundant — we proxy Umami first-party), and
+  **Security → Bots → JavaScript Detections** injects an inline `__CF$cv$params`
+  bootstrap for `/cdn-cgi/challenge-platform/…` (blocked by the same directive). Each
+  one costs a console error on every page load, and neither ever runs. Loosening the
+  CSP to admit them is the wrong direction: this is a privacy diagnostic that ships no
+  third-party script.

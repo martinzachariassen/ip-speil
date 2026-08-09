@@ -38,7 +38,13 @@ export function Readouts({ scan }: { scan: Scan | null }) {
     // A rule and a wide margin. Without them the first row started level with
     // whatever the two-column sheet above happened to end on, and read as one
     // more column of it.
-    <section className="mt-16 border-line border-t pt-11">
+    //
+    // The wide margin is what that job costs at `lg`, where this group has to
+    // separate itself from two columns ending at different heights. Below `lg`
+    // there are no columns to disown — the sheet is a single run — so the rule
+    // alone does the work, and the full 108px reads as a third of a phone
+    // screen of blank paper mid-page.
+    <section className="mt-10 border-line border-t pt-8 lg:mt-16 lg:pt-11">
       <SectionHeading as="h2">The full readout</SectionHeading>
       <p className="mt-2.5 mb-5 max-w-[76ch] text-[13.5px] text-ink-soft">
         Everything the checks above were drawn from, unsummarised. Open what you want to see.

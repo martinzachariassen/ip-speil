@@ -17,11 +17,25 @@ import { cx } from "../lib/cx.ts";
 import { type GlossaryKey, Tip } from "../lib/glossary.tsx";
 
 // Compose a label with an optional inline info-tip that explains a jargon term.
+//
+// One <span> of ordinary inline flow — deliberately *not* `inline-flex`. A
+// FindingItem sets its title row as a flex container, so an inline-flex wrapper
+// is blockified into a flex line of its own: the words become one flex item that
+// wraps inside itself while the tip stays pinned at the far right edge, level
+// with the middle of the block and a whole line away from the term it explains.
+// That only shows up once a title wraps, which on a phone is most of them.
+//
+// A plain span blockifies to `block` in the same position, so the text wraps
+// normally and the tip flows after the last word; outside a flex container it
+// stays inline and nothing changes. The system's InfoTip already sits on
+// `align-[-0.15em]` for exactly this, and the no-break space keeps it from
+// wrapping onto a line by itself.
 function withTip(label: ReactNode, tip?: GlossaryKey) {
   if (!tip) return label;
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span>
       {label}
+      {" "}
       <Tip k={tip} />
     </span>
   );
@@ -200,8 +214,28 @@ export function KVList({
 //
 // Two lists, not one in CSS columns: each keeps its own rule down the left, and
 // a column break can't land between a <dt> and its <dd>.
+//
+// Below `lg` the pair stacks, and the split down the middle stops meaning
+// anything — it was a device for filling a wide line. Both lists suppress the
+// rule above their first row (`first:border-t-0`, so a list doesn't open with a
+// stray mark), which at the seam leaves the second list's opening row jammed
+// against the last row of the first with no rule between them: the one place on
+// the sheet where two readings touch. Putting that rule back is what makes the
+// two halves read as the single continuous list they are on a phone.
 export function Columns({ children }: { children: ReactNode }) {
-  return <div className="grid gap-x-12 gap-y-0 lg:grid-cols-2">{children}</div>;
+  return (
+    <div
+      className={cx(
+        "grid gap-x-12 gap-y-0 lg:grid-cols-2",
+        // Findings (<ul>) also lose their top padding on the first row; data
+        // rows (<dl>) keep theirs, so they only need the rule back.
+        "max-lg:[&>ul+ul>li:first-child]:border-t max-lg:[&>ul+ul>li:first-child]:pt-2.5",
+        "max-lg:[&>dl+dl>div:first-child]:border-t",
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** Split a run of rows down the middle, so the two columns end level. */
@@ -256,14 +290,7 @@ export function Muted({ children }: { children: ReactNode }) {
 export function SubLabel({ children, tip }: { children: ReactNode; tip?: GlossaryKey }) {
   return (
     <Text variant="eyebrow" as="div" className="mt-[18px] mb-[6px] text-ink-soft">
-      {tip ? (
-        <span className="inline-flex items-center gap-1.5">
-          {children}
-          <Tip k={tip} />
-        </span>
-      ) : (
-        children
-      )}
+      {withTip(children, tip)}
     </Text>
   );
 }
