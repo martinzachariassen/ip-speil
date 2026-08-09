@@ -1,5 +1,5 @@
 /**
- * The eleven glyphs this app draws, as inline SVG.
+ * The seven glyphs this app draws, as inline SVG.
  *
  * The design system removed its `<Icon>` component in v0.4 ("no icon library,
  * deliberately") and tells consumers to bring their own. Rather than add
@@ -38,22 +38,7 @@ function Glyph({ className, children }: IconProps & { children: React.ReactNode 
   );
 }
 
-export function Check({ className }: IconProps) {
-  return (
-    <Glyph className={className}>
-      <path d="M20 6 9 17l-5-5" />
-    </Glyph>
-  );
-}
 
-export function Copy({ className }: IconProps) {
-  return (
-    <Glyph className={className}>
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-    </Glyph>
-  );
-}
 
 export function Clipboard({ className }: IconProps) {
   return (
@@ -85,22 +70,7 @@ export function Share({ className }: IconProps) {
   );
 }
 
-export function Sun({ className }: IconProps) {
-  return (
-    <Glyph className={className}>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4" />
-    </Glyph>
-  );
-}
 
-export function Moon({ className }: IconProps) {
-  return (
-    <Glyph className={className}>
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9" />
-    </Glyph>
-  );
-}
 
 export function Refresh({ className }: IconProps) {
   return (
@@ -138,10 +108,3 @@ export function ArrowRight({ className }: IconProps) {
   );
 }
 
-export function ChevronRight({ className }: IconProps) {
-  return (
-    <Glyph className={className}>
-      <path d="m9 18 6-6-6-6" />
-    </Glyph>
-  );
-}

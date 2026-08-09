@@ -1,11 +1,11 @@
-import { Callout, Container, Grid, GridBackground } from "@martinzachariassen/design";
+import { Callout, Container } from "@martinzachariassen/design";
 import { useMemo, useState } from "react";
-import { BentoCard, SectionLabel } from "./components/BentoCard.tsx";
+import { ExposureBand } from "./components/ExposureBand.tsx";
 import { Footer } from "./components/Footer.tsx";
 import { type Family, Hero } from "./components/Hero.tsx";
 import { MobileActions } from "./components/MobileActions.tsx";
+import { Section } from "./components/Section.tsx";
 import { SiteHeader } from "./components/SiteHeader.tsx";
-import { StatusStripe } from "./components/StatusStripe.tsx";
 import type { PageActions } from "./components/actions.ts";
 import { severityVariant, Skel } from "./components/primitives.tsx";
 import { Browser } from "./components/sections/Browser.tsx";
@@ -18,10 +18,8 @@ import { Privacy } from "./components/sections/Privacy.tsx";
 import { Routing } from "./components/sections/Routing.tsx";
 import { WebRTC } from "./components/sections/WebRTC.tsx";
 import { useFlash } from "./hooks/useFlash.ts";
-import { useMediaQuery } from "./hooks/useMediaQuery.ts";
 import { useScan } from "./hooks/useScan.ts";
-import { useTheme } from "./hooks/useTheme.ts";
-import { computeExposure } from "./lib/exposure.ts";
+import { bandItems, computeExposure } from "./lib/exposure.ts";
 import { decodeShare, encodeShare } from "./lib/snapshot.ts";
 
 // The read-only shared report is decoded once from the URL fragment; it never
@@ -31,21 +29,15 @@ function readSharedReport() {
 }
 
 function SkelBlock() {
-  return <Skel className="block h-16 w-full rounded-lg" />;
+  return <Skel className="block h-24 w-full rounded" />;
 }
 
 export function App() {
   const { scan, loading, report, diff, load, takeSnapshot, clearSnapshot } = useScan();
-  const { theme, toggle } = useTheme();
   const shared = useMemo(readSharedReport, []);
   const [family, setFamily] = useState<Family>("v4");
   const [status, setStatus] = useState("");
   const [snapshotFlash, flashSnapshot] = useFlash();
-
-  // The bento tiles from `lg` up; below that it's a stack, and a stack of ten
-  // open cards is a very long page. So on a phone everything but the first two
-  // starts folded.
-  const wide = useMediaQuery("(min-width: 64rem)");
 
   const exposure = useMemo(
     () =>
@@ -63,8 +55,7 @@ export function App() {
 
   const reportJson = useMemo(() => (report ? JSON.stringify(report, null, 2) : null), [report]);
   const shareUrl = useMemo(
-    () =>
-      report ? `${location.origin}${location.pathname}#r=${encodeShare(report)}` : null,
+    () => (report ? `${location.origin}${location.pathname}#r=${encodeShare(report)}` : null),
     [report],
   );
 
@@ -80,25 +71,11 @@ export function App() {
       setStatus("Snapshot saved locally");
     },
     snapshotFlash,
-    theme,
-    onToggleTheme: toggle,
     announce: setStatus,
   };
 
-  const fpBadge =
-    scan && scan.entropy.bits >= 18 ? (
-      <span className="font-mono text-[10px] text-warning-deep uppercase tracking-[0.12em]">
-        1 notice
-      </span>
-    ) : undefined;
-
   return (
-    <div className="relative min-h-dvh pb-20 lg:pb-0">
-      {/* The engineering-notebook grid, behind everything. `-z-10` keeps it under
-          the static content — an absolutely-positioned sibling would otherwise
-          paint over it. */}
-      <GridBackground cell={28} className="-z-10" />
-
+    <div className="min-h-dvh pb-20 lg:pb-0">
       <SiteHeader actions={actions} />
 
       {/* One polite live region for every action's outcome; the visible label
@@ -116,43 +93,39 @@ export function App() {
           onAnnounce={setStatus}
         />
 
-        {exposure ? (
+        <ExposureBand items={exposure ? bandItems(exposure.items) : null} />
+
+        {/* The one place a box is still right: a single statement the reader is
+            meant to act on, above a page of readings that only report. */}
+        {exposure && exposure.verdict.severity !== "ok" ? (
           <Callout
             variant={severityVariant(exposure.verdict.severity)}
             title={exposure.verdict.title}
             description={exposure.verdict.sub}
             pulse
-            className="mb-5"
+            className="mt-7"
           />
         ) : null}
 
-        <StatusStripe items={exposure?.items ?? null} />
-
         {shared ? (
-          <section className="mb-6" aria-label="Shared snapshot">
-            <SectionLabel>Shared snapshot</SectionLabel>
+          <Section title="Shared snapshot" className="mt-10">
             <Shared report={shared} />
-          </section>
+          </Section>
         ) : null}
 
-        <SectionLabel>
-          The detail <span>— every reading behind the summary</span>
-        </SectionLabel>
-
-        <Grid cols={6} gap="md" className="items-start pb-3">
-          <BentoCard num="I" title="Your network" span={2} defaultOpen>
+        {/* The sheet. Short fact lists flow in two columns from `lg`; the long
+            readouts below run full width, because a header dump or a fingerprint
+            table in a half-width column leaves a column-height void beside it. */}
+        <div className="pt-11 lg:columns-2 lg:gap-14">
+          <Section title="Exit &amp; network">
             {scan ? <NetworkFacts d={scan.data} exits={scan.exits} /> : <SkelBlock />}
-          </BentoCard>
+          </Section>
 
-          <BentoCard num="II" title="Where they place you" span={2} defaultOpen>
+          <Section title="Where they place you">
             {scan ? <GeoFacts d={scan.data} /> : <SkelBlock />}
-          </BentoCard>
+          </Section>
 
-          <BentoCard num="III" title="Your browser" span={2} defaultOpen={wide}>
-            {scan ? <Browser d={scan.data} /> : <SkelBlock />}
-          </BentoCard>
-
-          <BentoCard num="IV" title="The connection" span={3} defaultOpen={wide}>
+          <Section title="The connection">
             {scan ? (
               <IPv6
                 exits={scan.exits}
@@ -163,9 +136,13 @@ export function App() {
             ) : (
               <SkelBlock />
             )}
-          </BentoCard>
+          </Section>
 
-          <BentoCard num="V" title="Privacy checks" span={3} defaultOpen={wide}>
+          <Section title="Your browser">
+            {scan ? <Browser d={scan.data} /> : <SkelBlock />}
+          </Section>
+
+          <Section title="Leak checks">
             {scan ? (
               <Privacy
                 d={scan.data}
@@ -173,53 +150,40 @@ export function App() {
                 dnsLeak={scan.dnsLeak}
                 doh={scan.doh}
                 dnssec={scan.dnssec}
+                entropy={scan.entropy}
               />
             ) : (
               <SkelBlock />
             )}
-          </BentoCard>
+          </Section>
 
-          <BentoCard num="VI" title="WebRTC leak test" span={3} defaultOpen={wide}>
-            {scan ? <WebRTC webrtc={scan.webrtc} httpIp={scan.data.query} /> : <SkelBlock />}
-          </BentoCard>
-
-          <BentoCard num="VII" title="Routing & RPKI" span={3} defaultOpen={wide}>
+          <Section title="Routing &amp; RPKI">
             {scan ? <Routing d={scan.data} /> : <SkelBlock />}
-          </BentoCard>
+          </Section>
+        </div>
 
-          {/* From here down the readouts are long — a fingerprint table or a
-              header dump in a half-width column leaves a column-height void
-              beside it. Short fact lists tile; long ones take the full width. */}
-          <BentoCard
-            num="VIII"
-            title="Browser fingerprint"
-            span={6}
-            defaultOpen={wide}
-            badge={fpBadge}
-          >
-            {scan ? <Fingerprint fp={scan.fp} entropy={scan.entropy} /> : <SkelBlock />}
-          </BentoCard>
+        <Section title="WebRTC candidates">
+          {scan ? <WebRTC webrtc={scan.webrtc} httpIp={scan.data.query} /> : <SkelBlock />}
+        </Section>
 
-          <BentoCard num="IX" title="What the server sees" span={6} defaultOpen={wide}>
-            {scan ? <Headers headers={scan.headers} /> : <SkelBlock />}
-          </BentoCard>
+        <Section title="Browser fingerprint">
+          {scan ? <Fingerprint fp={scan.fp} entropy={scan.entropy} /> : <SkelBlock />}
+        </Section>
 
-          <BentoCard
-            num="X"
-            title="Snapshot & changes"
-            span={6}
-            defaultOpen={wide && Boolean(diff)}
-          >
-            {diff ? (
-              <Diff diff={diff} onClear={clearSnapshot} />
-            ) : (
-              <p className="text-[14px] text-ink-soft">
-                Nothing saved yet. Take a snapshot, change something about your connection — turn a
-                VPN on, switch networks — and come back to see exactly what moved.
-              </p>
-            )}
-          </BentoCard>
-        </Grid>
+        <Section title="What the server sees">
+          {scan ? <Headers headers={scan.headers} /> : <SkelBlock />}
+        </Section>
+
+        <Section title="Snapshot &amp; changes">
+          {diff ? (
+            <Diff diff={diff} onClear={clearSnapshot} />
+          ) : (
+            <p className="m-0 max-w-[62ch] text-[13.5px] text-ink-soft">
+              Nothing saved yet. Take a snapshot, change something about your connection — turn a
+              VPN on, switch networks — and come back to see exactly what moved.
+            </p>
+          )}
+        </Section>
 
         <Footer />
       </Container>

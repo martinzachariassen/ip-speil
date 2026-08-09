@@ -64,7 +64,7 @@ export function Diff({ diff, onClear }: { diff: SnapshotDiff; onClear: () => voi
         </Button>
       </div>
 
-      <KVList layout="grid">
+      <KVList>
         {diff.fields.map((f) => (
           <DiffRow key={f.label} {...f} />
         ))}

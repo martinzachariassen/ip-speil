@@ -4,9 +4,30 @@ import { isSuccessfulLookup } from "./format.ts";
 import type { GlossaryKey } from "./glossary.tsx";
 import { foreignResolvers, ispSuggestsHosting, isVpnSignal, webrtcLeak } from "./heuristics.ts";
 
+/**
+ * Stable identity for a finding, so the readout band can pick the five it wants
+ * without matching on label text — which would break the moment the wording
+ * changed, and silently.
+ */
+export type ExposureKey =
+  | "ip"
+  | "location"
+  | "anonymity"
+  | "hosting"
+  | "blocklists"
+  | "mobile"
+  | "webrtc"
+  | "dns"
+  | "doh"
+  | "fingerprint"
+  | "geo";
+
 export interface ExposureItem {
+  key: ExposureKey;
   severity: Severity;
   label: string;
+  /** The band's label for the same finding — it has one line and five columns. */
+  short?: string;
   detail?: string;
   /** Optional glossary term explained by an inline info-tip beside the label. */
   tip?: GlossaryKey;
@@ -26,8 +47,9 @@ export interface ExposureInput {
   entropy: EntropyEstimate;
 }
 
-// Derive the rail verdict + "What sites can see" ledger from a scan. Kept as a
-// pure function so both the rail (verdict) and the ledger section consume it.
+// Derive the page verdict and the full ledger of findings from one scan. Pure,
+// so the readout band and the verdict callout read the same computation instead
+// of each deciding for itself what counts as exposed.
 export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureInput): {
   verdict: Verdict;
   items: ExposureItem[];
@@ -40,22 +62,45 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
   const concerns: string[] = [];
 
   items.push({
+    key: "ip",
     severity: ok ? "off" : "warn",
     label: ok ? "Public IP" : "IP lookup",
+    short: "Exit",
     detail: ok ? d.query : "failed",
     tip: ok ? "publicIp" : undefined,
   });
 
   if (ok) {
     const place = [d.city, d.countryCode || d.country].filter(Boolean).join(", ");
-    items.push({ severity: "off", label: "Approximate location", detail: place || "unknown" });
+    items.push({
+      key: "location",
+      severity: "off",
+      label: "Approximate location",
+      short: "Location",
+      detail: place || "unknown",
+    });
     items.push(
       anonymity
-        ? { severity: "bad", label: "VPN / proxy / Tor", detail: "detected", tip: "vpnProxyTor" }
-        : { severity: "ok", label: "VPN / proxy / Tor", detail: "no signal", tip: "vpnProxyTor" },
+        ? {
+            key: "anonymity",
+            severity: "bad",
+            label: "VPN / proxy / Tor",
+            short: "VPN / proxy",
+            detail: "detected",
+            tip: "vpnProxyTor",
+          }
+        : {
+            key: "anonymity",
+            severity: "ok",
+            label: "VPN / proxy / Tor",
+            short: "VPN / proxy",
+            detail: "none detected",
+            tip: "vpnProxyTor",
+          },
     );
     if (d.hosting === true || ispSuggestsHosting(d)) {
       items.push({
+        key: "hosting",
         severity: "warn",
         label: "Datacenter / cloud IP",
         detail: "hosting ASN",
@@ -65,6 +110,7 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
     }
     if (d.blocklists?.length) {
       items.push({
+        key: "blocklists",
         severity: "warn",
         label: "Reputation DBs",
         detail: d.blocklists.join(", "),
@@ -73,15 +119,22 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
       concerns.push("a blocklist listing");
     }
     if (d.mobile) {
-      items.push({ severity: "off", label: "Mobile network", detail: "cellular ASN" });
+      items.push({
+        key: "mobile",
+        severity: "off",
+        label: "Mobile network",
+        detail: "cellular ASN",
+      });
     }
   }
 
   const leak = webrtcLeak(webrtc, d.query);
   items.push({
+    key: "webrtc",
     severity: leak ? "warn" : "ok",
     label: "WebRTC leak",
-    detail: leak ? "IP exposed" : "none",
+    short: "WebRTC",
+    detail: leak ? "IP exposed" : "no leak",
     tip: "webrtcLeak",
   });
   if (leak) concerns.push("a WebRTC leak");
@@ -90,6 +143,7 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
     const foreign = foreignResolvers(dnsLeak.resolvers, d.country);
     const n = dnsLeak.resolvers.length;
     items.push({
+      key: "dns",
       severity: foreign.length ? "warn" : "ok",
       label: "DNS leak",
       detail: foreign.length
@@ -103,19 +157,28 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
     });
     if (foreign.length) concerns.push("a DNS leak");
   } else if (doh === false) {
-    items.push({ severity: "warn", label: "DNS-over-HTTPS", detail: "blocked", tip: "doh" });
+    items.push({
+      key: "doh",
+      severity: "warn",
+      label: "DNS-over-HTTPS",
+      detail: "blocked",
+      tip: "doh",
+    });
   }
 
   const fpHigh = entropy.bits >= 18;
   items.push({
+    key: "fingerprint",
     severity: entropy.bits >= 26 ? "bad" : fpHigh ? "warn" : "ok",
     label: "Fingerprint",
-    detail: `${entropy.rarity} · ~${entropy.bits} bits`,
+    short: "Fingerprint",
+    detail: `~${entropy.bits} bits`,
     tip: "fingerprint",
   });
 
   if (d.geo && d.geo.total > 1) {
     items.push({
+      key: "geo",
       severity: "off",
       label: "Geo cross-check",
       detail: `${d.geo.agree}/${d.geo.total} agree`,
@@ -150,4 +213,21 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
             };
 
   return { verdict, items };
+}
+
+/**
+ * The readings that go in the band across the top, in the order they belong
+ * there — the address, where it puts you, and the three checks that most often
+ * come back with something.
+ *
+ * Anything missing (a failed lookup drops the location and anonymity readings)
+ * is skipped rather than left as an empty cell, so the band always has content
+ * in every column it shows.
+ */
+const BAND: ExposureKey[] = ["ip", "location", "anonymity", "webrtc", "fingerprint"];
+
+export function bandItems(items: ExposureItem[]): ExposureItem[] {
+  return BAND.map((key) => items.find((item) => item.key === key)).filter(
+    (item): item is ExposureItem => item != null,
+  );
 }

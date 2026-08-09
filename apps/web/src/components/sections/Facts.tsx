@@ -4,8 +4,7 @@ import type { GlossaryKey } from "../../lib/glossary.tsx";
 import { timezoneCheck } from "../../lib/heuristics.ts";
 import { Warning } from "../../lib/icons.tsx";
 import type { Exits, IpInfo } from "../../types.ts";
-import { GeoMap } from "../GeoMap.tsx";
-import { KV, KVList, MonoSm, Muted } from "../primitives.tsx";
+import { Absent, KV, KVList, MonoSm, Muted } from "../primitives.tsx";
 
 // One label/value row — the design system's grid <DataRow> (via <KV>), with a
 // flex-wrap value cell so multi-part values (a mono figure + a muted aside) keep
@@ -23,13 +22,7 @@ function Fact({ label, tip, children }: { label: string; tip?: GlossaryKey; chil
 }
 
 function LookupFailed() {
-  return (
-    <KVList layout="grid">
-      <Fact label="Status">
-        <Muted>IP lookup unavailable — try Refresh</Muted>
-      </Fact>
-    </KVList>
-  );
+  return <Absent>IP lookup unavailable — try Refresh.</Absent>;
 }
 
 /**
@@ -40,7 +33,7 @@ export function NetworkFacts({ d, exits }: { d: IpInfo; exits: Exits }) {
   if (!isSuccessfulLookup(d)) return <LookupFailed />;
 
   return (
-    <KVList layout="grid">
+    <KVList>
       <Fact label="Network">{d.isp || d.org ? d.isp || d.org : <Muted>unknown</Muted>}</Fact>
       {d.as ? (
         <Fact label="ASN" tip="asn">
@@ -62,8 +55,10 @@ export function NetworkFacts({ d, exits }: { d: IpInfo; exits: Exits }) {
 }
 
 /**
- * Where the geo databases put you, and how much to trust that — the map stub is
- * a coordinate system, not a claim about the street.
+ * Where the geo databases put you, and how much to trust that. The coordinates
+ * are a city-level estimate, and they're shown as figures rather than plotted:
+ * a map would mean a tile server, and a tile server would learn the very address
+ * this page exists to tell you about.
  */
 export function GeoFacts({ d }: { d: IpInfo }) {
   if (!isSuccessfulLookup(d)) return <LookupFailed />;
@@ -75,8 +70,7 @@ export function GeoFacts({ d }: { d: IpInfo }) {
 
   return (
     <>
-      {d.lat != null && d.lon != null ? <GeoMap lat={d.lat} lon={d.lon} /> : null}
-      <KVList layout="grid">
+      <KVList>
         <Fact label="Location">
           {place ? (
             <span>

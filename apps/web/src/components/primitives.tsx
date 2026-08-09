@@ -141,9 +141,8 @@ export function Chip({
 
 // A key/value row — the design system's <DataRow>. It renders a <dt>/<dd> pair,
 // so a run of KVs must sit inside a <KVList> (a real <dl>) for the description-
-// list relationship to be programmatically conveyed. The layout (`"justify"`
-// dashed rows vs `"grid"` fixed label column) is inherited from the parent
-// <KVList>, but a single row may override it.
+// list relationship to be programmatically conveyed. The layout is inherited
+// from the parent <KVList>, but a single row may override it.
 export function KV({
   k,
   mono,
@@ -166,10 +165,13 @@ export function KV({
 
 // The <dl> wrapper for a contiguous run of <KV> rows. Gives the dt/dd pairs a
 // valid, programmatically-determinable description-list container (WCAG 1.3.1).
-// `layout="grid"` cascades a fixed eyebrow-label column to every row — used by
-// the "Connection details" and snapshot-diff field lists.
+//
+// `ledger` is the page's row system: the design system's grid layout plus the
+// ruled margin. The rules are what let a dozen fact lists sit straight on the
+// page without a card around each one — they mark the block and measure the
+// column, which is the job the card borders used to do.
 export function KVList({
-  layout,
+  layout = "ledger",
   className,
   children,
 }: {
@@ -181,6 +183,16 @@ export function KVList({
     <DataList layout={layout} className={className}>
       {children}
     </DataList>
+  );
+}
+
+// A whole section with nothing to show — one muted line hanging off the same
+// rule the fact lists use, rather than an empty box. The design system's
+// <EmptyState> is the right thing when the emptiness is the subject and there's
+// an action to offer; here it is a footnote about an upstream that didn't answer.
+export function Absent({ children }: { children: ReactNode }) {
+  return (
+    <p className="m-0 border-line border-l py-1.5 pl-3.5 text-[13px] text-ink-faint">{children}</p>
   );
 }
 
@@ -207,34 +219,9 @@ export function Muted({ children }: { children: ReactNode }) {
   return <Text className="text-ink-soft">{children}</Text>;
 }
 
-// The section eyebrow — the single uppercase mono label role used above every
-// section (and, with `as="h4"`, as a sub-heading). Built on the design system's
-// <Text variant="eyebrow">. An inline <span> child renders as a normal-case,
-// slightly larger subtitle, so a label can carry a short aside on one line.
-export function Eyebrow({
-  as = "div",
-  className,
-  children,
-}: {
-  as?: React.ElementType;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <Text
-      variant="eyebrow"
-      as={as}
-      className={cx(
-        "[&_span]:text-[13px] [&_span]:normal-case [&_span]:tracking-normal [&_span]:text-ink-soft",
-        className,
-      )}
-    >
-      {children}
-    </Text>
-  );
-}
-
-// Uppercase mono sub-heading inside a reveal body (the eyebrow role).
+// Uppercase mono sub-heading inside a section body (the eyebrow role). The
+// section's own heading is the design system's <SectionHeading>; this is the
+// level below it, for a block within one section.
 export function SubLabel({ children, tip }: { children: ReactNode; tip?: GlossaryKey }) {
   return (
     <Text variant="eyebrow" as="div" className="mt-[18px] mb-[6px] text-ink-soft">

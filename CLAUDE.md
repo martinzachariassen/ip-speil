@@ -43,16 +43,16 @@ provides the security-header posture and rate limiting. The web front-end is a
 **built by Vite** (`@vitejs/plugin-react` + `@tailwindcss/vite` +
 `@cloudflare/vite-plugin`) into `apps/web/dist/`. Styling is **Tailwind CSS v4**,
 configured CSS-first: `apps/web/src/index.css` imports the design system
-(**`@martinzachariassen/design` v0.6.0**, pinned to a GitHub tag and installed from
+(**`@martinzachariassen/design` v0.7.0**, pinned to a GitHub tag and installed from
 its committed `dist/`), which provides the semantic `@theme` tokens, the self-hosted
 fonts, and a base layer, and keys dark mode off a `data-theme` attribute — so colour
 needs no `dark:` variants. `index.css` itself adds only a thin token bridge (local
 `paper`/`ink`/`line` aliases over the system tokens). The page is built almost
-entirely from that system: `Card`, `Collapsible`, `Grid`, `Container`, `DataList`,
-`Table`, `StatusChip`, `CopyButton`, `Callout`, `MarginNote`, `GlitchText`,
-`GridBackground`, `InfoTip`, `ToggleGroup`. **A gap in the system is fixed in the
-system** — new components land in `mlz-design` behind a changeset and a release
-before ip-speil uses them, never as a local one-off. The Worker
+entirely from that system: `Container`, `Readout`, `SectionHeading`, `DataList`
+(`layout="ledger"`), `FindingList`, `Table`, `Callout`, `CopyButton`, `MarginNote`,
+`GlitchText`, `ThemeProvider`/`ThemeToggle`, `InfoTip`, `ToggleGroup`. **A gap in the
+system is fixed in the system** — new components land in `mlz-design` behind a
+changeset and a release before ip-speil uses them, never as a local one-off. The Worker
 (`apps/web/src/worker/`) runs on Cloudflare's runtime; the Cloudflare Vite plugin
 runs it in workerd during `vite dev` and wires the built assets on `vite build`.
 Everything else — TypeScript typecheck, Biome — is dev tooling.
@@ -146,8 +146,8 @@ apps/
     index.html         Vite entry (root); mounts #root, loads /src/main.tsx as module
     vite.config.ts     react + tailwindcss + cloudflare plugins; assetsDir "bundle"
     src/
-      main.tsx         Bundle entry: apply theme, createRoot(<App/>), import index.css
-      App.tsx          Top-level layout: <Rail/> + <main> sections, wires the hooks
+      main.tsx         Bundle entry: pre-paint theme, <ThemeProvider>, createRoot(<App/>)
+      App.tsx          Page shape: header · hero · readout band · ruled sheet · footer
       index.css        Tailwind v4 entry: imports the DS (tokens + self-hosted fonts + base) + thin token bridge
       vite-env.d.ts    Vite client types + ambient non-standard browser API augments
       worker/
@@ -160,22 +160,23 @@ apps/
       api.ts           Wrappers over the site's /api/* endpoints
       report.ts        Redacted, copyable diagnostics report
       types.ts         Client data shapes; re-exports wire types from @ip-speil/shared
-      hooks/           useScan (collect + render one scan), useTheme, useFlash,
-                       useMediaQuery (bento open-by-default on desktop only)
+      hooks/           useScan (collect + render one scan), useFlash
       components/
-        SiteHeader.tsx   Sticky bar: mark, scan actions, theme (≥lg)
-        Hero.tsx         Giant click-to-copy IP + margin note + IPv4/IPv6 toggle
-        StatusStripe.tsx Every exposure finding as a StatusChip; scrolls on phones
-        BentoCard.tsx    One bento panel (Card + Collapsible) + SectionLabel
+        SiteHeader.tsx   Sticky bar: mark, scan actions (≥lg), <ThemeToggle iconOnly/>
+        Hero.tsx         h1 + click-to-copy IP (target hugs the address, affordance
+                         on the rule) + left-aligned MarginNote + IPv4/IPv6 toggle
+        ExposureBand.tsx The five headline readings as a <Readout>; snap-scrolls <720px
+        Section.tsx      <SectionHeading> + body, break-inside-avoid for the sheet
         MobileActions.tsx Sticky icon-only action bar (<lg)
-        GeoMap.tsx       Ruled box + pinging pin — a coordinate system, not a map
-        primitives.tsx   Dot, Note, KV, Mono, SubLabel, Button, Skel, …
+        primitives.tsx   Dot, Note, KV/KVList (ledger), Absent, Mono, Button, Skel, …
         Footer.tsx       curl lines, colophon + required DB-IP attribution
-        sections/        Facts (NetworkFacts/GeoFacts), Privacy, Browser, IPv6,
-                         Fingerprint, Headers, WebRTC, Routing, Diff/Shared
+        sections/        Facts (NetworkFacts/GeoFacts), Privacy (the FindingList of
+                         leak checks), Browser, IPv6, Fingerprint, Headers, WebRTC,
+                         Routing, Diff/Shared
       probes/          network (IPv4/IPv6/DoH/CF trace), webrtc, fingerprint, dns-leak
-      lib/             cx, icons, format, hash, heuristics (leak verdict, entropy),
-                       exposure, diff, snapshot, client-hints
+      lib/             cx, icons, format, hash, theme (pre-paint apply), heuristics
+                       (leak verdict, entropy), exposure (+ bandItems), diff,
+                       snapshot, client-hints
                        (+ *.test.ts, run by `bun test`)
     scripts/
       gen-brand-assets.ts  Renders the brand-asset set (favicons, app icons, OG/
@@ -294,7 +295,23 @@ static asset (`env.ASSETS.fetch`).
 - **`sr-only` is `position: absolute`.** Inside a horizontally-scrolling strip it
   needs a positioned ancestor within the scroller, or its containing block becomes
   the page root, it escapes the clip, and the document grows a phone-width horizontal
-  scrollbar. `StatusStripe`'s `relative` on each `<li>` is there for exactly that.
+  scrollbar. The design system's `ReadoutCell` carries `relative` for exactly that
+  reason; keep it in mind for any scroller built here.
+- **The page is rules, not boxes.** Ten `Card`s make every reading look equally
+  important and the borders say nothing. Sections sit straight on the paper:
+  `SectionHeading` marks where one starts and measures its column, `DataList
+  layout="ledger"` rules the rows, `FindingList` rules the checks, and `Absent` is
+  one muted line where a whole section has nothing. The one remaining box is the
+  verdict `Callout` — a single statement the reader is meant to act on, above a page
+  of readings that only report.
+- **`color-mix(… in oklch …, transparent)` drifts the hue.** Chrome doesn't treat
+  transparent's hue as powerless, so a translucent paper mixed in `oklch` comes out
+  visibly pink. Use Tailwind's alpha modifier (`bg-paper/90`), which mixes in
+  `oklab` — see `SiteHeader` and `MobileActions`.
+- **Theme is the design system's.** `ThemeProvider` (attribute `data-theme`, key
+  `ipspeil-theme`) owns light/dark/**system**, and `ThemeToggle iconOnly` is the
+  control. `lib/theme.ts` only applies the stored choice pre-paint — the system's
+  `themeInitScript()` is an inline `<script>` and would be refused by our CSP.
 - **The brand is the mirror mark.** ip-speil's identity is a monochrome mark built
   the same way as the MLZ mark in `@martinzachariassen/design` (solid polygon glyph
   on an ink tile, accent never in the mark): two triangles mirroring across a central
