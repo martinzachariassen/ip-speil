@@ -10,6 +10,7 @@ import type { Scan } from "../hooks/useScan.ts";
 import { Dot, SEVERITY_LABEL, type Severity, Skel } from "./primitives.tsx";
 import { Fingerprint, fingerprintSummary } from "./sections/Fingerprint.tsx";
 import { Headers } from "./sections/Headers.tsx";
+import { Routing, routingSummary } from "./sections/Routing.tsx";
 import { WebRTC, webrtcSummary } from "./sections/WebRTC.tsx";
 
 /**
@@ -28,6 +29,7 @@ import { WebRTC, webrtcSummary } from "./sections/WebRTC.tsx";
  * up in the band and the leak checks. That's what makes it safe to fold.
  */
 export function Readouts({ scan }: { scan: Scan | null }) {
+  const routing = scan ? routingSummary(scan.data) : null;
   const webrtc = scan ? webrtcSummary(scan.webrtc, scan.data.query) : null;
   const fp = scan ? fingerprintSummary(scan.entropy) : null;
   const headerCount = scan ? Object.keys(scan.headers).length : 0;
@@ -43,6 +45,14 @@ export function Readouts({ scan }: { scan: Scan | null }) {
       </p>
 
       <Accordion type="multiple">
+        <Readout
+          value="routing"
+          title="Routing &amp; RPKI"
+          summary={routing && <Summary severity={routing.severity}>{routing.text}</Summary>}
+        >
+          {scan ? <Routing d={scan.data} /> : <SkelBlock />}
+        </Readout>
+
         <Readout
           value="webrtc"
           title="WebRTC candidates"

@@ -11,11 +11,10 @@ import { Verdict } from "./components/Verdict.tsx";
 import type { PageActions } from "./components/actions.ts";
 import { Skel } from "./components/primitives.tsx";
 import { Browser } from "./components/sections/Browser.tsx";
-import { Connection, ConnectionSecurity } from "./components/sections/Connection.tsx";
+import { ConnectionSecurity } from "./components/sections/ConnectionSecurity.tsx";
 import { Diff, Shared } from "./components/sections/Diff.tsx";
 import { GeoFacts, NetworkFacts } from "./components/sections/Facts.tsx";
 import { Privacy } from "./components/sections/Privacy.tsx";
-import { Routing } from "./components/sections/Routing.tsx";
 import { useFlash } from "./hooks/useFlash.ts";
 import { useScan } from "./hooks/useScan.ts";
 import { bandItems, computeExposure } from "./lib/exposure.ts";
@@ -118,27 +117,33 @@ export function App() {
           )}
         </Section>
 
-        {/* Six fact lists in explicit pairs, not a CSS column flow. A flow
+        {/* Four fact lists in two explicit pairs, not a CSS column flow. A flow
             balances the *whole* run, so one unbreakable section landing badly
             leaves a screen-tall hole at the foot of a column; a grid bounds the
-            slack to the difference within one row, and the pairs are related
-            besides — the address and where it puts you, the exit and what the
-            path can see. */}
+            slack to the difference within one row.
+
+            Getting the holes out took more than pairing, though. Two of the six
+            sections couldn't hold a column: "The connection" never had more than
+            a few rows and reported the same IPv6 exit as "Exit & network", so
+            they're one section now; and "Routing & RPKI" is either a full
+            registry ledger or a single muted line depending on whether RIPEstat
+            answers, so it moved into the readout accordion, where its height
+            stops mattering. */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-x-14">
           <Section title="Exit &amp; network">
-            {scan ? <NetworkFacts d={scan.data} exits={scan.exits} /> : <SkelBlock />}
+            {scan ? (
+              <NetworkFacts d={scan.data} exits={scan.exits} ipv6Info={scan.ipv6Info} />
+            ) : (
+              <SkelBlock />
+            )}
           </Section>
 
           <Section title="Where they place you">
             {scan ? <GeoFacts d={scan.data} /> : <SkelBlock />}
           </Section>
 
-          <Section title="The connection">
-            {scan ? (
-              <Connection exits={scan.exits} ipv6Info={scan.ipv6Info} httpInfo={scan.data} />
-            ) : (
-              <SkelBlock />
-            )}
+          <Section title="Your browser">
+            {scan ? <Browser d={scan.data} /> : <SkelBlock />}
           </Section>
 
           {/* Its own heading, not a sub-heading at the bottom of the exits: what
@@ -146,14 +151,6 @@ export function App() {
               your traffic comes out. */}
           <Section title="Connection security">
             {scan ? <ConnectionSecurity cfTrace={scan.cfTrace} /> : <SkelBlock />}
-          </Section>
-
-          <Section title="Your browser">
-            {scan ? <Browser d={scan.data} /> : <SkelBlock />}
-          </Section>
-
-          <Section title="Routing &amp; RPKI">
-            {scan ? <Routing d={scan.data} /> : <SkelBlock />}
           </Section>
         </div>
 

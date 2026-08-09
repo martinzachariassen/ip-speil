@@ -1,7 +1,17 @@
 import { FindingList } from "@martinzachariassen/design";
 import { isSuccessfulLookup } from "../../lib/format.ts";
 import type { IpInfo, RpkiInfo } from "../../types.ts";
-import { Absent, Finding, Footnote, KV, KVList, Mono, MonoSm, SubLabel } from "../primitives.tsx";
+import {
+  Absent,
+  Finding,
+  Footnote,
+  KV,
+  KVList,
+  Mono,
+  MonoSm,
+  type Severity,
+  SubLabel,
+} from "../primitives.tsx";
 
 function RpkiFinding({ rpki }: { rpki: RpkiInfo }) {
   if (rpki.state === "valid") {
@@ -26,6 +36,36 @@ function RpkiFinding({ rpki }: { rpki: RpkiInfo }) {
       problem in itself.
     </Finding>
   );
+}
+
+/**
+ * What the row that opens this readout says about it.
+ *
+ * This section is why the sheet used to have a hole in it: with a live registry
+ * it is a full ledger — prefix, origin ASN, RPKI state, ROAs, abuse contact —
+ * and when RIPEstat is quiet it is a single muted line. Behind a disclosure its
+ * height stops mattering, and the one thing worth a glance (whether the route is
+ * authorised) is on the row itself.
+ */
+export function routingSummary(d: IpInfo): { severity: Severity; text: string } {
+  if (!isSuccessfulLookup(d)) {
+    return { severity: "off", text: "Needs a successful IP lookup" };
+  }
+  const r = d.routing;
+  if (!r || (!r.prefix && !r.originAsn && !r.rpki)) {
+    return { severity: "off", text: "The routing registry didn't answer for this network" };
+  }
+  const state = r.rpki?.state;
+  return {
+    severity: state === "valid" ? "ok" : state === "invalid" ? "bad" : "off",
+    text: [
+      state ? `RPKI ${state}` : null,
+      r.originAsn,
+      r.prefix,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  };
 }
 
 export function Routing({ d }: { d: IpInfo }) {

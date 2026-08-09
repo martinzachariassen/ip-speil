@@ -169,15 +169,17 @@ apps/
         Verdict.tsx      The page's conclusion, set opposite the note in the hero
         ExposureBand.tsx The five headline readings as a <Readout>; snap-scrolls <720px
         Section.tsx      <SectionHeading> + body — one section of the sheet
-        Readouts.tsx     "The full readout": the three long reference readouts in
-                         one <Accordion> (title · what it found · chevron)
+        Readouts.tsx     "The full readout": the four reference readouts (routing,
+                         WebRTC, fingerprint, headers) in one <Accordion>
+                         (title · what it found · chevron)
         MobileActions.tsx Sticky icon-only action bar (<lg)
         primitives.tsx   Dot, Finding, KV/KVList (ledger), Columns/halves, Absent,
                          Footnote, Mono, Button, Skel, …
-        Footer.tsx       curl lines, colophon + required DB-IP attribution
-        sections/        Facts (NetworkFacts/GeoFacts), Privacy (the FindingList of
-                         leak checks), Browser, Connection (+ConnectionSecurity),
-                         Fingerprint, Headers, WebRTC, Routing, Diff/Shared
+        Footer.tsx       One-line colophon + required DB-IP attribution
+        sections/        Facts (NetworkFacts — exits + operator; GeoFacts), Privacy
+                         (the FindingList of leak checks), Browser,
+                         ConnectionSecurity, Fingerprint, Headers, WebRTC,
+                         Routing, Diff/Shared
       probes/          network (IPv4/IPv6/DoH/CF trace), webrtc, fingerprint, dns-leak
       lib/             cx, icons, format, hash, theme (pre-paint apply), heuristics
                        (leak verdict, entropy), exposure (+ bandItems), diff,
@@ -329,7 +331,11 @@ static asset (`env.ASSETS.fetch`).
   whole run, so one unbreakable section landing badly leaves a screen-tall hole at
   the foot of a column — which is what put the reference readouts level with the
   middle of the other column. An explicit `lg:grid-cols-2` bounds the slack to the
-  height difference inside one row.
+  height difference inside one row. **A section that can't hold a column doesn't
+  get one**: "The connection" was folded into `NetworkFacts` (both reported the
+  same IPv6 exit), and `Routing` moved into the readout accordion because it's
+  either a full registry ledger or a single muted line depending on whether
+  RIPEstat answers, and nothing in a fixed grid survives that swing.
 - **Long lists run in two columns, not full width.** `Columns` sets two `KVList`s —
   or two `FindingList`s — side by side from `lg`, with `halves()` splitting the rows.
   Two lists rather than one in CSS columns: each keeps its own rule, and a column
