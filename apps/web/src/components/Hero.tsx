@@ -40,14 +40,7 @@ interface HeroProps {
  *
  * Copying fires one glitch burst: feedback, not atmosphere.
  */
-export function Hero({
-  scan,
-  loading,
-  family,
-  onFamilyChange,
-  onAnnounce,
-  verdict,
-}: HeroProps) {
+export function Hero({ scan, loading, family, onFamilyChange, onAnnounce, verdict }: HeroProps) {
   const glitch = useRef<GlitchTextHandle>(null);
   const { copied, copy } = useCopyToClipboard(2600);
 
@@ -144,8 +137,8 @@ export function Hero({
             // column under the address, not in a true margin.
             style={{ "--mlz-note-measure": "46ch" } as CSSProperties}
           >
-            this is the address every site you visit sees — including the ones you never asked to
-            be seen by
+            this is the address every site you visit sees — including the ones you never asked to be
+            seen by
           </MarginNote>
 
           {v6 && v4 ? (

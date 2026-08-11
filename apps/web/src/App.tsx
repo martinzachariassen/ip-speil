@@ -1,19 +1,19 @@
 import { Container } from "@martinzachariassen/design";
 import { useMemo, useState } from "react";
+import type { PageActions } from "./components/actions.ts";
 import { ExposureBand } from "./components/ExposureBand.tsx";
 import { Footer } from "./components/Footer.tsx";
 import { type Family, Hero } from "./components/Hero.tsx";
 import { MobileActions } from "./components/MobileActions.tsx";
+import { Skel } from "./components/primitives.tsx";
 import { Readouts } from "./components/Readouts.tsx";
 import { Section } from "./components/Section.tsx";
 import { SiteHeader } from "./components/SiteHeader.tsx";
-import { Verdict } from "./components/Verdict.tsx";
-import type { PageActions } from "./components/actions.ts";
-import { Skel } from "./components/primitives.tsx";
 import { Browser } from "./components/sections/Browser.tsx";
 import { Diff, Shared } from "./components/sections/Diff.tsx";
 import { GeoFacts, NetworkFacts } from "./components/sections/Facts.tsx";
 import { Privacy } from "./components/sections/Privacy.tsx";
+import { Verdict } from "./components/Verdict.tsx";
 import { useFlash } from "./hooks/useFlash.ts";
 import { useScan } from "./hooks/useScan.ts";
 import { bandItems, computeExposure } from "./lib/exposure.ts";
@@ -148,9 +148,7 @@ export function App() {
           </Section>
         </div>
 
-        <Section title="Your browser">
-          {scan ? <Browser d={scan.data} /> : <SkelBlock />}
-        </Section>
+        <Section title="Your browser">{scan ? <Browser d={scan.data} /> : <SkelBlock />}</Section>
 
         <Readouts scan={scan} />
 

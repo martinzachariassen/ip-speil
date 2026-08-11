@@ -17,11 +17,6 @@ export function isTorExit(ip: string): boolean {
   return exits.has(ip);
 }
 
-/** Number of Tor exit nodes currently loaded in memory. */
-export function torExitCount(): number {
-  return exits.size;
-}
-
 /**
  * Refresh the exit set, throttled to once per hour. On failure the last good set
  * is kept. Coalesces concurrent calls onto one in-flight fetch.

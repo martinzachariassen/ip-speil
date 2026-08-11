@@ -1,12 +1,11 @@
 import {
   Badge,
-  Button as DsButton,
-  type ButtonProps as DsButtonProps,
   type DataLayout,
   DataList,
   DataRow,
+  Button as DsButton,
+  type ButtonProps as DsButtonProps,
   FindingItem,
-  Separator,
   Skeleton,
   StatusDot,
   type StatusDotProps,
@@ -248,7 +247,11 @@ export function halves<T>(rows: T[]): [T[], T[]] {
 // that reassures rather than reports (what we sent upstream, what we didn't
 // keep); it belongs on the page but not at the weight of a reading.
 export function Footnote({ children }: { children: ReactNode }) {
-  return <p className="mt-3.5 mb-0 max-w-[68ch] text-[12px] text-ink-faint leading-relaxed">{children}</p>;
+  return (
+    <p className="mt-3.5 mb-0 max-w-[68ch] text-[12px] text-ink-faint leading-relaxed">
+      {children}
+    </p>
+  );
 }
 
 // A whole section with nothing to show — one muted line hanging off the same
@@ -305,11 +308,6 @@ export function BodyIntro({ children }: { children: ReactNode }) {
   );
 }
 
-// A hairline rule — the design system's <Separator>.
-export function Divider() {
-  return <Separator className="my-4" />;
-}
-
 // Button — the design system's <Button>. ip-speil's "ghost" maps to the system's
 // ghost variant; the default is the signature outline.
 export function Button({
@@ -343,12 +341,6 @@ export function Button({
 
 // Shimmer skeleton placeholder — the design system's <Skeleton>. Kept
 // inline-block + align-middle so it drops into inline text like the old Skel.
-export function Skel({
-  className,
-  style,
-}: {
-  className?: string;
-  style?: React.CSSProperties;
-}) {
+export function Skel({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return <Skeleton className={cx("inline-block align-middle", className)} style={style} />;
 }

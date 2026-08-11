@@ -38,8 +38,6 @@ function Glyph({ className, children }: IconProps & { children: React.ReactNode 
   );
 }
 
-
-
 export function Clipboard({ className }: IconProps) {
   return (
     <Glyph className={className}>
@@ -69,8 +67,6 @@ export function Share({ className }: IconProps) {
     </Glyph>
   );
 }
-
-
 
 export function Refresh({ className }: IconProps) {
   return (
@@ -107,4 +103,3 @@ export function ArrowRight({ className }: IconProps) {
     </Glyph>
   );
 }
-

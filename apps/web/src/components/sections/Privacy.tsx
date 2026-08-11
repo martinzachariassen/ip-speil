@@ -14,13 +14,7 @@ import type {
   IpInfo,
   WebRTCResult,
 } from "../../types.ts";
-import {
-  Absent,
-  Columns,
-  Finding as FindingRow,
-  halves,
-  type Severity,
-} from "../primitives.tsx";
+import { Absent, Columns, Finding as FindingRow, halves, type Severity } from "../primitives.tsx";
 
 interface Finding {
   severity: Severity;

@@ -1,6 +1,6 @@
 import { Readout, ReadoutCell } from "@martinzachariassen/design";
 import type { ExposureItem } from "../lib/exposure.ts";
-import { SEVERITY_LABEL, severityVariant, Skel } from "./primitives.tsx";
+import { SEVERITY_LABEL, Skel, severityVariant } from "./primitives.tsx";
 
 /**
  * The five headline readings, on one line, under the address.
