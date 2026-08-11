@@ -42,12 +42,6 @@ const FIELDS: { label: string; get: (r: Report) => unknown }[] = [
   { label: "WebRTC IP leak", get: (r) => r.signals?.webrtcDifferentPublicIp },
   { label: "WebRTC public IPs", get: (r) => r.webrtc?.publicCount },
   { label: "Fingerprint entropy (bits)", get: (r) => r.signals?.fingerprintEntropyBits },
-  { label: "CF datacenter", get: (r) => r.cloudflare?.colo ?? null },
-  { label: "CF sees country", get: (r) => r.cloudflare?.loc ?? null },
-  { label: "Cloudflare WARP", get: (r) => r.cloudflare?.warp ?? null },
-  { label: "HTTP version", get: (r) => r.cloudflare?.http ?? null },
-  { label: "TLS version", get: (r) => r.cloudflare?.tls ?? null },
-  { label: "Encrypted Client Hello", get: (r) => r.cloudflare?.ech ?? null },
 ];
 
 export function fmtValue(v: unknown): string {

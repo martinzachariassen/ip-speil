@@ -2,7 +2,6 @@ import { clientHintsStatus } from "./lib/client-hints.ts";
 import { networkLabel } from "./lib/format.ts";
 import { foreignResolvers, webrtcLeak } from "./lib/heuristics.ts";
 import type {
-  CFTrace,
   DnsLeakResult,
   DnssecResult,
   EntropyEstimate,
@@ -28,7 +27,6 @@ export interface ReportInput {
   webrtc: WebRTCResult;
   exits: Exits;
   ipv6Info: IpInfo | null;
-  cfTrace: CFTrace | null;
   headers: HeaderMap;
   dnsLeak: DnsLeakResult;
   dnssec: DnssecResult;
@@ -41,7 +39,7 @@ export interface ReportInput {
 export type Report = ReturnType<typeof buildReport>;
 
 export function buildReport(input: ReportInput) {
-  const { data, webrtc, exits, ipv6Info, cfTrace, headers, dnsLeak, dnssec, doh, entropy } = input;
+  const { data, webrtc, exits, ipv6Info, headers, dnsLeak, dnssec, doh, entropy } = input;
   const foreignCount = foreignResolvers(dnsLeak.resolvers, data.country).length;
   const routing = data.routing;
 
@@ -90,19 +88,6 @@ export function buildReport(input: ReportInput) {
       mdnsMaskedCount: webrtc.mdns,
       candidateTypes: [...new Set(webrtc.candidates.map((c) => c.type))],
     },
-    cloudflare: cfTrace
-      ? {
-          colo: cfTrace.colo || null,
-          loc: cfTrace.loc || null,
-          warp: cfTrace.warp || null,
-          gateway: cfTrace.gateway || null,
-          http: cfTrace.http || null,
-          tls: cfTrace.tls || null,
-          // sni=encrypted → Encrypted Client Hello was used on this connection.
-          ech: cfTrace.sni ? cfTrace.sni === "encrypted" : null,
-          keyExchange: cfTrace.kex || null,
-        }
-      : null,
     headersObserved: Object.keys(headers ?? {}).sort(),
     // Presence/absence of the high-entropy client hints we solicited — never
     // their values, to keep the report shareable.

@@ -177,10 +177,9 @@ apps/
                          Footnote, Mono, Button, Skel, …
         Footer.tsx       One-line colophon + required DB-IP attribution
         sections/        Facts (NetworkFacts — exits + operator; GeoFacts), Privacy
-                         (the FindingList of leak checks), Browser,
-                         ConnectionSecurity, Fingerprint, Headers, WebRTC,
-                         Routing, Diff/Shared
-      probes/          network (IPv4/IPv6/DoH/CF trace), webrtc, fingerprint, dns-leak
+                         (the FindingList of leak checks), Browser, Fingerprint,
+                         Headers, WebRTC, Routing, Diff/Shared
+      probes/          network (IPv4/IPv6/DoH), webrtc, fingerprint, dns-leak
       lib/             cx, icons, format, hash, theme (pre-paint apply), heuristics
                        (leak verdict, entropy), exposure (+ bandItems), diff,
                        snapshot, client-hints
@@ -377,6 +376,11 @@ static asset (`env.ASSETS.fetch`).
 - **TLS/JA3/JA4 fingerprinting was evaluated and dropped:** the only free service
   (tls.peet.ws) sends no CORS header, so the browser can't read it, and proxying it
   server-side would fingerprint our server rather than the visitor.
+- **The "Connection security" section (TLS/ECH/WARP via `1.1.1.1/cdn-cgi/trace`) was
+  removed for the same reason:** Cloudflare now returns 503 to cross-origin
+  `fetch`/`XHR` requests against that endpoint (confirmed live — a plain navigation to
+  the same URL still returns 200), and proxying it server-side would report the
+  Worker's handshake with Cloudflare, not the visitor's browser.
 - **DNS-leak (bash.ws) is best-effort** — it's wrapped in timeouts and degrades to the
   DoH-reachability note if the provider is unreachable.
 - **Most of the console noise on prod is the probes working, not bugs.** A cross-origin
