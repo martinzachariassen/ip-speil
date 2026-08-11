@@ -24,8 +24,6 @@ export interface WebRTCResult {
   candidates: IceCandidateInfo[];
 }
 
-export type CFTrace = Record<string, string>;
-
 export interface WebGLInfo {
   renderer: string;
   vendor: string;
