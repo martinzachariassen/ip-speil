@@ -1,5 +1,3 @@
-import type { CFTrace } from "../types.ts";
-
 async function fetchExitIp(url: string, wantFamily: 4 | 6): Promise<string | null> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
@@ -27,21 +25,6 @@ export async function getDohReachable(): Promise<boolean | null> {
     if (!res.ok) return false;
     const data = await res.json();
     return Array.isArray(data?.Answer) && data.Answer.length > 0;
-  } catch {
-    return null;
-  }
-}
-
-export async function getCFTrace(): Promise<CFTrace | null> {
-  try {
-    const res = await fetch("https://1.1.1.1/cdn-cgi/trace", { signal: AbortSignal.timeout(4000) });
-    if (!res.ok) return null;
-    const obj: CFTrace = {};
-    for (const line of (await res.text()).split("\n")) {
-      const i = line.indexOf("=");
-      if (i > 0) obj[line.slice(0, i)] = line.slice(i + 1);
-    }
-    return obj;
   } catch {
     return null;
   }

@@ -12,11 +12,10 @@ import {
 import { getDnsLeak } from "../probes/dns-leak.ts";
 import { getDnssec } from "../probes/dnssec.ts";
 import { collectFingerprint } from "../probes/fingerprint.ts";
-import { getCFTrace, getDohReachable, getIPv4, getIPv6 } from "../probes/network.ts";
+import { getDohReachable, getIPv4, getIPv6 } from "../probes/network.ts";
 import { getWebRTCIPs } from "../probes/webrtc.ts";
 import { buildReport, type Report } from "../report.ts";
 import type {
-  CFTrace,
   DnsLeakResult,
   DnssecResult,
   EntropyEstimate,
@@ -33,7 +32,6 @@ export interface Scan {
   data: IpInfo;
   webrtc: WebRTCResult;
   ipv6Info: IpInfo | null;
-  cfTrace: CFTrace | null;
   headers: HeaderMap;
   doh: boolean | null;
   dnsLeak: DnsLeakResult;
@@ -66,19 +64,17 @@ export function useScan(): UseScan {
     setScan(null);
     setReport(null);
 
-    const [data, webrtc, ipv4, ipv6, cfTrace, headers, doh, dnsLeak, dnssec, fp] =
-      await Promise.all([
-        fetchInfo(),
-        getWebRTCIPs(),
-        getIPv4(),
-        getIPv6(),
-        getCFTrace(),
-        fetchHeaders(),
-        getDohReachable(),
-        getDnsLeak(),
-        getDnssec(),
-        collectFingerprint(),
-      ]);
+    const [data, webrtc, ipv4, ipv6, headers, doh, dnsLeak, dnssec, fp] = await Promise.all([
+      fetchInfo(),
+      getWebRTCIPs(),
+      getIPv4(),
+      getIPv6(),
+      fetchHeaders(),
+      getDohReachable(),
+      getDnsLeak(),
+      getDnssec(),
+      collectFingerprint(),
+    ]);
     const ipv6Info = ipv6 ? await fetchInfo(ipv6) : null;
     const exits: Exits = { http: data.query ?? null, v4: ipv4, v6: ipv6 };
     const entropy = estimateEntropy(fp);
@@ -88,7 +84,6 @@ export function useScan(): UseScan {
       webrtc,
       exits,
       ipv6Info,
-      cfTrace,
       headers,
       dnsLeak,
       dnssec,
@@ -98,7 +93,7 @@ export function useScan(): UseScan {
 
     setFingerprintId(fpId);
     setReport(nextReport);
-    setScan({ data, webrtc, ipv6Info, cfTrace, headers, doh, dnsLeak, dnssec, fp, entropy, exits });
+    setScan({ data, webrtc, ipv6Info, headers, doh, dnsLeak, dnssec, fp, entropy, exits });
     setLoading(false);
   }, []);
 
