@@ -10,7 +10,6 @@ function mkReport(overrides: Record<string, unknown> = {}): Report {
     httpNetwork: "AS1 / Example",
     signals: { vpn: false, blocklists: [], fingerprintEntropyBits: 20 },
     webrtc: { publicCount: 0 },
-    cloudflare: { colo: "OSL", tls: "TLSv1.3", ech: true },
     ...overrides,
   } as unknown as Report;
 }
@@ -47,7 +46,7 @@ test("diffReports counts a changed fingerprint as one change", () => {
   expect(d.changedCount).toBe(1);
 });
 
-test("diffReports detects nested signal and cloudflare changes", () => {
+test("diffReports detects nested signal changes", () => {
   const prev = mkReport({ signals: { vpn: false, blocklists: [] } });
   const curr = mkReport({ signals: { vpn: true, blocklists: ["spamhaus"] } });
   const d = diffReports(prev, curr, "2020-01-01T00:00:00.000Z", false);
@@ -59,7 +58,5 @@ test("diffReports detects nested signal and cloudflare changes", () => {
 test("flattenReport produces display-ready label/value pairs", () => {
   const flat = flattenReport(mkReport());
   const country = flat.find((f) => f.label === "IP country");
-  const ech = flat.find((f) => f.label === "Encrypted Client Hello");
   expect(country?.value).toBe("US");
-  expect(ech?.value).toBe("yes");
 });

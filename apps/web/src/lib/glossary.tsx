@@ -120,30 +120,6 @@ export const GLOSSARY = {
     title: "Client Hints",
     body: "Small headers your browser can send with device details (platform, model…) when a site opts in via the Accept-CH header — a quieter, modern alternative to the user agent.",
   },
-  ech: {
-    title: "Encrypted Client Hello (ECH)",
-    body: "Hides the website name during the secure handshake, so your network can't see which HTTPS site you're opening. Without it, that name (the SNI) is sent in the clear.",
-  },
-  sni: {
-    title: "SNI — Server Name Indication",
-    body: "Tells the server which site you want during the handshake. Historically sent unencrypted, so networks can log the domains you visit.",
-  },
-  tls: {
-    title: "TLS",
-    body: "The encryption that secures HTTPS. The newest version, TLS 1.3, is faster and leaks less about your connection.",
-  },
-  keyExchange: {
-    title: "Key exchange",
-    body: "How your browser and the server secretly agree on an encryption key. Modern, “forward-secret” methods keep past traffic safe even if a key later leaks.",
-  },
-  warp: {
-    title: "Cloudflare WARP",
-    body: "Cloudflare's consumer VPN. When it's active, your traffic exits through Cloudflare rather than straight from your ISP.",
-  },
-  cloudflareTrace: {
-    title: "Cloudflare trace",
-    body: "A diagnostic readout from Cloudflare (which fronts this site) describing how your connection reached its edge network.",
-  },
   ipv6: {
     title: "IPv6",
     body: "The newer internet addressing scheme. If IPv6 is on but your VPN only covers IPv4, your real IPv6 address can leak out.",
