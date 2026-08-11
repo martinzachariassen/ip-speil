@@ -1,11 +1,13 @@
 ---
 name: ip-speil
-description: Privacy/network diagnostic web app — Bun + Hono + TypeScript. Server runs .ts directly; the client is TS bundled by `bun build`.
+description: Privacy/network diagnostic web app — Bun-workspaces monorepo (Hono API on Railway + React/Cloudflare Worker web app), TypeScript throughout.
 agent-permissions:
   auto-edit:
-    - src/**/*.ts
-    - public/**/*
-    - test/**/*.ts
+    - apps/*/src/**/*.ts
+    - apps/*/src/**/*.tsx
+    - apps/*/test/**/*.ts
+    - packages/shared/src/**/*.ts
+    - apps/web/public/**/*
     - "*.json"
     - "*.toml"
     - "*.md"
@@ -15,7 +17,8 @@ agent-permissions:
     - .github/**
   auto-run:
     - bun run dev
-    - bun start
+    - bun run dev:api
+    - bun run dev:web
     - bun test
     - bun run build
     - bun run typecheck
@@ -24,8 +27,8 @@ agent-permissions:
     - bun run check
     - bun install
     - bun add --dev *
-    - bun src/server.ts
-    - PORT=* bun src/server.ts
+    - bun apps/api/src/index.ts
+    - PORT=* bun apps/api/src/index.ts
     - mise run *
     - curl -sS http://127.0.0.1:*/*
     - curl -fsS http://127.0.0.1:*/*
@@ -46,80 +49,17 @@ agent-permissions:
     - rm -rf *
     - editing .env or anything with secrets
     - editing .claude/** (managed externally)
-    - adding new runtime `dependencies` (keep them minimal — Hono is the only one)
-    - touching Railway / DNS / infra
+    - adding new runtime `dependencies` (keep them minimal — API's only one is Hono;
+      web's are @ip-speil/shared, react, react-dom)
+    - touching Railway / Cloudflare / DNS / infra
 ---
 
 # Agents working in ip-speil
 
-Working agreement for AI coding agents (Claude Code, Codex, etc.) in this repo.
-The authoritative project rules live in [`CLAUDE.md`](./CLAUDE.md); this file
-mirrors the most important bits for tools that look for `AGENTS.md`, and
-declares the operations that are pre-approved here.
+This file exists only because some tools (Codex, Cursor, Aider, …) look for
+`AGENTS.md` by convention and don't read `CLAUDE.md`.
 
-## TL;DR
-
-- **Bun runtime.** The server is TypeScript run directly by Bun
-  (`bun src/server.ts`) — no server build step. HTTP is served by **Hono**, the
-  only runtime dependency.
-- **The client has one build step.** Frontend TypeScript in `src/client/` is
-  bundled by `bun build` to `public/assets/js/main.js`. `bun run dev` and the
-  Docker build both run it for you.
-- **Verify with `bun run check`** before finishing — build + typecheck (server
-  and client) + lint + tests.
-- **Don't commit or push** unless explicitly asked.
-- Import local modules with the real `.ts` extension (`./app.ts`); use
-  `import type` for type-only imports.
-
-## Common operations (pre-approved)
-
-| Need | Command |
-|---|---|
-| Run the dev server (watch) | `bun run dev` (port 3000) |
-| Build the client bundle | `bun run build` |
-| Run tests | `bun test` |
-| Full check | `bun run check` |
-| Type-only check | `bun run typecheck` |
-| Lint / format | `bun run lint` / `bun run format` |
-| Start the prod server | `bun start` (= `bun src/server.ts`) |
-| Smoke a local route | `curl -sS http://127.0.0.1:3000/health` |
-| Hit the IP-lookup proxy | `curl -sS "http://127.0.0.1:3000/api/info?ip=8.8.8.8"` |
-
-A spare port like `PORT=3456 bun src/server.ts` is fine for parallel smoke tests
-so the dev `--watch` instance on 3000 stays untouched.
-
-## Editing rules
-
-- **CSP / security headers**: configured on Hono's `secureHeaders` in
-  `src/app.ts`. A new external origin needs an entry in `connectSrc`, or the
-  browser will block it. Rate limiting and the body-size limit also live there.
-- **Static files**: served by Hono's `serveStatic` from `public/` (it handles
-  path-traversal safety — no manual allowlist to maintain). New browser code is
-  imported by `main.ts` and bundled; new webfonts go in `public/assets/fonts/`.
-- **Runtime deps stay minimal**: anything added to `dependencies` in
-  `package.json` ships to prod. Hono is the only one — keep it that way unless
-  there's a clear reason, and put dev tooling in `devDependencies`.
-- **No persistence, cookies, request logs, or trackers.** By design.
-- **Fingerprinting stays client-side** and is never sent to the server.
-
-## Hands off
-
-- `.claude/` — managed externally; don't touch via shell.
-- `.env*` and anything that looks like a credential or token.
-- Railway deploy config and DNS for `ip.mlz.no` — don't touch infra.
-
-## Where things live
-
-```text
-src/server.ts     Entry — parses PORT, starts/stops Bun.serve
-src/app.ts        Hono app factory: routing, security middleware, static serving
-src/ip-lookup.ts  ipapi.is geolocation (HTTPS) + client-IP extraction + IP validation
-src/rate-limit.ts In-memory rate limiter (Hono middleware)
-src/client/       Frontend TypeScript; main.ts is the bundle entry point
-public/           index.html + assets/{css,fonts,js}; js/ is build output (gitignored)
-test/             Bun test runner (app.test.ts, ip-lookup.test.ts)
-tsconfig.json     Strict server typecheck (noEmit); src/client/tsconfig.json for the client
-biome.json        Lint + format
-Dockerfile        oven/bun multi-stage (build client, run server.ts non-root)
-railway.json      Railway deploy (Dockerfile builder, /health healthcheck)
-```
+**The rules live in [`CLAUDE.md`](./CLAUDE.md) — read that.** It's kept current;
+this file is not, on purpose, so there's one place to update instead of two.
+The frontmatter above declares the operations pre-approved in this repo for
+tools that honor an `agent-permissions` block.
