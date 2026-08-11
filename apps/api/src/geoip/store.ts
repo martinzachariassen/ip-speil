@@ -162,19 +162,6 @@ export const EMPTY_ASN_V6: AsnTableV6 = {
   orgPool: [],
 };
 
-export const EMPTY_CITY_V4: CityTableV4 = {
-  starts: new Uint32Array(0),
-  ends: new Uint32Array(0),
-  countryIdx: new Int32Array(0),
-  regionIdx: new Int32Array(0),
-  cityIdx: new Int32Array(0),
-  lat: new Float32Array(0),
-  lon: new Float32Array(0),
-  countryPool: [],
-  regionPool: [],
-  cityPool: [],
-};
-
 export const EMPTY_CITY_V6: CityTableV6 = {
   starts: [],
   ends: [],

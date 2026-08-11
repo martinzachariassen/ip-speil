@@ -70,14 +70,14 @@ export function NetworkFacts({
               tip="splitRouting"
               title="IPv4 exit differs from the address the server saw"
             >
-              Your forced-IPv4 exit is a different address than this page was contacted from —
-              split routing or a proxy.
+              Your forced-IPv4 exit is a different address than this page was contacted from — split
+              routing or a proxy.
             </Finding>
           ) : null}
           {v6Mismatch ? (
             <Finding severity="warn" title="IPv4 and IPv6 leave through different networks">
-              One of the two bypasses whatever you expected to carry your traffic — a common way
-              for a VPN to leak.
+              One of the two bypasses whatever you expected to carry your traffic — a common way for
+              a VPN to leak.
             </Finding>
           ) : null}
         </FindingList>
@@ -153,48 +153,46 @@ export function GeoFacts({ d }: { d: IpInfo }) {
   const f = flag(d.countryCode);
 
   return (
-    <>
-      <KVList>
-        <Fact label="Location">
-          {place ? (
-            <span>
-              {f ? `${f} ` : ""}
-              {place}
-            </span>
-          ) : (
-            <Muted>unknown</Muted>
-          )}
+    <KVList>
+      <Fact label="Location">
+        {place ? (
+          <span>
+            {f ? `${f} ` : ""}
+            {place}
+          </span>
+        ) : (
+          <Muted>unknown</Muted>
+        )}
+      </Fact>
+      {d.lat != null && d.lon != null ? (
+        <Fact label="Coordinates">
+          <MonoSm>
+            {d.lat.toFixed(3)}, {d.lon.toFixed(3)}
+          </MonoSm>{" "}
+          <Muted>city-level estimate</Muted>
         </Fact>
-        {d.lat != null && d.lon != null ? (
-          <Fact label="Coordinates">
-            <MonoSm>
-              {d.lat.toFixed(3)}, {d.lon.toFixed(3)}
-            </MonoSm>{" "}
-            <Muted>city-level estimate</Muted>
-          </Fact>
+      ) : null}
+      <Fact label="Timezone">
+        <span>{d.timezone || tz.browserTz}</span>
+        {tzWarn ? (
+          <Muted>
+            browser: {tz.browserTz}{" "}
+            <Warning className="inline-block align-[-2px] text-warning-deep" />
+            <span className="sr-only">timezone mismatch</span>
+          </Muted>
         ) : null}
-        <Fact label="Timezone">
-          <span>{d.timezone || tz.browserTz}</span>
-          {tzWarn ? (
-            <Muted>
-              browser: {tz.browserTz}{" "}
-              <Warning className="inline-block align-[-2px] text-warning-deep" />
-              <span className="sr-only">timezone mismatch</span>
-            </Muted>
-          ) : null}
+      </Fact>
+      {d.geo && d.geo.total > 1 ? (
+        <Fact label="Geo agreement" tip="geoAgreement">
+          {d.geo.agree}/{d.geo.total} sources agree on country
         </Fact>
-        {d.geo && d.geo.total > 1 ? (
-          <Fact label="Geo agreement" tip="geoAgreement">
-            {d.geo.agree}/{d.geo.total} sources agree on country
-          </Fact>
-        ) : null}
-        {d.datasetDate ? (
-          <Fact label="Geo dataset" tip="geoDataset">
-            <MonoSm>{d.datasetDate.slice(0, 10)}</MonoSm>{" "}
-            <Muted>DB-IP + iptoasn, resolved locally</Muted>
-          </Fact>
-        ) : null}
-      </KVList>
-    </>
+      ) : null}
+      {d.datasetDate ? (
+        <Fact label="Geo dataset" tip="geoDataset">
+          <MonoSm>{d.datasetDate.slice(0, 10)}</MonoSm>{" "}
+          <Muted>DB-IP + iptoasn, resolved locally</Muted>
+        </Fact>
+      ) : null}
+    </KVList>
   );
 }

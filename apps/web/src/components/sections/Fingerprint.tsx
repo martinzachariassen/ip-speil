@@ -12,7 +12,8 @@ import {
   SubLabel,
 } from "../primitives.tsx";
 
-const distinctiveness = (bits: number): Severity => (bits >= 26 ? "bad" : bits >= 18 ? "warn" : "ok");
+const distinctiveness = (bits: number): Severity =>
+  bits >= 26 ? "bad" : bits >= 18 ? "warn" : "ok";
 
 /** What the row that opens this readout says about it. */
 export function fingerprintSummary(entropy: EntropyEstimate) {
@@ -38,13 +39,7 @@ export function fingerprintSummary(entropy: EntropyEstimate) {
  * every time tell the reader nothing they can act on — what matters is whether
  * anything is *blocked*, and that is one line.
  */
-export function Fingerprint({
-  fp,
-  entropy,
-}: {
-  fp: FingerprintData;
-  entropy: EntropyEstimate;
-}) {
+export function Fingerprint({ fp, entropy }: { fp: FingerprintData; entropy: EntropyEstimate }) {
   const s = fp.storage;
   const c = fp.connection;
 
@@ -134,7 +129,11 @@ export function Fingerprint({
     ) : null,
     c?.effectiveType ? (
       <KV key="net" k="Network">
-        {[c.effectiveType, c.downlink != null ? `${c.downlink} Mbps` : null, c.rtt != null ? `${c.rtt} ms` : null]
+        {[
+          c.effectiveType,
+          c.downlink != null ? `${c.downlink} Mbps` : null,
+          c.rtt != null ? `${c.rtt} ms` : null,
+        ]
           .filter(Boolean)
           .join(" · ")}
       </KV>

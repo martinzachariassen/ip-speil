@@ -12,12 +12,10 @@ import { defineConfig } from "vite";
 // after `vite build` needs no extra flags.
 export default defineConfig({
   plugins: [react(), tailwindcss(), cloudflare()],
-  // The design system is linked from a sibling repo (file:../../../mlz-design).
-  // Dedupe React so the linked package shares this app's single copy (avoids the
-  // "invalid hook call" from a duplicated React), and allow the dev server to
-  // read the linked package's real path outside this repo's root.
+  // Dedupe React so the design system's bundled copy shares this app's single
+  // instance (avoids the "invalid hook call" from a duplicated React).
   resolve: { dedupe: ["react", "react-dom"] },
-  server: { fs: { allow: ["../..", "../../../mlz-design"] } },
+  server: { fs: { allow: ["../.."] } },
   build: {
     target: "es2022",
     // Content-hashed output lands in dist/bundle/ instead of dist/assets/, so it

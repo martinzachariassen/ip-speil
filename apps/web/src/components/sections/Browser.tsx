@@ -1,7 +1,7 @@
 import { languageGeoCheck, timezoneCheck } from "../../lib/heuristics.ts";
-import type { IpInfo } from "../../types.ts";
 import { Warning } from "../../lib/icons.tsx";
-import { BodyIntro, Columns, KV, KVList, Mono, halves } from "../primitives.tsx";
+import type { IpInfo } from "../../types.ts";
+import { BodyIntro, Columns, halves, KV, KVList, Mono } from "../primitives.tsx";
 
 export function Browser({ d }: { d: IpInfo }) {
   const tz = timezoneCheck(d);
@@ -63,8 +63,8 @@ export function Browser({ d }: { d: IpInfo }) {
       ) : null}
       {langGeo.mismatch ? (
         <BodyIntro>
-          Browser locale region <b className="text-ink">{langGeo.langRegion}</b> differs from your IP
-          country <b className="text-ink">{d.countryCode}</b> — common when travelling or using a
+          Browser locale region <b className="text-ink">{langGeo.langRegion}</b> differs from your
+          IP country <b className="text-ink">{d.countryCode}</b> — common when travelling or using a
           VPN.
         </BodyIntro>
       ) : null}

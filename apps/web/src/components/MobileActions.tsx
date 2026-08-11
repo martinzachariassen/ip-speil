@@ -25,7 +25,7 @@ export function MobileActions({ actions }: { actions: PageActions }) {
       // bg-paper/92 rather than a hand-written oklch mix with `transparent` —
       // see SiteHeader: that mix drifts the paper pink in Chrome.
       className="fixed inset-x-0 bottom-0 z-30 flex gap-2 border-line border-t bg-paper/92 px-4 pt-2.5 pb-[max(10px,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden"
-      role="group"
+      role="toolbar"
       aria-label="Scan actions"
     >
       <Button

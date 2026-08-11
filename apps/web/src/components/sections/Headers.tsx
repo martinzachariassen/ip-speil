@@ -1,5 +1,9 @@
 import { FindingList } from "@martinzachariassen/design";
-import { clientHintsStatus, isClientHintHeader } from "../../lib/client-hints.ts";
+import {
+  anyClientHintAnswered,
+  clientHintsStatus,
+  isClientHintHeader,
+} from "../../lib/client-hints.ts";
 import type { HeaderMap } from "../../types.ts";
 import {
   Absent,
@@ -9,6 +13,7 @@ import {
   KVList,
   Mono,
   Muted,
+  type Severity,
   SubLabel,
 } from "../primitives.tsx";
 
@@ -29,7 +34,6 @@ const PRIORITY = [
 // sends.
 function ClientHintsBlock({ headers }: { headers: HeaderMap }) {
   const statuses = clientHintsStatus(headers);
-  const answered = statuses.filter((s) => s.value !== null);
 
   return (
     <>
@@ -38,7 +42,7 @@ function ClientHintsBlock({ headers }: { headers: HeaderMap }) {
         These weren&rsquo;t sent automatically: this page asked with an <Mono>Accept-CH</Mono>{" "}
         header, and a Chromium-based browser answers on its next request without prompting you.
       </BodyIntro>
-      {answered.length === 0 ? (
+      {!anyClientHintAnswered(headers) ? (
         <FindingList>
           <Finding severity="ok" title="No high-entropy hints returned">
             Your browser didn&rsquo;t answer the request — typical of Firefox and Safari, which
@@ -56,6 +60,13 @@ function ClientHintsBlock({ headers }: { headers: HeaderMap }) {
       )}
     </>
   );
+}
+
+export function headersSummary(headers: HeaderMap): { severity: Severity; text: string } {
+  return {
+    severity: "off",
+    text: `${Object.keys(headers).length} headers were sent to this page unprompted`,
+  };
 }
 
 export function Headers({ headers }: { headers: HeaderMap }) {

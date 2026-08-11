@@ -52,5 +52,5 @@
 - [ ] Changes are minimal and scoped to the request
 - [ ] No secrets, tokens, or keys committed (`PROXY_SECRET` and provider tokens stay in env)
 - [ ] No inline `<script>`/`<style>` or `style=""` added (keeps `script-src 'self'` / `style-src 'self'`)
-- [ ] Docs updated where behavior or commands changed (`README.md`, `CLAUDE.md`, and `AGENTS.md` kept in sync)
+- [ ] Docs updated where behavior or commands changed (`README.md`, `CLAUDE.md`, `ARCHITECTURE.md`)
 - [ ] CI is green

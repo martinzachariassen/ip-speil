@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import type { Scan } from "../hooks/useScan.ts";
 import { Dot, SEVERITY_LABEL, type Severity, Skel } from "./primitives.tsx";
 import { Fingerprint, fingerprintSummary } from "./sections/Fingerprint.tsx";
-import { Headers } from "./sections/Headers.tsx";
+import { Headers, headersSummary } from "./sections/Headers.tsx";
 import { Routing, routingSummary } from "./sections/Routing.tsx";
 import { WebRTC, webrtcSummary } from "./sections/WebRTC.tsx";
 
@@ -32,7 +32,7 @@ export function Readouts({ scan }: { scan: Scan | null }) {
   const routing = scan ? routingSummary(scan.data) : null;
   const webrtc = scan ? webrtcSummary(scan.webrtc, scan.data.query) : null;
   const fp = scan ? fingerprintSummary(scan.entropy) : null;
-  const headerCount = scan ? Object.keys(scan.headers).length : 0;
+  const headers = scan ? headersSummary(scan.headers) : null;
 
   return (
     // A rule and a wide margin. Without them the first row started level with
@@ -78,13 +78,7 @@ export function Readouts({ scan }: { scan: Scan | null }) {
         <Readout
           value="headers"
           title="What the server sees"
-          summary={
-            scan ? (
-              <Summary severity="off">
-                {headerCount} headers were sent to this page unprompted
-              </Summary>
-            ) : null
-          }
+          summary={headers && <Summary severity={headers.severity}>{headers.text}</Summary>}
         >
           {scan ? <Headers headers={scan.headers} /> : <SkelBlock />}
         </Readout>

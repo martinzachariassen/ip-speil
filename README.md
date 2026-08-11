@@ -8,6 +8,8 @@ A privacy mirror that shows what a website can infer about your connection the m
 
 **Status:** Live in production · Bun ≥ 1.3 · MIT
 
+![ip-speil scanning a connection: public IP, exit/location/VPN/WebRTC/fingerprint band, and the leak checks below it](docs/assets/hero.png)
+
 **[Try it live → ip.mlz.no](https://ip.mlz.no)** — no install required. *Speil* is Norwegian for *mirror*.
 
 ## What it does
@@ -30,11 +32,6 @@ bun run dev                                       # API on :3000, web on :5173
 # → open http://localhost:5173
 ```
 
-> [!NOTE]
-> The web app depends on the `@martinzachariassen/design` design system through a local
-> path (`file:../../../mlz-design`). Check that repository out as a sibling of `ip-speil`
-> before `bun install`, or the install and build for `apps/web` will fail.
-
 ## Usage
 
 Open the site in a browser and it scans automatically. It also answers terminals:
@@ -49,7 +46,7 @@ curl ip.mlz.no/json  # full JSON: geo, ASN, VPN/Tor flags, blocklists, routing
 Split deployment, one repo — a Bun-workspaces monorepo with two deploy targets and a shared type package:
 
 - **`apps/web`** — the public site: a React 19 SPA (Vite + Tailwind v4) served by a Cloudflare Worker at `ip.mlz.no`. The Worker owns the dynamic edge routes and proxies `/api/info` to the API, attaching a shared bearer secret so the browser never sees it.
-- **`apps/api`** — a Hono server on Bun (no build step), deployed to Railway at `api.ip.mlz.no`. It does the enrichment — local geoip lookup, reverse DNS + blocklists via `node:dns`, RIPEstat routing — behind a cache + single-flight + daily-budget guard. `/api/info` is reachable only with the bearer secret.
+- **`apps/api`** — a Hono server on Bun (no build step), deployed to Railway at `api.ip.mlz.no`. It does the enrichment — local geoip lookup, reverse DNS + blocklists via `node:dns`, RIPEstat routing — behind a cache + single-flight guard. `/api/info` is reachable only with the bearer secret.
 - **`packages/shared`** — `@ip-speil/shared`, the type-only wire contract imported by both apps so they can't drift.
 
 ```mermaid
@@ -62,7 +59,7 @@ flowchart LR
   Browser -.->|client-side probes| Probes[WebRTC · DNS leak · fingerprint]
 ```
 
-Deeper design notes live in [CLAUDE.md](CLAUDE.md).
+Details: [ARCHITECTURE.md](ARCHITECTURE.md). Day-to-day working conventions: [CLAUDE.md](CLAUDE.md).
 
 ## Configuration
 
@@ -103,8 +100,8 @@ Two targets, deployed independently from `main` — a web-only change won't rede
 Set `PROXY_SECRET` on both sides in production (`wrangler secret put PROXY_SECRET`; a matching Railway env var). Roll back by redeploying the previous version from each provider.
 
 > [!NOTE]
-> The API's cache, daily budget, and rate limiter live in process memory — correct for one
-> Railway replica. Scaling horizontally would fragment them; move that state to a shared store
+> The API's cache and rate limiter live in process memory — correct for one Railway
+> replica. Scaling horizontally would fragment them; move that state to a shared store
 > before adding replicas.
 
 ## Contributing

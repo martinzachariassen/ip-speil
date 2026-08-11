@@ -58,13 +58,7 @@ export function routingSummary(d: IpInfo): { severity: Severity; text: string } 
   const state = r.rpki?.state;
   return {
     severity: state === "valid" ? "ok" : state === "invalid" ? "bad" : "off",
-    text: [
-      state ? `RPKI ${state}` : null,
-      r.originAsn,
-      r.prefix,
-    ]
-      .filter(Boolean)
-      .join(" · "),
+    text: [state ? `RPKI ${state}` : null, r.originAsn, r.prefix].filter(Boolean).join(" · "),
   };
 }
 

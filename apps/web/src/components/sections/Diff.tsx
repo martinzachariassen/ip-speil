@@ -1,8 +1,8 @@
 import { FindingList } from "@martinzachariassen/design";
-import { flattenReport, type DiffField, type SnapshotDiff } from "../../lib/diff.ts";
 import { cx } from "../../lib/cx.ts";
-import type { Report } from "../../report.ts";
+import { type DiffField, flattenReport, type SnapshotDiff } from "../../lib/diff.ts";
 import { ArrowRight } from "../../lib/icons.tsx";
+import type { Report } from "../../report.ts";
 import { Button, Dot, Finding, KV, KVList, Mono, SEVERITY_LABEL } from "../primitives.tsx";
 
 function when(iso: string): string {

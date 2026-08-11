@@ -7,11 +7,11 @@ import {
   TableHeader,
   TableRow,
 } from "@martinzachariassen/design";
+import type { ReactNode } from "react";
 import { Tip } from "../../lib/glossary.tsx";
 import { isForeignPublicIp, webrtcLeak } from "../../lib/heuristics.ts";
 import { ArrowLeft } from "../../lib/icons.tsx";
 import type { WebRTCResult } from "../../types.ts";
-import type { ReactNode } from "react";
 import { Absent, Chip, type ChipTone, Finding, Footnote, SubLabel } from "../primitives.tsx";
 
 // A WebRTC IP token — the shared <Chip> (design system <Badge>) with the leak/
@@ -24,11 +24,7 @@ function Tag({ children, variant }: { children: ReactNode; variant?: "leak" | "l
 // An IP tag with an optional trailing annotation, introduced by a left-pointing
 // arrow icon (not a glyph in a string) so it reads "<ip> ← <note>".
 function PublicTag({ ip, httpIp }: { ip: string; httpIp: string | undefined }) {
-  const note = isForeignPublicIp(ip, httpIp)
-    ? "differs"
-    : ip === httpIp
-      ? "matches HTTP"
-      : null;
+  const note = isForeignPublicIp(ip, httpIp) ? "differs" : ip === httpIp ? "matches HTTP" : null;
   return (
     <Tag variant={note === "differs" ? "leak" : undefined}>
       {ip}
@@ -68,13 +64,7 @@ export function webrtcSummary(webrtc: WebRTCResult, httpIp: string | undefined) 
   };
 }
 
-export function WebRTC({
-  webrtc,
-  httpIp,
-}: {
-  webrtc: WebRTCResult;
-  httpIp: string | undefined;
-}) {
+export function WebRTC({ webrtc, httpIp }: { webrtc: WebRTCResult; httpIp: string | undefined }) {
   const { pub, lan, relay, mdns, candidates } = webrtc;
 
   if (pub.length === 0 && lan.length === 0 && relay.length === 0 && mdns === 0) {
@@ -95,9 +85,9 @@ export function WebRTC({
       {leak ? (
         <FindingList className="mb-4">
           <Finding severity="warn" tip="webrtcLeak" title="Different public IP exposed">
-            WebRTC revealed a public address that differs from the one normal requests come from.
-            If you expected all traffic to use one VPN exit, check your browser or VPN&rsquo;s
-            WebRTC leak protection.
+            WebRTC revealed a public address that differs from the one normal requests come from. If
+            you expected all traffic to use one VPN exit, check your browser or VPN&rsquo;s WebRTC
+            leak protection.
           </Finding>
         </FindingList>
       ) : null}
