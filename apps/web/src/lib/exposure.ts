@@ -1,3 +1,4 @@
+import type { ScanError } from "../api.ts";
 import type { Severity } from "../components/primitives.tsx";
 import type { DnsLeakResult, EntropyEstimate, IpInfo, WebRTCResult } from "../types.ts";
 import { isSuccessfulLookup } from "./format.ts";
@@ -45,12 +46,29 @@ export interface ExposureInput {
   dnsLeak: DnsLeakResult;
   doh: boolean | null;
   entropy: EntropyEstimate;
+  /** Why the lookup returned nothing, when it did. */
+  error?: ScanError | null;
 }
+
+// A failed lookup has more than one cause, and "try Refresh" is bad advice for
+// two of them. Being throttled or unable to reach the service is a fact about
+// the connection — exactly what this page exists to report.
+const FAILURE_DETAIL: Record<ScanError, string> = {
+  rate_limited: "rate limited",
+  unavailable: "service error",
+  unreachable: "unreachable",
+};
+
+const FAILURE_SUB: Record<ScanError, string> = {
+  rate_limited: "The lookup service is throttling this connection — wait a minute and refresh.",
+  unavailable: "The lookup service answered with an error — try Refresh in a moment.",
+  unreachable: "The lookup service couldn't be reached — check your connection and refresh.",
+};
 
 // Derive the page verdict and the full ledger of findings from one scan. Pure,
 // so the readout band and the verdict callout read the same computation instead
 // of each deciding for itself what counts as exposed.
-export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureInput): {
+export function computeExposure({ d, webrtc, dnsLeak, doh, entropy, error }: ExposureInput): {
   verdict: Verdict;
   items: ExposureItem[];
 } {
@@ -66,7 +84,7 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
     severity: ok ? "off" : "warn",
     label: ok ? "Public IP" : "IP lookup",
     short: "Exit",
-    detail: ok ? d.query : "lookup failed",
+    detail: ok ? d.query : error ? FAILURE_DETAIL[error] : "lookup failed",
     tip: ok ? "publicIp" : undefined,
   });
 
@@ -187,7 +205,11 @@ export function computeExposure({ d, webrtc, dnsLeak, doh, entropy }: ExposureIn
   }
 
   const verdict: Verdict = !ok
-    ? { severity: "warn", title: "Scan incomplete.", sub: "The IP lookup failed — try Refresh." }
+    ? {
+        severity: "warn",
+        title: "Scan incomplete.",
+        sub: error ? FAILURE_SUB[error] : "The IP lookup failed — try Refresh.",
+      }
     : anonymity
       ? {
           severity: "bad",
