@@ -45,6 +45,7 @@ export function App() {
             dnsLeak: scan.dnsLeak,
             doh: scan.doh,
             entropy: scan.entropy,
+            error: scan.error,
           })
         : null,
     [scan],
