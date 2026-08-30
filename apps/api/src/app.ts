@@ -23,6 +23,8 @@ export { DEFAULT_PORT } from "./config.ts";
 export interface AppOptions {
   requestTimeoutMs?: number;
   infoRateLimit?: number;
+  // Cross-IP backstop. Injected by tests; production uses RATE_LIMIT.infoGlobal.
+  infoGlobalRateLimit?: number;
   // Shared secret the Cloudflare Worker sends on proxied calls. Omit in
   // tests/local dev to disable the gate (see auth.ts).
   proxySecret?: string;
@@ -64,6 +66,7 @@ export function createApp(options: AppOptions = {}) {
   const {
     requestTimeoutMs = REQUEST_TIMEOUT_MS,
     infoRateLimit = RATE_LIMIT.info,
+    infoGlobalRateLimit = RATE_LIMIT.infoGlobal,
     proxySecret,
     enableOnlineTiebreaker = ENABLE_ONLINE_TIEBREAKER,
     fetchImpl = fetch,
@@ -111,18 +114,22 @@ export function createApp(options: AppOptions = {}) {
   app.get(
     "/api/info",
     requireProxySecret(proxySecret),
-    rateLimit({
-      windowMs: RATE_LIMIT.windowMs,
-      limit: RATE_LIMIT.infoGlobal,
-      keyGenerator: () => "global",
-      standardHeaders: false,
-      name: "info-global",
-    }),
+    // Per-IP before the cross-IP backstop. The other way round, one client's
+    // flood is counted against the shared budget before its own limit rejects
+    // it, so a single abuser can exhaust the global allowance and 429 everyone
+    // else for the rest of the window. Rejected here, it spends nothing.
     rateLimit({
       windowMs: RATE_LIMIT.windowMs,
       limit: infoRateLimit,
       keyGenerator: clientIpFor,
       name: "info-per-ip",
+    }),
+    rateLimit({
+      windowMs: RATE_LIMIT.windowMs,
+      limit: infoGlobalRateLimit,
+      keyGenerator: () => "global",
+      standardHeaders: false,
+      name: "info-global",
     }),
     infoRoute({ lookup, clientIpFor }),
   );

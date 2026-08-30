@@ -176,6 +176,39 @@ test("api info rate limits a client after the configured number of requests", as
   expect(await third.json()).toEqual({ error: "rate_limited" });
 });
 
+test("a single flooding client cannot spend the whole cross-ip budget", async () => {
+  const server = app({ infoRateLimit: 2, infoGlobalRateLimit: 5 });
+  const flooder = { "x-forwarded-for": "203.0.113.99" };
+
+  // Six requests from one IP: two pass, four are rejected by its own limit and
+  // never reach the global counter.
+  const statuses: number[] = [];
+  for (let i = 0; i < 6; i++) {
+    statuses.push((await server.request("/api/info", { headers: flooder })).status);
+  }
+  expect(statuses).toEqual([200, 200, 429, 429, 429, 429]);
+
+  // A different visitor still gets served — the shared budget has 3 left.
+  const other = await server.request("/api/info", {
+    headers: { "x-forwarded-for": "203.0.113.10" },
+  });
+  expect(other.status).toBe(200);
+});
+
+test("the cross-ip backstop still rejects a spread-out flood", async () => {
+  const server = app({ infoRateLimit: 100, infoGlobalRateLimit: 3 });
+
+  const statuses: number[] = [];
+  for (let i = 0; i < 4; i++) {
+    const res = await server.request("/api/info", {
+      headers: { "x-forwarded-for": `198.51.100.${i}` },
+    });
+    statuses.push(res.status);
+  }
+
+  expect(statuses).toEqual([200, 200, 200, 429]);
+});
+
 test("api info rejects calls without the proxy token when one is configured", async () => {
   const server = app({ proxySecret: "edge-token-abc" });
 

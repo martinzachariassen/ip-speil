@@ -4,5 +4,8 @@
     "lib": ["ESNext"],
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["**/*.ts"]
+  // Tests run under Bun, not workerd; they are typechecked by neither config,
+  // the same arrangement the app's tsconfig uses.
+  "include": ["**/*.ts"],
+  "exclude": ["**/*.test.ts"]
 }
