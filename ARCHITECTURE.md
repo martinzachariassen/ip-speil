@@ -179,6 +179,8 @@ static asset (`env.ASSETS.fetch`).
 - `GET /api/info?ip=` → **proxied** to `${API_ORIGIN}/api/info`, with the bearer
   secret attached at the edge and the client IP forwarded via `X-Forwarded-For`.
 - `GET /api/headers` → echoes request headers (minus hop-by-hop/sensitive ones).
+  `Cookie` and `Authorization` are reported by name and length only — the value is
+  a live credential and the page is made to be shared.
   Note: these are **Cloudflare-flavored** headers (what a site behind Cloudflare
   sees), not the raw browser socket.
 - `GET /script.js` → first-party proxy of the Umami tracker script (edge-cached).
