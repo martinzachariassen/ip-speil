@@ -22,6 +22,20 @@ export function redactIp(ip: string | null | undefined): string | null {
   return parts.length === 4 ? `${parts[0]}.${parts[1]}.x.x` : "IP redacted";
 }
 
+// Auto-generated PTR records usually spell the address out in the hostname
+// ("203-0-113-45.customer.example.net", "1.2.3.4.static.example.net"), so an
+// unredacted reverse-DNS name hands back the exact IP every other field here
+// hides. Every digit run collapses to "x": the provider-identifying tail and
+// the shape of the name survive, the address does not.
+//
+// The snapshot diff compares the redacted value, so a PTR that changes only in
+// its digits no longer registers as a change — the redacted IP and network rows
+// already carry that signal.
+export function redactHostname(name: string | null | undefined): string | null {
+  if (!name) return null;
+  return name.replace(/\d+/g, "x");
+}
+
 export interface ReportInput {
   data: IpInfo;
   webrtc: WebRTCResult;
@@ -48,7 +62,7 @@ export function buildReport(input: ReportInput) {
     httpIp: redactIp(data.query),
     httpNetwork: networkLabel(data) || null,
     httpCountry: data.countryCode || null,
-    reverseDns: data.reverse || null,
+    reverseDns: redactHostname(data.reverse),
     ipv4Exit: redactIp(exits.v4),
     ipv6: redactIp(exits.v6),
     ipv6Network: ipv6Info?.status === "success" ? networkLabel(ipv6Info) : null,
@@ -95,6 +109,6 @@ export function buildReport(input: ReportInput) {
       header: h.header,
       answered: h.value !== null,
     })),
-    note: "Redacted report: exact IPs and full header values are omitted. Browser fingerprint details stay local — only a coarse entropy estimate is included.",
+    note: "Redacted report: exact IPs are truncated, address digits in the reverse-DNS name are masked, and full header values are omitted. Browser fingerprint details stay local — only a coarse entropy estimate is included.",
   };
 }
