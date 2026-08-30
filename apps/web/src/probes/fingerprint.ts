@@ -212,6 +212,38 @@ async function storageAudit(): Promise<StorageAudit> {
   };
 }
 
+// What the scan falls back to if the whole collection somehow throws. Every
+// sub-probe already guards itself; this exists so one unexpected failure
+// degrades the fingerprint readout instead of the page.
+export const EMPTY_FINGERPRINT: FingerprintData = {
+  canvas: null,
+  audio: null,
+  webgl: null,
+  screen: "unknown",
+  dpr: 1,
+  cpu: null,
+  memory: null,
+  touch: 0,
+  gamut: "unknown",
+  hdr: false,
+  platform: "Not exposed",
+  fonts: [],
+  voices: 0,
+  devices: null,
+  storage: {
+    cookies: false,
+    localStorage: false,
+    sessionStorage: false,
+    indexedDB: false,
+    cacheAPI: false,
+    serviceWorker: false,
+    storageAccessApi: false,
+    quotaMb: null,
+  },
+  languages: [],
+  connection: null,
+};
+
 export async function collectFingerprint(): Promise<FingerprintData> {
   const [canvas, audio, voices, devices, storage] = await Promise.all([
     getCanvasHash(),

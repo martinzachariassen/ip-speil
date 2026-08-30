@@ -11,6 +11,13 @@ interface LeakRow {
 // privacy section falls back to the DoH-reachability signal it already computes.
 const unavailable = (): DnsLeakResult => ({ available: false, resolvers: [] });
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Long enough for a cold start or a transient 5xx to clear, short enough to stay
+// inside the scan. Retrying in the same tick, as this used to, re-hits whatever
+// was failing microseconds later — a retry in name only.
+const RETRY_DELAY_MS = 300;
+
 // One retry with a short backoff smooths over the provider's occasional 5xx /
 // cold-start without hanging the scan (each attempt is independently timed out).
 async function fetchWithRetry(
@@ -19,6 +26,7 @@ async function fetchWithRetry(
   timeoutMs: number,
 ): Promise<Response | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await sleep(RETRY_DELAY_MS);
     try {
       const res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
       if (res.ok) return res;
@@ -27,6 +35,17 @@ async function fetchWithRetry(
     }
   }
   return null;
+}
+
+// A body can fail after its headers arrived — a dropped connection mid-read
+// rejects here, not at the fetch. Everything else in this probe is guarded;
+// this was not, so the rejection escaped getDnsLeak and, with it, the scan.
+async function readText(res: Response): Promise<string | null> {
+  try {
+    return (await res.text()).trim();
+  } catch {
+    return null;
+  }
 }
 
 // DNS-leak detection uses bash.ws's unique-subdomain reflection: we resolve a
@@ -47,8 +66,8 @@ async function fetchWithRetry(
 export async function getDnsLeak(): Promise<DnsLeakResult> {
   const idRes = await fetchWithRetry("https://bash.ws/id", {}, 4000);
   if (!idRes) return unavailable();
-  const id = (await idRes.text()).trim();
-  if (!/^[a-z0-9]+$/i.test(id)) return unavailable();
+  const id = await readText(idRes);
+  if (!id || !/^[a-z0-9]+$/i.test(id)) return unavailable();
 
   // no-cors: we only need the DNS lookup to happen, not the response body.
   await Promise.all(
